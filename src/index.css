@@ -61,6 +61,13 @@
 
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-codigo: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  /* Entrada suave (formulário do login) */
+  --animate-surgir: surgir 0.5s ease-out both;
+  @keyframes surgir {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
 }
 
 :root {
@@ -91,6 +98,32 @@
 /* Anéis concêntricos discretos — eco do símbolo, usados sobre Noite */
 @utility textura-aneis {
   background-image: repeating-radial-gradient(circle at 100% 0%, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 28px);
+}
+
+/* Grade de pontos do lado claro do login — mesmo passo do circuito; some no centro */
+@utility textura-pontos {
+  background-image: radial-gradient(circle, rgb(11 114 133 / 0.18) 1px, transparent 1.5px);
+  background-size: 20px 20px;
+  mask-image: radial-gradient(ellipse at center, transparent 25%, black 85%);
+}
+
+/*
+ * Circuito animado do login (components/CircuitoAnimado.tsx). O pulso corre a
+ * trilha em 55% do ciclo (de --pulso-de até --pulso-ate, definidos por trilha)
+ * e some; a ilha da ponta acende quando ele chega.
+ */
+@keyframes circuito-pulso {
+  from { stroke-dashoffset: var(--pulso-de); }
+  55%, to { stroke-dashoffset: var(--pulso-ate); }
+}
+@keyframes circuito-chegada {
+  0%, 50% { opacity: 0; }
+  57% { opacity: 1; }
+  80%, 100% { opacity: 0; }
+}
+@keyframes circuito-respira {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.8; }
 }
 
 @layer base {

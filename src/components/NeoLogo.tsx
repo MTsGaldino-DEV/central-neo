@@ -10,7 +10,7 @@
  */
 type Tema = 'claro' | 'escuro' | 'mono';
 
-const CORES: Record<Tema, { ink: string; dot: string }> = {
+export const CORES: Record<Tema, { ink: string; dot: string }> = {
   claro: { ink: '#0b1f24', dot: '#0b7285' },
   escuro: { ink: '#ffffff', dot: '#3bc9db' },
   mono: { ink: 'currentColor', dot: 'currentColor' },
@@ -18,7 +18,7 @@ const CORES: Record<Tema, { ink: string; dot: string }> = {
 
 // Anel: r=15, circunferência ≈ 94,25. O traço cobre ~298° e deixa a abertura
 // no canto superior direito, onde fica o ponto.
-function Simbolo({ ink, dot, x = 0, y = 0, escala = 1 }: { ink: string; dot: string; x?: number; y?: number; escala?: number }) {
+export function Simbolo({ ink, dot, x = 0, y = 0, escala = 1 }: { ink: string; dot: string; x?: number; y?: number; escala?: number }) {
   return (
     <g transform={`translate(${x} ${y}) scale(${escala})`}>
       <circle cx="24" cy="24" r="15" fill="none" stroke={ink} strokeWidth="6.5"
