@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/*
+ * Central NEO — identidade visual.
+ *
+ * Conceito: "o círculo que fecha". O símbolo é um anel aberto (a nota ainda
+ * pendente) cuja abertura é preenchida por um ponto (o pagamento que fecha
+ * a conta). Cor-mãe: Petróleo — séria, financeira, distinta do navy+âmbar
+ * da Central NEC e do azul do TraceOne.
+ *
+ * Os nomes dos tokens (tinta, sinal, noite, nevoa, linha, aco…) são os mesmos
+ * do TraceOne de propósito: as telas portadas de lá herdam a paleta da NEO
+ * sem precisar ser reescritas.
+ */
+@theme {
+  /* Marca */
+  --color-tinta: #0b1f24;          /* texto principal */
+  --color-sinal: #0b7285;          /* Petróleo: ação principal, links, foco */
+  --color-sinal-forte: #08596a;    /* hover/pressed */
+  --color-sinal-fundo: #e6f4f6;    /* item ativo, linha selecionada */
+  --color-sinal-claro: #3bc9db;    /* ponto da marca sobre fundo escuro */
+  --color-cobre: #d9822b;          /* destaque quente: valores em US, divergências */
+  --color-cobre-fundo: #fdf3e8;
+  --color-noite: #061a1f;          /* barra lateral e login */
+  --color-noite-alto: #0c2f38;
+  --color-noite-baixo: #030d10;
+
+  /* Neutros */
+  --color-nevoa: #f4f7f8;          /* fundo das páginas */
+  --color-linha: #dde6e8;          /* bordas */
+  --color-aco: #586e74;            /* texto secundário */
+  --color-aco-claro: #93a5aa;      /* ícones inativos, placeholders */
+
+  /* Status (texto / fundo / marcador) — mesmos significados do TraceOne */
+  --color-pendente: #b45309;
+  --color-pendente-fundo: #fffbeb;
+  --color-pendente-marca: #f59e0b;
+  --color-revisao: #6d28d9;
+  --color-revisao-fundo: #f5f3ff;
+  --color-revisao-marca: #8b5cf6;
+  --color-concluido: #047857;
+  --color-concluido-fundo: #ecfdf5;
+  --color-concluido-marca: #10b981;
+  --color-erro: #b91c1c;
+  --color-erro-fundo: #fef2f2;
+  --color-erro-marca: #ef4444;
+
+  /* Etapas do fechamento */
+  --color-etapa-fechar: #0b7285;
+  --color-etapa-fechar-fundo: #e6f4f6;
+  --color-etapa-nsmp: #b45309;
+  --color-etapa-nsmp-fundo: #fffbeb;
+  --color-etapa-nspr: #6d28d9;
+  --color-etapa-nspr-fundo: #f5f3ff;
+  --color-etapa-fatura: #1d4ed8;
+  --color-etapa-fatura-fundo: #eff6ff;
+  --color-etapa-faturada: #047857;
+  --color-etapa-faturada-fundo: #ecfdf5;
+  --color-etapa-sem: #586e74;
+  --color-etapa-sem-fundo: #eef2f3;
+
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-codigo: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+:root {
+  /* Tokens dos gráficos (components/charts/*) */
+  --chart-background: #ffffff;
+  --chart-foreground: #0b1f24;
+  --chart-foreground-muted: #586e74;
+  --chart-label: #93a5aa;
+  --chart-1: #f59e0b;
+  --chart-2: #10b981;
+  --chart-3: #0b7285;
+  --chart-4: #8b5cf6;
+  --chart-5: #ef4444;
+  --muted: #eef2f3;
+}
+
+@theme inline {
+  --color-foreground: var(--chart-foreground);
+  --color-muted: var(--muted);
+  --color-chart-label: var(--chart-label);
+}
+
+/* Fundo Noite do login e da barra lateral */
+@utility bg-noite-degrade {
+  background: radial-gradient(ellipse at 30% 20%, var(--color-noite-alto) 0%, var(--color-noite) 55%, var(--color-noite-baixo) 100%);
+}
+
+/* Anéis concêntricos discretos — eco do símbolo, usados sobre Noite */
+@utility textura-aneis {
+  background-image: repeating-radial-gradient(circle at 100% 0%, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 28px);
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-nevoa);
+    color: var(--color-tinta);
+    -webkit-font-smoothing: antialiased;
+  }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+}

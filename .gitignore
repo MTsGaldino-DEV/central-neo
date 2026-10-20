@@ -1,0 +1,21 @@
+node_modules
+dist
+
+# Credenciais (o modelo fica em .env.example)
+.env
+.env.*
+!.env.example
+
+# Planilhas, relatórios e contratos com dados reais (nomes, matrículas, valores)
+*.xlsx
+*.xls
+*.csv
+*.pdf
+
+# Supabase CLI
+supabase/.temp
+supabase/.branches
+
+*.tmp.ts
+.DS_Store
+Thumbs.db
