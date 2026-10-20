@@ -9,6 +9,8 @@ export { lerNumero, normalizarAP } from './fechamentoFormato';
 
 export interface LinhaRelatorioNsis {
   servico: string;
+  /** coluna "Tipo de Serv." do GDIS: NSIS, NSRI, MULTIFUNCIONAL… */
+  tipo_serv: string;
   referencia: string | null;
   localidade: string | null;
   endereco: string | null;
@@ -90,8 +92,8 @@ export function lerDataHora(raw: unknown): string | null {
 /**
  * Lê o relatório "Serviços Executados - Completo" do GDIS. O cabeçalho não
  * fica na primeira linha (vem depois do bloco de filtros), então procuramos a
- * linha que tem "Serviço" e "Término". Ficam só NSIS de responsabilidade da
- * CONTRATADA.
+ * linha que tem "Serviço" e "Término". Entram todos os tipos de serviço, só
+ * os de responsabilidade da CONTRATADA.
  */
 export function lerRelatorioNsis(buffer: ArrayBuffer): LeituraRelatorio {
   const wb = XLSX.read(buffer, { type: 'array', raw: true, codepage: 1252 });
@@ -138,7 +140,7 @@ export function lerRelatorioNsis(buffer: ArrayBuffer): LeituraRelatorio {
   };
   if (C.tipoServ === -1) {
     return { linhas: [], totalLinhas: 0, ignoradas: [], periodo: null,
-      erro: 'A coluna "Tipo de Serv." não foi encontrada: sem ela não dá para separar as NSIS.' };
+      erro: 'A coluna "Tipo de Serv." não foi encontrada: sem ela não dá para saber o tipo de cada serviço.' };
   }
 
   // Período do relatório: as linhas "No período de" / data / "a" / data
@@ -165,7 +167,7 @@ export function lerRelatorioNsis(buffer: ArrayBuffer): LeituraRelatorio {
     totalLinhas++;
 
     const tipo = (texto(val(linha, C.tipoServ)) ?? '').toUpperCase();
-    if (tipo !== 'NSIS') { ignorar(`Tipo ${tipo || 'vazio'} (não é NSIS)`); continue; }
+    if (!tipo) { ignorar('Tipo de Serv. vazio'); continue; }
     const resp = (texto(val(linha, C.resp)) ?? '').toUpperCase();
     if (C.resp !== -1 && resp !== 'CONTRATADA') { ignorar(`Responsável ${resp || 'vazio'}`); continue; }
     if (vistos.has(servico)) { ignorar('Serviço repetido no arquivo'); continue; }
@@ -174,6 +176,7 @@ export function lerRelatorioNsis(buffer: ArrayBuffer): LeituraRelatorio {
     const referencia = texto(val(linha, C.referencia));
     linhas.push({
       servico,
+      tipo_serv: tipo,
       referencia,
       localidade: referencia?.match(/^\d{4}/)?.[0] ?? null,
       endereco: texto(val(linha, C.endereco)),

@@ -42,7 +42,7 @@ src/
   paginas/traceone/   Lista, Lancamento, Importacao, Conferencia, Conferencia45, Backup  ← portados
                       ConectarTraceone (pede a senha do TraceOne se a conexão automática falhar)
   paginas/fechamento/ Fila, PainelNsis, Importar, TabelaValores, Painel
-supabase/migrations/       001–007 do banco central-neo (aplicar com `node scripts/migrar.cjs`)
+supabase/migrations/       001–009 do banco central-neo (aplicar com `node scripts/migrar.cjs`)
 supabase/functions/        admin-usuarios (criar login, redefinir senha, bloquear; só ADMIN NEO)
 supabase/legado-traceone/  migrations antigas aplicadas no TraceOne (objetos neo_* de lá; podem ser removidos)
 scripts/                   migrar.cjs, copiar-do-traceone.cjs (cópia única de 2026-10-20)
@@ -70,7 +70,7 @@ cores `bg-[#1e3a5f]` → `bg-sinal`. Os tokens de cor (`tinta`, `sinal`, `nevoa`
 ## 4. Fechamento de NSIS
 
 ### O processo (como era na planilha)
-1. O GDIS gera o relatório **"Serviços Executados - Completo"**. Interessa só **Tipo de Serv. = NSIS** com **Resp. = CONTRATADA**.
+1. O GDIS gera o relatório **"Serviços Executados - Completo"**. Interessa só **Resp. = CONTRATADA**. Desde a migration 008 entram todos os tipos (NSIS, NSRI, MULTIFUNCIONAL…), e o **Tipo de Serv.** fica em `neo_nsis.tipo_serv`.
 2. O rapaz do fechamento lê a **Observação** (o que a equipe fez) e decide o que cobrar. Pode ser mais de um item por NSIS, cada um com um valor em **US**, conforme o contrato CEMIG.
 3. Gera a **NSMP** (pedido de pagamento) no sistema da CEMIG.
 4. A CEMIG devolve a **NSPR** (confirmação) e o **valor final** pago.
@@ -79,6 +79,7 @@ cores `bg-[#1e3a5f]` → `bg-sinal`. Os tokens de cor (`tinta`, `sinal`, `nevoa`
 ### Modelo
 - `neo_nsis`: uma linha por NSIS, com os campos do relatório. Localidade = 4 primeiros dígitos da Referência, e DT EXECUÇÃO = Término. Também guarda `sem_cobranca` + `motivo_sem_cobranca` e a `origem` (RELATORIO, HISTORICO ou MANUAL).
 - `neo_nsis_itens`: cada cobrança (descrição, código, equipe, valor_inicial, us_adicional, nsmp, nspr, valor_final, fatura).
+- `neo_localidade_supervisor`: localidade (4 dígitos) → município, posto e supervisor (Posto 1 Pedro, 2 Elton, 3 Vinicius, 4 Victor; carga na migration 009). Não tem tela: mudanças vão por migration. A view traz `supervisor` no fim. NSIS sem localidade (as do histórico) ficam sem supervisor.
 - `neo_vw_nsis` (security_invoker): calcula a **etapa** a partir dos itens:
   `A_FECHAR → AGUARDANDO_NSMP → AGUARDANDO_NSPR → AGUARDANDO_FATURA → FATURADA`, ou `SEM_COBRANCA`.
 - Alertas: **divergente** = tem NSPR e valor pago ≠ pedido. **Sem valor pago** = tem NSPR, mas o valor final está vazio (comum no histórico). O "pago − pedido" só compara itens com os dois valores.
@@ -99,7 +100,7 @@ cores `bg-[#1e3a5f]` → `bg-sinal`. Os tokens de cor (`tinta`, `sinal`, `nevoa`
 - O contrato paga em US. O valor da US em R$ fica em `neo_valor_us` (uma linha por início de vigência), mantido pelo ADMIN NEO na tela **Tabela de valores**. Carga inicial: R$ 2.880,23 de 24/05/2025 a 23/05/2026 e R$ 2.964,33 a partir de 24/05/2026. O início em 24/05/2025 é uma suposição de reajuste anual e ainda precisa ser confirmado.
 - **R$ do item = round(US × valor da US vigente na data de execução (Término), 2)**. O cálculo é feito na consulta (`neo_vw_itens`, colunas novas no fim de `neo_vw_nsis`), então corrigir um valor da US corrige tudo. NSIS sem data ou executada antes da primeira vigência fica sem R$.
 - **Painel** (`/fechamento/painel`, RPC `neo_painel_fechamento(inicio, fim)`): período pela data de execução, alternância R$/US, cartões (executadas, pedido, pago, aguardando), pedido × pago por mês (clique leva à fila filtrada), etapas do período, pendências por idade (foto de hoje) e rankings de serviços, equipes e localidades.
-- **Fila**: os filtros ficam na URL (`q`, `loc`, `equipe`, `de`, `ate`, `alerta`, `ordem`). A data de execução vai de/até, com atalhos, e as contagens por etapa seguem os filtros. NSMP e NSPR têm colunas próprias.
+- **Fila**: colunas na ordem NSIS · Tipo do serviço · NSMP · Equipe · Supervisor (com a localidade) · NSPR · DT execução · Lançamento Salesforce (US pedida) · Pago · Apropriação · Observação · Etapa. Tempo de deslocamento e de execução não aparecem mais (continuam guardados). Os filtros ficam na URL (`q`, `loc`, `equipe`, `tipo`, `de`, `ate`, `alerta`, `ordem`). A data de execução vai de/até, com atalhos, e as contagens por etapa seguem os filtros. NSMP e NSPR têm colunas próprias.
 
 ### Pendente
 - As abas "211 TRAFO" e "211 TRIPSAVER" da planilha ficaram fora do MVP. O modelo (`neo_nsis` + itens) serve de base para elas.
@@ -138,7 +139,7 @@ npm run build
 
 Só variáveis `VITE_` vão para o navegador. Service_role e senha do banco nunca levam esse prefixo.
 
-Migrations do banco central-neo: `node scripts/migrar.cjs` (usa `NEO_DATABASE_URL`; `--testar` roda e desfaz). 001–007 aplicadas em 2026-10-20.
+Migrations do banco central-neo: `node scripts/migrar.cjs` (usa `NEO_DATABASE_URL`; `--testar` roda e desfaz). 001–009 aplicadas em 2026-10-20.
 Edge Function: `supabase functions deploy admin-usuarios --project-ref dxcxoimvweeggrvtbmxb --use-api`.
 No painel do Supabase (central-neo), em Authentication → URL Configuration, cadastre a URL publicada da NEO em Site URL e em Redirect URLs. Sem isso, o link de "Esqueci minha senha" não volta para `/reset-senha`.
 

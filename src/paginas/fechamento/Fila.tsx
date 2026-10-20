@@ -8,7 +8,7 @@ import EtapaChip from '@/components/fechamento/EtapaChip';
 import PainelNsis from './PainelNsis';
 import {
   ETAPAS, listarNsis, getResumo, getResumoFaturas, exportarFechamento, criarNsisManual, formatarUS, formatarReais, formatarData,
-  contarPorEtapa, temFiltro,
+  contarPorEtapa, temFiltro, listarTiposServico,
   type Etapa, type Nsis, type ResumoFechamento, type ResumoFatura, type FiltrosNsis,
 } from '@/lib/fechamento';
 
@@ -42,6 +42,7 @@ export default function FilaFechamento() {
     busca: params.get('q') ?? '',
     localidade: params.get('loc') ?? '',
     equipe: params.get('equipe') ?? '',
+    tipo: params.get('tipo') ?? '',
     de: params.get('de') ?? '',
     ate: params.get('ate') ?? '',
     alerta: (params.get('alerta') as FiltrosNsis['alerta']) || null,
@@ -63,6 +64,9 @@ export default function FilaFechamento() {
   const [erro, setErro] = useState<string | null>(null);
   const [exportando, setExportando] = useState(false);
   const [novaAberta, setNovaAberta] = useState(false);
+  const [tipos, setTipos] = useState<string[]>([]);
+
+  useEffect(() => { listarTiposServico().then(setTipos).catch(() => {}); }, []);
 
   // campos de texto acompanham a URL quando ela muda por fora (voltar, link do Painel, "limpar")
   useEffect(() => {
@@ -118,7 +122,7 @@ export default function FilaFechamento() {
   }
 
   function limparFiltros() {
-    mudarParams({ q: null, loc: null, equipe: null, de: null, ate: null, alerta: null });
+    mudarParams({ q: null, loc: null, equipe: null, tipo: null, de: null, ate: null, alerta: null });
   }
 
   async function exportar() {
@@ -147,6 +151,7 @@ export default function FilaFechamento() {
       limpar: { de: null, ate: null },
     });
   }
+  if (filtros.tipo) chips.push({ rotulo: <>Tipo <b>{filtros.tipo}</b></>, limpar: { tipo: null } });
   if (filtros.busca) chips.push({ rotulo: <>Busca: <b>{filtros.busca}</b></>, limpar: { q: null } });
   if (filtros.localidade) chips.push({ rotulo: <>Localidade <b>{filtros.localidade}</b></>, limpar: { loc: null } });
   if (filtros.equipe) chips.push({ rotulo: <>Equipe <b>{filtros.equipe}</b></>, limpar: { equipe: null } });
@@ -254,7 +259,7 @@ export default function FilaFechamento() {
                 <div className="relative">
                   <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-aco-claro" />
                   <input value={busca} onChange={(e) => setBusca(e.target.value)}
-                    placeholder="Serviço, NSMP, NSPR, AP, equipe ou texto…" className={`${campo} w-full pl-9`} />
+                    placeholder="Serviço, NSMP, NSPR, AP, equipe, supervisor ou texto…" className={`${campo} w-full pl-9`} />
                 </div>
               </div>
               <div>
@@ -276,6 +281,14 @@ export default function FilaFechamento() {
               </div>
             </div>
             <div className="flex flex-wrap items-end gap-2">
+              <div>
+                <label className="block text-[11px] font-semibold text-aco mb-1">Tipo do serviço</label>
+                <select value={filtros.tipo ?? ''} onChange={(e) => mudarParam('tipo', e.target.value || null)}
+                  className={`${campo} px-2 ${filtros.tipo ? 'border-sinal text-sinal font-semibold' : ''}`}>
+                  <option value="">Todos</option>
+                  {[...new Set([...tipos, ...(filtros.tipo ? [filtros.tipo] : [])])].map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
               <div>
                 <label className="block text-[11px] font-semibold text-aco mb-1">Localidade</label>
                 <input value={localidade} onChange={(e) => setLocalidade(e.target.value.replace(/\D/g, '').slice(0, 4))} onBlur={() => aplicarTextos()}
@@ -335,20 +348,23 @@ export default function FilaFechamento() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wider text-aco border-b border-linha bg-nevoa/60">
-                    <th className="px-4 py-3 font-bold">Serviço</th>
-                    <th className="px-3 py-3 font-bold">Loc.</th>
-                    <th className="px-3 py-3 font-bold">DT execução</th>
-                    <th className="px-3 py-3 font-bold w-[32%]">O que foi feito</th>
+                    <th className="px-4 py-3 font-bold">NSIS</th>
+                    <th className="px-3 py-3 font-bold">Tipo do serviço</th>
                     <th className="px-3 py-3 font-bold">NSMP</th>
+                    <th className="px-3 py-3 font-bold">Equipe</th>
+                    <th className="px-3 py-3 font-bold">Supervisor</th>
                     <th className="px-3 py-3 font-bold">NSPR</th>
-                    <th className="px-3 py-3 font-bold text-right">Pedido</th>
+                    <th className="px-3 py-3 font-bold">DT execução</th>
+                    <th className="px-3 py-3 font-bold text-right">Lançamento Salesforce</th>
                     <th className="px-3 py-3 font-bold text-right">Pago</th>
+                    <th className="px-3 py-3 font-bold">Apropriação</th>
+                    <th className="px-3 py-3 font-bold min-w-[260px]">Observação</th>
                     <th className="px-4 py-3 font-bold">Etapa</th>
                   </tr>
                 </thead>
                 <tbody>
                   {!carregando && linhas.length === 0 && (
-                    <tr><td colSpan={9} className="py-16 text-center text-aco">
+                    <tr><td colSpan={12} className="py-16 text-center text-aco">
                       <Inbox size={28} className="mx-auto text-aco-claro mb-2" />
                       {etapa === 'A_FECHAR' && !filtrado ? 'Nenhuma NSIS a fechar. Importe o relatório da semana.' : 'Nenhuma NSIS encontrada com esses filtros.'}
                     </td></tr>
@@ -357,20 +373,15 @@ export default function FilaFechamento() {
                     <tr key={n.servico} onClick={() => mudarParam('nsis', n.servico)}
                       className={`border-b border-linha last:border-0 cursor-pointer hover:bg-sinal-fundo/50 align-top ${aberta === n.servico ? 'bg-sinal-fundo' : ''}`}>
                       <td className="px-4 py-3 font-codigo font-semibold whitespace-nowrap">{n.servico}</td>
-                      <td className="px-3 py-3 font-codigo text-aco">{n.localidade ?? '—'}</td>
-                      <td className="px-3 py-3 whitespace-nowrap text-aco">{formatarData(n.termino)}</td>
-                      <td className="px-3 py-3">
-                        {n.observacao
-                          ? <span className="line-clamp-2">{n.observacao}</span>
-                          : n.qtd_itens === 0 && <span className="text-pendente text-xs font-semibold">sem observação no GDIS</span>}
-                        {n.qtd_itens > 0 && (
-                          <span className="block text-[11px] text-aco mt-0.5">
-                            {n.qtd_itens} item{n.qtd_itens > 1 ? 's' : ''}{n.equipes && <> · equipe <span className="font-codigo">{n.equipes}</span></>}
-                          </span>
-                        )}
-                      </td>
+                      <td className="px-3 py-3 text-xs font-bold whitespace-nowrap">{n.tipo_serv}</td>
                       <td className="px-3 py-3"><Numeros valor={n.nsmps} falta={n.qtd_itens > 0 && n.itens_sem_nsmp > 0} /></td>
+                      <td className="px-3 py-3"><Numeros valor={n.equipes} falta={false} /></td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        {n.supervisor ?? <span className="text-aco-claro">—</span>}
+                        <span className="block text-[11px] text-aco">Loc. <span className="font-codigo">{n.localidade ?? '—'}</span></span>
+                      </td>
                       <td className="px-3 py-3"><Numeros valor={n.nsprs} falta={n.qtd_itens > 0 && !!n.nsmps && n.itens_sem_nspr > 0} /></td>
+                      <td className="px-3 py-3 whitespace-nowrap text-aco">{formatarData(n.termino)}</td>
                       <td className="px-3 py-3 text-right whitespace-nowrap">
                         {n.qtd_itens ? <>
                           <span className="font-semibold">{formatarUS(n.valor_inicial_total)}</span>
@@ -384,10 +395,14 @@ export default function FilaFechamento() {
                         </> : '—'}
                         {n.itens_sem_valor_pago > 0 && <span className="block text-[10px] font-bold text-pendente">sem valor pago</span>}
                       </td>
-                      <td className="px-4 py-3">
-                        <EtapaChip etapa={n.etapa} curto />
-                        {n.faturas && <span className="block mt-1 text-[11px] font-codigo text-aco whitespace-nowrap">{n.faturas}</span>}
+                      <td className="px-3 py-3"><Numeros valor={n.faturas} falta={n.qtd_itens > 0 && !!n.nsprs && n.itens_sem_fatura > 0} /></td>
+                      <td className="px-3 py-3">
+                        {n.observacao
+                          ? <span className="line-clamp-2">{n.observacao}</span>
+                          : n.qtd_itens === 0 && <span className="text-pendente text-xs font-semibold">sem observação no GDIS</span>}
+                        {n.qtd_itens > 0 && <span className="block text-[11px] text-aco mt-0.5">{n.qtd_itens} item{n.qtd_itens > 1 ? 's' : ''}</span>}
                       </td>
+                      <td className="px-4 py-3"><EtapaChip etapa={n.etapa} curto /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -411,7 +426,7 @@ export default function FilaFechamento() {
   );
 }
 
-/** NSMP / NSPR da NSIS: um número por linha; "falta" quando algum item ainda não tem. */
+/** NSMP / NSPR / equipe / AP da NSIS: um número por linha; "falta" quando algum item ainda não tem. */
 function Numeros({ valor, falta }: { valor: string | null; falta: boolean }) {
   const lista = valor ? valor.split(', ') : [];
   return (

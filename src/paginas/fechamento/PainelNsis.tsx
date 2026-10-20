@@ -119,6 +119,8 @@ export default function PainelNsis({ servico, onFechar, onAlterado }: Props) {
                     <span className="text-aco">DT execução</span> <strong>{formatarData(nsis.termino, true)}</strong></span>
                   <span className="flex items-center gap-1.5"><MapPin size={15} className="text-aco-claro" />
                     <span className="text-aco">Localidade</span> <strong className="font-codigo">{nsis.localidade ?? '—'}</strong></span>
+                  <span><span className="text-aco">Supervisor</span> <strong>{nsis.supervisor ?? '—'}</strong></span>
+                  <span><span className="text-aco">Tipo</span> <strong>{nsis.tipo_serv}</strong></span>
                 </div>
 
                 <button onClick={() => setDetalhes((d) => !d)} className="mt-4 flex items-center gap-1 text-xs font-bold text-sinal">
@@ -128,8 +130,6 @@ export default function PainelNsis({ servico, onFechar, onAlterado }: Props) {
                   <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm bg-nevoa rounded-xl p-4">
                     <Campo rotulo="Matrícula (líder)" valor={nsis.matricula} codigo />
                     <Campo rotulo="Nome" valor={nsis.nome} />
-                    <Campo rotulo="Tempo de deslocamento" valor={nsis.tempo_deslocamento} />
-                    <Campo rotulo="Tempo de execução" valor={nsis.tempo_execucao} />
                     <Campo rotulo="Pedido em" valor={formatarData(nsis.pedido_em, true)} />
                     <Campo rotulo="Prazo legal" valor={nsis.prazo_legal ? `${nsis.prazo_legal} h` : null} />
                     <Campo rotulo="Referência" valor={nsis.referencia} codigo />

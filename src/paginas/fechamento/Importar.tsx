@@ -122,9 +122,9 @@ function AbaRelatorio() {
         <AreaArquivo onArquivo={ler} titulo="Arraste o relatório do GDIS aqui ou clique" dica='"Serviços Executados - Completo" · .xlsx, .xls ou .csv' />
         <div className="p-4 bg-sinal-fundo rounded-xl text-xs text-sinal-forte space-y-1">
           <p className="font-bold">O que entra</p>
-          <p>• Só linhas com <strong>Tipo de Serv. = NSIS</strong> e <strong>Resp. = CONTRATADA</strong>. NSRI, CEMIG e MULTIFUNCIONAL ficam de fora.</p>
+          <p>• Só linhas com <strong>Resp. = CONTRATADA</strong>. Entram todos os tipos (NSIS, NSRI, MULTIFUNCIONAL…), e o <strong>Tipo de Serv.</strong> fica guardado para filtrar na fila.</p>
           <p>• Localidade = 4 primeiros dígitos da Referência. DT execução = Término.</p>
-          <p>• Matrícula, nome e tempos ficam guardados nos detalhes da NSIS.</p>
+          <p>• Matrícula e nome ficam guardados nos detalhes da NSIS.</p>
           <p>• NSIS já importada tem os dados do GDIS atualizados, sem perder o que já foi lançado no fechamento.</p>
         </div>
       </>
@@ -144,7 +144,7 @@ function AbaRelatorio() {
             {leitura.periodo && <p className="text-sm text-aco">Período do relatório: <strong className="text-tinta">{leitura.periodo}</strong></p>}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Numero valor={leitura.totalLinhas} rotulo="Linhas no relatório" />
-              <Numero valor={leitura.linhas.length} rotulo="NSIS da contratada" cor="text-sinal" />
+              <Numero valor={leitura.linhas.length} rotulo="Serviços da contratada" cor="text-sinal" />
               <Numero valor={novas} rotulo="Novas na fila" cor="text-concluido" />
               <Numero valor={jaNaBase} rotulo="Já na base (atualiza)" cor="text-aco" />
             </div>
@@ -158,12 +158,13 @@ function AbaRelatorio() {
               <div className="overflow-x-auto border border-linha rounded-xl">
                 <table className="w-full text-xs">
                   <thead><tr className="bg-nevoa text-left text-aco">
-                    <th className="px-3 py-2">Serviço</th><th className="px-3 py-2">Loc.</th><th className="px-3 py-2">Término</th><th className="px-3 py-2">Observação</th><th className="px-3 py-2"></th>
+                    <th className="px-3 py-2">Serviço</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Loc.</th><th className="px-3 py-2">Término</th><th className="px-3 py-2">Observação</th><th className="px-3 py-2"></th>
                   </tr></thead>
                   <tbody>
                     {leitura.linhas.slice(0, 8).map((l) => (
                       <tr key={l.servico} className="border-t border-linha">
                         <td className="px-3 py-2 font-codigo font-semibold">{l.servico}</td>
+                        <td className="px-3 py-2 font-semibold">{l.tipo_serv}</td>
                         <td className="px-3 py-2 font-codigo">{l.localidade}</td>
                         <td className="px-3 py-2 whitespace-nowrap">{formatarData(l.termino, true)}</td>
                         <td className="px-3 py-2">{l.observacao ?? <span className="text-pendente">sem observação</span>}</td>
@@ -172,7 +173,7 @@ function AbaRelatorio() {
                     ))}
                   </tbody>
                 </table>
-                {leitura.linhas.length > 8 && <p className="text-[11px] text-aco-claro text-right px-3 py-1.5">+ {leitura.linhas.length - 8} NSIS</p>}
+                {leitura.linhas.length > 8 && <p className="text-[11px] text-aco-claro text-right px-3 py-1.5">+ {leitura.linhas.length - 8} serviços</p>}
               </div>
             )}
 
@@ -189,7 +190,7 @@ function AbaRelatorio() {
                 <button onClick={limpar} disabled={importando} className="flex-1 h-10 border border-linha rounded-xl text-sm font-semibold text-aco hover:bg-nevoa disabled:opacity-50">Cancelar</button>
                 <button onClick={importar} disabled={importando || leitura.linhas.length === 0}
                   className="flex-1 h-10 bg-sinal hover:bg-sinal-forte text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50">
-                  {importando ? <><Loader2 size={15} className="animate-spin" /> Importando {progresso}</> : <>Importar {leitura.linhas.length} NSIS <ArrowRight size={15} /></>}
+                  {importando ? <><Loader2 size={15} className="animate-spin" /> Importando {progresso}</> : <>Importar {leitura.linhas.length} serviços <ArrowRight size={15} /></>}
                 </button>
               </div>
             )}

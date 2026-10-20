@@ -39,6 +39,8 @@ export function infoEtapa(etapa: Etapa) {
 
 export interface Nsis {
   servico: string;
+  /** "Tipo de Serv." do GDIS: NSIS, NSRI, MULTIFUNCIONAL… */
+  tipo_serv: string;
   referencia: string | null;
   localidade: string | null;
   endereco: string | null;
@@ -75,6 +77,8 @@ export interface Nsis {
   valor_us_reais: number | null;
   valor_inicial_reais_total: number;
   valor_final_reais_total: number;
+  /** da tabela localidade → supervisor; null se a localidade não estiver cadastrada */
+  supervisor: string | null;
 }
 
 export interface ItemNsis {
@@ -175,6 +179,8 @@ export interface FiltrosNsis {
   de?: string;
   ate?: string;
   equipe?: string;
+  /** "Tipo de Serv." do GDIS */
+  tipo?: string;
   ordem?: 'termino_desc' | 'termino_asc' | 'servico';
 }
 
@@ -195,6 +201,7 @@ function aplicarFiltros<Q extends { eq: Function; ilike: Function; or: Function;
   let q = query;
   if (f.etapa && f.etapa !== 'TODAS') q = q.eq('etapa', f.etapa);
   if (f.localidade?.trim()) q = q.ilike('localidade', `${f.localidade.trim()}%`);
+  if (f.tipo?.trim()) q = q.eq('tipo_serv', f.tipo.trim());
   if (f.de && DATA_VALIDA.test(f.de)) q = q.gte('termino', `${f.de}T00:00:00-03:00`);
   if (f.ate && DATA_VALIDA.test(f.ate)) q = q.lt('termino', `${diaSeguinte(f.ate)}T00:00:00-03:00`);
   if (f.equipe?.trim()) q = q.ilike('equipes', `%${f.equipe.trim().replace(/[,()%]/g, '')}%`);
@@ -206,7 +213,7 @@ function aplicarFiltros<Q extends { eq: Function; ilike: Function; or: Function;
     const p = `%${termo}%`;
     q = q.or(
       [`servico.ilike.${p}`, `observacao.ilike.${p}`, `endereco.ilike.${p}`, `nsmps.ilike.${p}`,
-        `nsprs.ilike.${p}`, `faturas.ilike.${p}`, `equipes.ilike.${p}`, `nome.ilike.${p}`].join(',')
+        `nsprs.ilike.${p}`, `faturas.ilike.${p}`, `equipes.ilike.${p}`, `nome.ilike.${p}`, `supervisor.ilike.${p}`].join(',')
     );
   }
   if (semOrdem) return q;
@@ -239,7 +246,7 @@ export async function listarNsis(
 
 /** Algum filtro além da etapa? (aí as contagens por etapa precisam seguir o filtro) */
 export function temFiltro(f: FiltrosNsis): boolean {
-  return !!(f.busca?.trim() || f.localidade?.trim() || f.alerta || f.de || f.ate || f.equipe?.trim());
+  return !!(f.busca?.trim() || f.localidade?.trim() || f.alerta || f.de || f.ate || f.equipe?.trim() || f.tipo?.trim());
 }
 
 /** Quantas NSIS em cada etapa, respeitando os filtros (menos a etapa). */
@@ -254,6 +261,13 @@ export async function contarPorEtapa(f: FiltrosNsis): Promise<{ etapas: Partial<
   };
   const [total, ...porEtapa] = await Promise.all([contar('TODAS'), ...ETAPAS.map((e) => contar(e.id))]);
   return { total, etapas: Object.fromEntries(ETAPAS.map((e, i) => [e.id, porEtapa[i]])) };
+}
+
+/** Tipos de serviço que existem na base (opções do filtro). */
+export async function listarTiposServico(): Promise<string[]> {
+  const { data, error } = await supabase.rpc('neo_tipos_servico');
+  if (error) throw new Error('Falha ao carregar os tipos de serviço: ' + error.message);
+  return ((data ?? []) as string[]).filter(Boolean);
 }
 
 export interface ResumoFechamento {
@@ -464,6 +478,8 @@ export async function exportarFechamento(filtros: FiltrosNsis): Promise<void> {
     const itens = itensPorServico.get(n.servico) ?? [];
     const base = {
       'Serviço': n.servico,
+      'Tipo de Serv.': n.tipo_serv,
+      'Supervisor': n.supervisor ?? '',
       'Localidade': n.localidade ?? '',
       'DT EXECUÇÃO': formatarData(n.termino),
       'Etapa': infoEtapa(n.etapa).nome,
@@ -497,7 +513,7 @@ export async function exportarFechamento(filtros: FiltrosNsis): Promise<void> {
 
   const ordem = ['Serviço', 'NSMP', 'Nº do equipe', 'Código', 'Qtd.', 'Tipo de Serviço', 'VALOR INICIAL', 'NSPR', 'US ADICIONAL',
     'VALOR FINAL', 'DT EXECUÇÃO', 'APROPRIAÇÃO/FATURA', 'VALOR US (R$)', 'VALOR INICIAL (R$)', 'VALOR FINAL (R$)',
-    'Localidade', 'Etapa', 'Observação GDIS'];
+    'Tipo de Serv.', 'Supervisor', 'Localidade', 'Etapa', 'Observação GDIS'];
   const XLSX = await import('xlsx');
   const ws = XLSX.utils.json_to_sheet(linhas, { header: ordem });
   const wb = XLSX.utils.book_new();
