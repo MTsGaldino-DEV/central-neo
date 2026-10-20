@@ -1,5 +1,5 @@
 /**
- * Logo da Central NEO.
+ * Logo da Central NEO (Núcleo de Eficiência Operacional).
  *
  * O símbolo é um anel aberto com um ponto preenchendo a abertura: a nota
  * pendente que se fecha quando o pagamento entra. Por isso o "O" de NEO é o

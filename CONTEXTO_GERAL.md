@@ -5,7 +5,7 @@
 
 ## 1. O que é
 
-Central do **NEO**, irmã da Central NEC. Responsabilidades do NEO:
+Central do **NEO (Núcleo de Eficiência Operacional)**, irmã da Central NEC. Responsabilidades do NEO:
 
 | Frente | Situação |
 |---|---|

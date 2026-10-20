@@ -64,7 +64,7 @@ export default function Login() {
       <aside className="hidden lg:flex flex-col justify-between bg-noite-degrade textura-aneis text-white p-12">
         <NeoLogo tema="escuro" className="h-10 w-auto self-start" />
         <div className="max-w-md">
-          <p className="text-sinal-claro text-xs font-bold uppercase tracking-[0.2em] mb-4">Central NEO</p>
+          <p className="text-sinal-claro text-xs font-bold uppercase tracking-[0.2em] mb-4">Núcleo de Eficiência Operacional</p>
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
             Cada nota aberta,<br />até o último centavo fechado.
           </h1>
