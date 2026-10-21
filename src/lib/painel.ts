@@ -41,8 +41,19 @@ export interface PainelLocalidade { localidade: string; nsis: number; pedido: Pa
 export interface PainelServico { codigo: string | null; descricao: string; itens: number; pedido: Par }
 export interface PainelEquipe { equipe: string; nsis: number; itens: number; pedido: Par }
 
+/** Contrato 2026 (Anexo VI) × Tabela CEMIG (pedido) × Pago, sobre os mesmos itens. */
+export interface PainelContratos {
+  totais: { itens: number; nsis: number; contrato: Par; cemig: Par; pago: Par };
+  meses: { mes: string; itens: number; contrato: Par; cemig: Par; pago: Par }[];
+  /** com código da Tabela 03, mas ainda sem NSPR ou valor pago */
+  aguardandoPagamento: number;
+  /** lançados sem código (histórico): não dá para calcular o contrato 2026 */
+  semCodigo: number;
+}
+
 export interface Painel {
   totais: PainelTotais;
+  contratos: PainelContratos;
   meses: PainelMes[];
   etapas: PainelEtapa[];
   pendentes: PainelPendente[];
@@ -60,9 +71,15 @@ const n = (v: unknown) => Number(v ?? 0);
 const par = (r: Bruto, base: string): Par => ({ us: n(r[`${base}_us`]), reais: n(r[`${base}_reais`]) });
 
 export async function getPainel(inicio: string, fim: string): Promise<Painel> {
-  const { data, error } = await supabase.rpc('neo_painel_fechamento', { p_inicio: inicio, p_fim: fim });
+  const [painel, contratos] = await Promise.all([
+    supabase.rpc('neo_painel_fechamento', { p_inicio: inicio, p_fim: fim }),
+    supabase.rpc('neo_painel_contratos', { p_inicio: inicio, p_fim: fim }),
+  ]);
+  const error = painel.error ?? contratos.error;
   if (error) throw new Error('Falha ao carregar o painel: ' + error.message);
-  const d = (data ?? {}) as Bruto;
+  const d = (painel.data ?? {}) as Bruto;
+  const c = (contratos.data ?? {}) as Bruto;
+  const ct = (c.totais ?? {}) as Bruto;
   const t = (d.totais ?? {}) as Bruto;
   const lista = (k: string) => (d[k] ?? []) as Bruto[];
   const q = (d.qualidade ?? {}) as Bruto;
@@ -81,6 +98,14 @@ export async function getPainel(inicio: string, fim: string): Promise<Painel> {
       pedidoConfirmado: par(t, 'pedido_confirmado'),
       pagoConfirmado: par(t, 'pago_confirmado'),
       itensSemValorUS: n(t.itens_sem_valor_us),
+    },
+    contratos: {
+      totais: { itens: n(ct.itens), nsis: n(ct.nsis), contrato: par(ct, 'contrato'), cemig: par(ct, 'cemig'), pago: par(ct, 'pago') },
+      meses: ((c.meses ?? []) as Bruto[]).map((m) => ({
+        mes: String(m.mes), itens: n(m.itens), contrato: par(m, 'contrato'), cemig: par(m, 'cemig'), pago: par(m, 'pago'),
+      })),
+      aguardandoPagamento: n(c.aguardando_pagamento),
+      semCodigo: n(c.sem_codigo),
     },
     meses: lista('meses').map((m) => ({
       mes: String(m.mes),

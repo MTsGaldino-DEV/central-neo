@@ -132,6 +132,8 @@ export default function Painel() {
             <BarrasMes dados={dados} unidade={unidade} />
           </Bloco>
 
+          <Contratos dados={dados} unidade={unidade} />
+
           <div className="grid lg:grid-cols-2 gap-5">
             <Bloco titulo="Onde estão as NSIS do período" subtitulo="Etapa atual de cada NSIS executada no período.">
               <Etapas dados={dados} fmt={fmt} v={v} periodo={periodo === 'tudo' ? '' : `&de=${faixa.inicio}&ate=${faixa.fim}`} />
@@ -197,10 +199,12 @@ function Avisos({ dados, unidade }: { dados: DadosPainel; unidade: Unidade }) {
   );
 }
 
-function Cartao({ rotulo, valor, detalhe, cor = 'text-tinta' }: { rotulo: string; valor: string; detalhe: ReactNode; cor?: string }) {
+function Cartao({ rotulo, valor, detalhe, cor = 'text-tinta', marca }: { rotulo: string; valor: string; detalhe: ReactNode; cor?: string; marca?: string }) {
   return (
     <div className="bg-white border border-linha rounded-2xl px-4 py-3">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-aco">{rotulo}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-aco flex items-center gap-1.5">
+        {marca && <span className={`size-2.5 rounded-sm ${marca}`} />}{rotulo}
+      </p>
       <p className={`text-2xl font-extrabold tracking-tight mt-1 ${cor}`}>{valor}</p>
       <p className="text-[11px] text-aco-claro mt-0.5">{detalhe}</p>
     </div>
@@ -280,6 +284,122 @@ function BarrasMes({ dados, unidade }: { dados: DadosPainel; unidade: Unidade })
         </div>
       </div>
       <p className="text-[10px] text-aco-claro text-right mt-1">número abaixo do mês = NSIS executadas</p>
+    </div>
+  );
+}
+
+// ─── Contrato 2026 × Tabela CEMIG × Pago ────────────────────────────────────
+
+/** Cores das três séries (paleta validada; o petróleo é um pouco mais vivo que o da marca). */
+const SERIES = [
+  { chave: 'contrato', nome: 'Contrato 2026', marca: 'bg-revisao' },
+  { chave: 'cemig', nome: 'Tabela CEMIG', marca: 'bg-cobre' },
+  { chave: 'pago', nome: 'Pago', marca: 'bg-[#0a8aa3]' },
+] as const;
+
+function Contratos({ dados, unidade }: { dados: DadosPainel; unidade: Unidade }) {
+  const c = dados.contratos;
+  const v = (p: Par) => (unidade === 'reais' ? p.reais : p.us);
+  const fmt = (x: number) => (unidade === 'reais' ? formatarReais(x) : `${formatarUS(x)} US`);
+  const dif = (x: number) => (
+    <span className={Math.abs(x) < 0.005 ? '' : x < 0 ? 'text-erro font-bold' : 'text-concluido font-bold'}>
+      {x > 0 ? '+' : ''}{fmt(x)}
+    </span>
+  );
+  const t = c.totais;
+
+  return (
+    <section className="space-y-3">
+      <div>
+        <h3 className="text-sm font-extrabold">Contrato 2026 × Tabela CEMIG × Pago</h3>
+        <p className="text-[11px] text-aco">
+          Itens lançados com código da Tabela 03 e já pagos (NSPR com valor). Contrato 2026 = valor publicado no Anexo VI;
+          Tabela CEMIG = valor pedido, com os acertos da Tabela de valores; Pago = valor confirmado na NSPR.
+        </p>
+      </div>
+      <div className="grid sm:grid-cols-3 gap-3">
+        <Cartao rotulo="Contrato 2026" marca={SERIES[0].marca} valor={fmt(v(t.contrato))}
+          detalhe={<>Anexo VI · {t.itens.toLocaleString('pt-BR')} {t.itens === 1 ? 'item' : 'itens'} de {t.nsis.toLocaleString('pt-BR')} NSIS</>} />
+        <Cartao rotulo="Tabela CEMIG" marca={SERIES[1].marca} valor={fmt(v(t.cemig))}
+          detalhe={<>pedido · CEMIG − 2026 {dif(v(t.cemig) - v(t.contrato))}</>} />
+        <Cartao rotulo="Pago pela CEMIG" marca={SERIES[2].marca} valor={fmt(v(t.pago))}
+          detalhe={<>pago − 2026 {dif(v(t.pago) - v(t.contrato))} · pago − CEMIG {dif(v(t.pago) - v(t.cemig))}</>} />
+      </div>
+      <Bloco titulo="Por mês" subtitulo="Mês da execução. As três barras de cada mês são os mesmos itens.">
+        {t.itens === 0 ? (
+          <p className="text-sm text-aco py-8 text-center max-w-xl mx-auto">
+            Nenhum item pago com código da Tabela 03 neste período.
+            {c.semCodigo > 0 && <> Os {c.semCodigo.toLocaleString('pt-BR')} itens do período foram lançados sem código (histórico), então não dá para calcular o contrato 2026 deles.</>}
+            {' '}A comparação começa com os itens lançados pelo código.
+          </p>
+        ) : (
+          <BarrasContratos meses={c.meses} unidade={unidade} />
+        )}
+        {(c.aguardandoPagamento > 0 || (t.itens > 0 && c.semCodigo > 0)) && (
+          <p className="text-[10px] text-aco-claro mt-2">
+            Fora da comparação:
+            {c.aguardandoPagamento > 0 && <> {c.aguardandoPagamento.toLocaleString('pt-BR')} itens com código aguardando pagamento</>}
+            {c.aguardandoPagamento > 0 && t.itens > 0 && c.semCodigo > 0 && ' ·'}
+            {t.itens > 0 && c.semCodigo > 0 && <> {c.semCodigo.toLocaleString('pt-BR')} itens sem código (histórico)</>}.
+          </p>
+        )}
+      </Bloco>
+    </section>
+  );
+}
+
+function BarrasContratos({ meses, unidade }: { meses: DadosPainel['contratos']['meses']; unidade: Unidade }) {
+  const [foco, setFoco] = useState<string | null>(null);
+  const v = (p: Par) => (unidade === 'reais' ? p.reais : p.us);
+  const fmt = (x: number) => (unidade === 'reais' ? formatarReais(x) : `${formatarUS(x)} US`);
+  const topo = topoEscala(Math.max(...meses.map((m) => Math.max(v(m.contrato), v(m.cemig), v(m.pago)))));
+  const grade = [1, 0.75, 0.5, 0.25];
+  const eixo = (x: number) => (unidade === 'reais' ? formatarReais(x, true) : formatarUS(x, x < 10 ? 1 : 0));
+  const mesFoco = meses.find((m) => m.mes === foco);
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-aco mb-3">
+        {SERIES.map((s) => <span key={s.chave} className="flex items-center gap-1.5"><span className={`size-2.5 rounded-sm ${s.marca}`} /> {s.nome}</span>)}
+        <span className="flex-1" />
+        {mesFoco ? (
+          <span className="text-tinta">
+            <strong>{rotuloMes(mesFoco.mes)}</strong> · {mesFoco.itens} itens
+            {SERIES.map((s) => <span key={s.chave}> · {s.nome.toLowerCase()} <strong>{fmt(v(mesFoco[s.chave]))}</strong></span>)}
+          </span>
+        ) : <span className="text-aco-claro hidden sm:inline">Passe o mouse sobre um mês para ver os valores</span>}
+      </div>
+      <div className="flex">
+        <div className="w-14 shrink-0 relative h-48 text-[10px] text-aco-claro">
+          {grade.map((g) => <span key={g} className="absolute right-2 -translate-y-1/2" style={{ top: `${(1 - g) * 100}%` }}>{eixo(topo * g)}</span>)}
+          <span className="absolute right-2 bottom-0 translate-y-1/2">0</span>
+        </div>
+        <div className="flex-1 overflow-x-auto">
+          <div className="relative h-48" style={{ minWidth: meses.length * 44 }}>
+            {grade.map((g) => <div key={g} className="absolute inset-x-0 border-t border-dashed border-linha" style={{ top: `${(1 - g) * 100}%` }} />)}
+            <div className="absolute inset-x-0 bottom-0 border-t border-linha" />
+            <div className="absolute inset-0 flex items-end">
+              {meses.map((m) => (
+                <Link key={m.mes} to={linkMes(m.mes)} onMouseEnter={() => setFoco(m.mes)} onMouseLeave={() => setFoco(null)}
+                  title="Ver as NSIS deste mês na fila"
+                  className={`flex-1 h-full flex items-end justify-center gap-0.5 px-0.5 rounded-t-md ${foco === m.mes ? 'bg-sinal-fundo/60' : ''}`}>
+                  {SERIES.map((s) => (
+                    <div key={s.chave} className={`w-full max-w-4 ${s.marca} rounded-t-sm transition-[height] duration-500`}
+                      style={{ height: `${(v(m[s.chave]) / topo) * 100}%` }} />
+                  ))}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div className="flex" style={{ minWidth: meses.length * 44 }}>
+            {meses.map((m) => (
+              <div key={m.mes} className={`flex-1 text-center pt-1.5 ${foco === m.mes ? 'text-tinta font-bold' : 'text-aco'}`}>
+                <p className="text-[10px] whitespace-nowrap">{rotuloMes(m.mes)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
