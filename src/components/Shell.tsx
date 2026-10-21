@@ -25,9 +25,11 @@ export function useSecoesNav(): SecaoNav[] {
   const secoes: SecaoNav[] = [{ titulo: '', itens: [{ label: 'Início', href: '/', icon: Home, fim: true }] }];
 
   if (temModulo(acesso, 'traceone')) {
+    // Na NEO o TraceOne é só a ferramenta de pesquisa/edição da lista; o resto fica para o ADMIN NEO
+    const adminNeo = acesso?.papel === 'ADMIN';
     const despachante = profile?.role === 'DESPACHANTE';
     const itens: ItemNav[] = [{ label: 'Lista de Medidores', href: '/traceone', icon: LayoutDashboard, fim: true }];
-    if (!despachante) {
+    if (adminNeo && !despachante) {
       itens.push(
         { label: 'Lançamento Manual', href: '/traceone/lancamento', icon: PlusCircle },
         { label: 'Importar Relatório', href: '/traceone/importacao', icon: UploadCloud },
@@ -35,7 +37,7 @@ export function useSecoesNav(): SecaoNav[] {
         { label: 'Conferência +45 dias', href: '/traceone/conferencia-45dias', icon: AlarmClockCheck },
       );
     }
-    if (isAdmin(profile?.role)) itens.push({ label: 'Backup', href: '/traceone/backup', icon: DatabaseBackup });
+    if (adminNeo && isAdmin(profile?.role)) itens.push({ label: 'Backup', href: '/traceone/backup', icon: DatabaseBackup });
     secoes.push({ titulo: 'TraceOne · Medidores', itens });
   }
 

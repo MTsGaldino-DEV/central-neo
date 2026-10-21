@@ -348,12 +348,12 @@ export default function FilaFechamento() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wider text-aco border-b border-linha bg-nevoa/60">
-                    <th className="px-4 py-3 font-bold">NSIS</th>
+                    <th className="px-4 py-3 font-bold">N° Serviço</th>
                     <th className="px-3 py-3 font-bold">Tipo do serviço</th>
                     <th className="px-3 py-3 font-bold">NSMP</th>
                     <th className="px-3 py-3 font-bold">Equipe</th>
                     <th className="px-3 py-3 font-bold">Supervisor</th>
-                    <th className="px-3 py-3 font-bold">NSPR</th>
+                    <th className="px-3 py-3 font-bold">NSPR/NSMC</th>
                     <th className="px-3 py-3 font-bold">DT execução</th>
                     <th className="px-3 py-3 font-bold text-right">Lançamento Salesforce</th>
                     <th className="px-3 py-3 font-bold text-right">Pago</th>

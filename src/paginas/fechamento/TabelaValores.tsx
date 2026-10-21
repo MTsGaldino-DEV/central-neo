@@ -62,7 +62,8 @@ export default function TabelaValores() {
         )}
       </div>
 
-      <SecaoValorUS admin={admin} />
+      {/* Valor da US em reais: só o ADMIN NEO vê e altera */}
+      {admin && <SecaoValorUS admin={admin} />}
 
       <div className="bg-sinal-fundo rounded-2xl p-4 text-xs text-sinal-forte grid sm:grid-cols-2 gap-x-6 gap-y-1">
         <p className="sm:col-span-2 font-bold flex items-center gap-1.5"><Info size={14} /> Regras da Tabela 03, já aplicadas no cálculo do pedido</p>

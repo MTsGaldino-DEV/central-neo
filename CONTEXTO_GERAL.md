@@ -64,6 +64,7 @@ cores `bg-[#1e3a5f]` → `bg-sinal`. Os tokens de cor (`tinta`, `sinal`, `nevoa`
 - Entra na NEO quem tem linha ativa em `neo_acessos` (`papel` ADMIN/USUARIO, `modulos` ⊂ {`traceone`, `fechamento`}). ADMIN vê tudo.
 - **Logins e acessos** (ADMIN NEO): cria login, redefine senha, bloqueia e escolhe os módulos. Criar login e trocar senha passam pela Edge Function `admin-usuarios`, que confere `neo_is_admin()` e usa a service_role.
 - A troca da própria senha (menu) muda na NEO e, se o TraceOne estiver conectado, lá também, para as duas continuarem iguais.
+- Na NEO o TraceOne é só ferramenta: quem não é ADMIN NEO vê apenas a **Lista de Medidores** (pesquisa e alterações ficam nela). Lançamento, Importar, Conferências e Backup ficam ocultos e só abrem para ADMIN NEO (menu e rotas).
 - As permissões das telas de medidores continuam vindo de `profiles.role` (RLS do TraceOne). Despachante só vê a lista, e Backup é só para ADMIN do TraceOne.
 - Primeiro admin: `matheus.galdino@engelmig.com.br`.
 
@@ -97,10 +98,10 @@ cores `bg-[#1e3a5f]` → `bg-sinal`. Os tokens de cor (`tinta`, `sinal`, `nevoa`
 - O item guarda `fator_unitario` (valor do código na hora do pedido): **acertar um código não muda itens já lançados**.
 
 ### Valor em reais (apostilamento) e Painel
-- O contrato paga em US. O valor da US em R$ fica em `neo_valor_us` (uma linha por início de vigência), mantido pelo ADMIN NEO na tela **Tabela de valores**. Carga inicial: R$ 2.880,23 de 24/05/2025 a 23/05/2026 e R$ 2.964,33 a partir de 24/05/2026. O início em 24/05/2025 é uma suposição de reajuste anual e ainda precisa ser confirmado.
+- O contrato paga em US. O valor da US em R$ fica em `neo_valor_us` (uma linha por início de vigência), mantido pelo ADMIN NEO na tela **Tabela de valores** (a seção só aparece para ADMIN NEO). Carga inicial: R$ 2.880,23 de 24/05/2025 a 23/05/2026 e R$ 2.964,33 a partir de 24/05/2026. O início em 24/05/2025 é uma suposição de reajuste anual e ainda precisa ser confirmado.
 - **R$ do item = round(US × valor da US vigente na data de execução (Término), 2)**. O cálculo é feito na consulta (`neo_vw_itens`, colunas novas no fim de `neo_vw_nsis`), então corrigir um valor da US corrige tudo. NSIS sem data ou executada antes da primeira vigência fica sem R$.
 - **Painel** (`/fechamento/painel`, RPC `neo_painel_fechamento(inicio, fim)`): período pela data de execução, alternância R$/US, cartões (executadas, pedido, pago, aguardando), pedido × pago por mês (clique leva à fila filtrada), etapas do período, pendências por idade (foto de hoje) e rankings de serviços, equipes e localidades.
-- **Fila**: colunas na ordem NSIS · Tipo do serviço · NSMP · Equipe · Supervisor (com a localidade) · NSPR · DT execução · Lançamento Salesforce (US pedida) · Pago · Apropriação · Observação · Etapa. Tempo de deslocamento e de execução não aparecem mais (continuam guardados). Os filtros ficam na URL (`q`, `loc`, `equipe`, `tipo`, `de`, `ate`, `alerta`, `ordem`). A data de execução vai de/até, com atalhos, e as contagens por etapa seguem os filtros. NSMP e NSPR têm colunas próprias.
+- **Fila**: colunas na ordem N° Serviço · Tipo do serviço · NSMP · Equipe · Supervisor (com a localidade) · NSPR/NSMC · DT execução · Lançamento Salesforce (US pedida) · Pago · Apropriação · Observação · Etapa. Tempo de deslocamento e de execução não aparecem mais (continuam guardados). Os filtros ficam na URL (`q`, `loc`, `equipe`, `tipo`, `de`, `ate`, `alerta`, `ordem`). A data de execução vai de/até, com atalhos, e as contagens por etapa seguem os filtros. NSMP e NSPR têm colunas próprias.
 
 ### Pendente
 - As abas "211 TRAFO" e "211 TRIPSAVER" da planilha ficaram fora do MVP. O modelo (`neo_nsis` + itens) serve de base para elas.

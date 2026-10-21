@@ -105,11 +105,11 @@ export default function App() {
         <Route index element={<Inicio />} />
         <Route path="traceone" element={<ExigeModulo modulo="traceone"><ExigeTraceone><Outlet /></ExigeTraceone></ExigeModulo>}>
           <Route index element={<ListaMedidores />} />
-          <Route path="lancamento" element={<NaoDespachante><Lancamento /></NaoDespachante>} />
-          <Route path="importacao" element={<NaoDespachante><Importacao /></NaoDespachante>} />
-          <Route path="conferencia" element={<NaoDespachante><Conferencia /></NaoDespachante>} />
-          <Route path="conferencia-45dias" element={<NaoDespachante><Conferencia45 /></NaoDespachante>} />
-          <Route path="backup" element={<SoAdminTraceone><Backup /></SoAdminTraceone>} />
+          <Route path="lancamento" element={<ExigeAdminNeo><NaoDespachante><Lancamento /></NaoDespachante></ExigeAdminNeo>} />
+          <Route path="importacao" element={<ExigeAdminNeo><NaoDespachante><Importacao /></NaoDespachante></ExigeAdminNeo>} />
+          <Route path="conferencia" element={<ExigeAdminNeo><NaoDespachante><Conferencia /></NaoDespachante></ExigeAdminNeo>} />
+          <Route path="conferencia-45dias" element={<ExigeAdminNeo><NaoDespachante><Conferencia45 /></NaoDespachante></ExigeAdminNeo>} />
+          <Route path="backup" element={<ExigeAdminNeo><SoAdminTraceone><Backup /></SoAdminTraceone></ExigeAdminNeo>} />
         </Route>
         <Route path="fechamento" element={<ExigeModulo modulo="fechamento"><Outlet /></ExigeModulo>}>
           <Route index element={<FilaFechamento />} />
