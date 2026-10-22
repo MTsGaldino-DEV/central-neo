@@ -190,7 +190,7 @@ export default function Painel() {
             </Bloco>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-5">
+          <div className="grid md:grid-cols-2 gap-5">
             <Bloco titulo="O que mais pedimos" subtitulo="Códigos escolhidos em &quot;O que deve ser cobrado?&quot;, por valor pedido no período. Clique para ver as NSIS.">
               {dados.servicos.length === 0 ? (
                 <p className="text-sm text-aco py-6 text-center">
@@ -224,6 +224,13 @@ export default function Painel() {
                   href: `/fechamento?etapa=TODAS&loc=${encodeURIComponent(l.localidade)}${filtroData}`,
                 }))} fmt={fmt} cor="bg-etapa-fatura" />
               )}
+            </Bloco>
+            <Bloco titulo="Apropriações" subtitulo="APs com mais valor pago entre as NSIS executadas no período. Clique para ver as NSIS.">
+              <Ranking itens={dados.apropriacoes.map((a) => ({
+                chave: a.fatura, rotulo: <span className="font-codigo">{a.fatura}</span>,
+                valor: v(a.pago), detalhe: `${a.nsis} NSIS`,
+                href: `/fechamento?etapa=TODAS&q=${encodeURIComponent(a.fatura)}${filtroData}`,
+              }))} fmt={fmt} cor="bg-etapa-faturada" />
             </Bloco>
           </div>
         </div>

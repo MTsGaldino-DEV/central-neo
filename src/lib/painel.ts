@@ -42,6 +42,8 @@ export interface PainelEtapa { etapa: Etapa; nsis: number; valor: Par }
 export interface PainelPendente { etapa: Etapa; faixa: string; nsis: number; valor: Par }
 export interface PainelLocalidade { localidade: string; nsis: number; pedido: Par; pago: Par }
 export interface PainelServico { codigo: string | null; descricao: string; itens: number; pedido: Par }
+/** AP (apropriação/fatura) e quanto foi pago nela */
+export interface PainelApropriacao { fatura: string; nsis: number; itens: number; pedido: Par; pago: Par }
 export interface PainelEquipe { equipe: string; nsis: number; itens: number; pedido: Par }
 
 /** Contrato 2026 (Anexo VI) × Tabela CEMIG (pedido) × Pago, sobre os mesmos itens. */
@@ -62,6 +64,7 @@ export interface Painel {
   localidades: PainelLocalidade[];
   servicos: PainelServico[];
   equipes: PainelEquipe[];
+  apropriacoes: PainelApropriacao[];
   qualidade: { semData: number; dataFutura: number; primeiraVigencia: string | null };
   periodoDisponivel: { inicio: string | null; fim: string | null };
 }
@@ -73,11 +76,12 @@ const n = (v: unknown) => Number(v ?? 0);
 const par = (r: Bruto, base: string): Par => ({ us: n(r[`${base}_us`]), reais: n(r[`${base}_reais`]) });
 
 export async function getPainel(inicio: string, fim: string): Promise<Painel> {
-  const [painel, contratos] = await Promise.all([
+  const [painel, contratos, aps] = await Promise.all([
     supabase.rpc('neo_painel_fechamento', { p_inicio: inicio, p_fim: fim }),
     supabase.rpc('neo_painel_contratos', { p_inicio: inicio, p_fim: fim }),
+    supabase.rpc('neo_painel_apropriacoes', { p_inicio: inicio, p_fim: fim }),
   ]);
-  const error = painel.error ?? contratos.error;
+  const error = painel.error ?? contratos.error ?? aps.error;
   if (error) throw new Error('Falha ao carregar o painel: ' + error.message);
   const d = (painel.data ?? {}) as Bruto;
   const c = (contratos.data ?? {}) as Bruto;
@@ -129,6 +133,9 @@ export async function getPainel(inicio: string, fim: string): Promise<Painel> {
     })),
     equipes: lista('equipes').map((e) => ({
       equipe: String(e.equipe), nsis: n(e.nsis), itens: n(e.itens), pedido: par(e, 'pedido'),
+    })),
+    apropriacoes: ((aps.data ?? []) as Bruto[]).map((a) => ({
+      fatura: String(a.fatura), nsis: n(a.nsis), itens: n(a.itens), pedido: par(a, 'pedido'), pago: par(a, 'pago'),
     })),
     qualidade: {
       semData: n(q.sem_data),

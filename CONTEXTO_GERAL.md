@@ -42,7 +42,7 @@ src/
   paginas/traceone/   Lista, Lancamento, Importacao, Conferencia, Conferencia45, Backup  ← portados
                       ConectarTraceone (pede a senha do TraceOne se a conexão automática falhar)
   paginas/fechamento/ Fila, PainelNsis, Importar, TabelaValores, Painel
-supabase/migrations/       001–011 do banco central-neo (aplicar com `node scripts/migrar.cjs`)
+supabase/migrations/       001–012 do banco central-neo (aplicar com `node scripts/migrar.cjs`)
 supabase/functions/        admin-usuarios (criar login, redefinir senha, bloquear; só ADMIN NEO)
 supabase/legado-traceone/  migrations antigas aplicadas no TraceOne (objetos neo_* de lá; podem ser removidos)
 scripts/                   migrar.cjs, copiar-do-traceone.cjs (cópia única de 2026-10-20)
@@ -100,12 +100,13 @@ cores `bg-[#1e3a5f]` → `bg-sinal`. Os tokens de cor (`tinta`, `sinal`, `nevoa`
 ### Valor em reais (apostilamento) e Painel
 - O contrato paga em US. O valor da US em R$ fica em `neo_valor_us` (uma linha por início de vigência), mantido pelo ADMIN NEO na tela **Tabela de valores** (todos veem; só o ADMIN NEO altera). Carga inicial: R$ 2.880,23 de 24/05/2025 a 23/05/2026 e R$ 2.964,33 a partir de 24/05/2026. O início em 24/05/2025 é uma suposição de reajuste anual e ainda precisa ser confirmado.
 - **R$ do item = round(US × valor da US vigente na data de execução (Término), 2)**. O cálculo é feito na consulta (`neo_vw_itens`, colunas novas no fim de `neo_vw_nsis`), então corrigir um valor da US corrige tudo. NSIS sem data ou executada antes da primeira vigência fica sem R$.
-- **Painel** (`/fechamento/painel`, RPC `neo_painel_fechamento(inicio, fim)`): período pela data de execução (atalhos 12 meses/ano/tudo ou campos de/até, na URL `periodo`, `de`, `ate`), alternância R$/US, cartões (executadas, pedido, pago, aguardando), gráfico mensal Contrato 2026 × Tabela CEMIG × Pago (clique leva à fila filtrada pelo mês), etapas do período, pendências por idade (foto de hoje) e rankings. **O que mais pedimos** só conta itens lançados por código em "O que deve ser cobrado?" (migration 011; o histórico, sem código, fica fora). Clicar num serviço, equipe ou localidade abre a fila filtrada (`codigo`, `equipe`, `loc`) no mesmo período.
+- **Painel** (`/fechamento/painel`, RPC `neo_painel_fechamento(inicio, fim)`): período pela data de execução (atalhos 12 meses/ano/tudo ou campos de/até, na URL `periodo`, `de`, `ate`), alternância R$/US, cartões (executadas, pedido, pago, aguardando), gráfico mensal Contrato 2026 × Tabela CEMIG × Pago (clique leva à fila filtrada pelo mês), etapas do período, pendências por idade (foto de hoje) e rankings. **O que mais pedimos** só conta itens lançados por código em "O que deve ser cobrado?" (migration 011; o histórico, sem código, fica fora). Clicar num serviço, equipe ou localidade abre a fila filtrada (`codigo`, `equipe`, `loc`) no mesmo período. **Apropriações** (migration 012, RPC `neo_painel_apropriacoes`): as 10 APs com mais valor pago entre as NSIS executadas no período; o clique abre a fila buscando a AP.
 - **Contrato 2026 × Tabela CEMIG × Pago** (Painel, migration 010, RPC `neo_painel_contratos`): a CEMIG paga pela aba "Fechamento - NSIS" da planilha "Contratão 2024 (Utilizado CEMIG)". Em 2026-10-21 ela foi comparada código a código com o Anexo VI (Tabela 03): mesmos 155 códigos e valores, rural = +20%. As diferenças entre os dois entram como **acertos** na Tabela de valores: `fator_original` = Contrato 2026 e `fator_us` = Tabela CEMIG. Por item: Contrato 2026 = fator_original × qtd × 1,2 se rural (`neo_vw_itens.valor_contrato`); Tabela CEMIG = valor_inicial (pedido); Pago = valor_final. Base comparável = itens com código e já pagos (NSPR + valor). Os itens do histórico não têm código e ficam fora. A aba "Planilha3" (CONTRATAO 2024, códigos 700xxx LV) ainda não é usada.
 - **Fila**: colunas na ordem N° Serviço · Tipo do serviço · NSMP · Equipe · Supervisor (com a localidade) · NSPR/NSMC · DT execução · Lançamento Salesforce (US pedida) · Pago · Apropriação · Observação · Etapa. Tempo de deslocamento e de execução não aparecem mais (continuam guardados). Os filtros ficam na URL (`q`, `loc`, `equipe`, `tipo`, `codigo`, `de`, `ate`, `alerta`, `ordem`). `codigo` filtra pela coluna `codigos` de `neo_vw_nsis` (códigos da Tabela 03 dos itens). A data de execução vai de/até, com atalhos, e as contagens por etapa seguem os filtros. NSMP e NSPR têm colunas próprias.
 
 ### Pendente
 - As abas "211 TRAFO" e "211 TRIPSAVER" da planilha ficaram fora do MVP. O modelo (`neo_nsis` + itens) serve de base para elas.
+- **Lembrete (2026-10-22):** os cards Contrato 2026 × Tabela CEMIG × Pago ficam em 0 porque só somam itens lançados por código e já pagos, e o histórico não tem código. O Matheus vai resolver com a sincronização com o GDIS, que deve deixar o valor mais próximo do real.
 
 ## 5. Identidade visual
 
@@ -141,7 +142,7 @@ npm run build
 
 Só variáveis `VITE_` vão para o navegador. Service_role e senha do banco nunca levam esse prefixo.
 
-Migrations do banco central-neo: `node scripts/migrar.cjs` (usa `NEO_DATABASE_URL`; `--testar` roda e desfaz). 001–009 aplicadas em 2026-10-20 010 em 2026-10-21 e 011 em 2026-10-22.
+Migrations do banco central-neo: `node scripts/migrar.cjs` (usa `NEO_DATABASE_URL`; `--testar` roda e desfaz). 001–009 aplicadas em 2026-10-20 010 em 2026-10-21 011 e 012 em 2026-10-22.
 Edge Function: `supabase functions deploy admin-usuarios --project-ref dxcxoimvweeggrvtbmxb --use-api`.
 No painel do Supabase (central-neo), em Authentication → URL Configuration, cadastre a URL publicada da NEO em Site URL e em Redirect URLs. Sem isso, o link de "Esqueci minha senha" não volta para `/reset-senha`.
 
