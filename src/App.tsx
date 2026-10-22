@@ -25,6 +25,7 @@ const ImportarFechamento = lazy(() => import('@/paginas/fechamento/Importar'));
 const TabelaValores = lazy(() => import('@/paginas/fechamento/TabelaValores'));
 const PainelFechamento = lazy(() => import('@/paginas/fechamento/Painel'));
 const Colaboradores = lazy(() => import('@/paginas/Colaboradores'));
+const ContratoFat = lazy(() => import('@/paginas/faturamento/Contrato'));
 
 function Carregando() {
   return (
@@ -116,6 +117,10 @@ export default function App() {
           <Route path="importar" element={<ImportarFechamento />} />
           <Route path="tabela" element={<TabelaValores />} />
           <Route path="painel" element={<PainelFechamento />} />
+        </Route>
+        <Route path="faturamento" element={<ExigeModulo modulo="faturamento"><Outlet /></ExigeModulo>}>
+          <Route index element={<Navigate to="tabelas" replace />} />
+          <Route path="tabelas" element={<ContratoFat />} />
         </Route>
         <Route path="acessos" element={<ExigeAdminNeo><Acessos /></ExigeAdminNeo>} />
         <Route path="colaboradores" element={<ExigeAdminNeo><Colaboradores /></ExigeAdminNeo>} />

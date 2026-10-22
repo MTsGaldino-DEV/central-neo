@@ -15,7 +15,6 @@ interface ItemNav { label: string; href: string; icon: LucideIcon; fim?: boolean
 interface SecaoNav { titulo: string; itens: ItemNav[]; emBreve?: boolean }
 
 const EM_BREVE: ItemNav[] = [
-  { label: 'Faturamento', href: '#', icon: Receipt },
   { label: 'Notas de Ouvidoria', href: '#', icon: MessageSquareWarning },
   { label: 'Conciliação CEMIG', href: '#', icon: Scale },
 ];
@@ -53,6 +52,11 @@ export function useSecoesNav(): SecaoNav[] {
     });
   }
 
+  if (temModulo(acesso, 'faturamento')) {
+    secoes.push({ titulo: 'Faturamento', itens: [
+      { label: 'Tabelas do contrato', href: '/faturamento/tabelas', icon: Receipt },
+    ] });
+  }
   secoes.push({ titulo: 'Em breve', itens: EM_BREVE, emBreve: true });
 
   if (acesso?.papel === 'ADMIN') {

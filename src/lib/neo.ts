@@ -9,10 +9,11 @@
  */
 import { supabase } from './supabase';
 
-export type Modulo = 'traceone' | 'fechamento';
+export type Modulo = 'traceone' | 'fechamento' | 'faturamento';
 export type PapelNeo = 'ADMIN' | 'USUARIO';
 
 export const MODULOS: { id: Modulo; nome: string; descricao: string }[] = [
+  { id: 'faturamento', nome: 'Faturamento', descricao: 'Conferência de créditos e débitos CEMIG' },
   { id: 'traceone', nome: 'TraceOne', descricao: 'Controle de medidores' },
   { id: 'fechamento', nome: 'Fechamento de Notas', descricao: 'NSIS → NSMP → NSPR → fatura' },
 ];
