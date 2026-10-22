@@ -181,6 +181,8 @@ export interface FiltrosNsis {
   equipe?: string;
   /** "Tipo de Serv." do GDIS */
   tipo?: string;
+  /** código da Tabela 03 de algum item (vem do painel, "O que mais pedimos") */
+  codigo?: string;
   ordem?: 'termino_desc' | 'termino_asc' | 'servico';
 }
 
@@ -204,6 +206,7 @@ function aplicarFiltros<Q extends { eq: Function; ilike: Function; or: Function;
   if (f.tipo?.trim()) q = q.eq('tipo_serv', f.tipo.trim());
   if (f.de && DATA_VALIDA.test(f.de)) q = q.gte('termino', `${f.de}T00:00:00-03:00`);
   if (f.ate && DATA_VALIDA.test(f.ate)) q = q.lt('termino', `${diaSeguinte(f.ate)}T00:00:00-03:00`);
+  if (f.codigo?.trim()) q = q.ilike('codigos', `%${f.codigo.trim().replace(/[,()%]/g, '')}%`);
   if (f.equipe?.trim()) q = q.ilike('equipes', `%${f.equipe.trim().replace(/[,()%]/g, '')}%`);
   if (f.alerta === 'DIVERGENTE') q = q.gt('itens_divergentes', 0);
   if (f.alerta === 'SEM_VALOR') q = q.gt('itens_sem_valor_pago', 0);
@@ -246,7 +249,7 @@ export async function listarNsis(
 
 /** Algum filtro além da etapa? (aí as contagens por etapa precisam seguir o filtro) */
 export function temFiltro(f: FiltrosNsis): boolean {
-  return !!(f.busca?.trim() || f.localidade?.trim() || f.alerta || f.de || f.ate || f.equipe?.trim() || f.tipo?.trim());
+  return !!(f.busca?.trim() || f.localidade?.trim() || f.alerta || f.de || f.ate || f.equipe?.trim() || f.tipo?.trim() || f.codigo?.trim());
 }
 
 /** Quantas NSIS em cada etapa, respeitando os filtros (menos a etapa). */

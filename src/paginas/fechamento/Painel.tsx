@@ -28,6 +28,14 @@ function linkMes(mes: string) {
   return `/fechamento?etapa=TODAS&de=${mes}-01&ate=${mes}-${String(fim).padStart(2, '0')}`;
 }
 
+const dataBR = (d: string) => d.split('-').reverse().join('/');
+
+/** Período escolhido nos campos de/até (um dos dois pode ficar em branco). */
+function rotuloDatas(de: string, ate: string) {
+  if (de && ate) return `${dataBR(de)} a ${dataBR(ate)}`;
+  return de ? `a partir de ${dataBR(de)}` : `até ${dataBR(ate)}`;
+}
+
 function rotuloMes(mes: string) {
   const [a, m] = mes.split('-');
   return `${MESES[Number(m) - 1]}/${a.slice(2)}`;
@@ -40,7 +48,19 @@ export default function Painel() {
   const [dados, setDados] = useState<DadosPainel | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const faixa = intervalo(periodo);
+  // de/até na URL têm prioridade sobre os atalhos (12 meses, ano, tudo)
+  const de = params.get('de') ?? '';
+  const ate = params.get('ate') ?? '';
+  const personalizado = !!(de || ate);
+  const faixa = personalizado
+    ? { inicio: de || '2000-01-01', fim: ate || '2100-12-31', rotulo: rotuloDatas(de, ate) }
+    : intervalo(periodo);
+  const deMostrado = personalizado ? de : periodo === 'tudo' ? '' : faixa.inicio;
+  const ateMostrado = personalizado ? ate : periodo === 'tudo' ? '' : faixa.fim;
+  // mesmo período ao abrir a fila a partir do painel
+  const filtroData = personalizado
+    ? `${de ? `&de=${de}` : ''}${ate ? `&ate=${ate}` : ''}`
+    : periodo === 'tudo' ? '' : `&de=${faixa.inicio}&ate=${faixa.fim}`;
 
   async function carregar() {
     setCarregando(true);
@@ -54,11 +74,29 @@ export default function Painel() {
     }
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { carregar(); }, [periodo]);
+  useEffect(() => { carregar(); }, [faixa.inicio, faixa.fim]);
 
   function mudar(chave: string, valor: string | null) {
     const p = new URLSearchParams(params);
     if (valor === null) p.delete(chave); else p.set(chave, valor);
+    setParams(p, { replace: true });
+  }
+
+  /** Atalho do select: limpa o de/até escolhido à mão. */
+  function mudarPeriodo(valor: string) {
+    const p = new URLSearchParams(params);
+    p.delete('de');
+    p.delete('ate');
+    if (valor === '12m') p.delete('periodo'); else p.set('periodo', valor);
+    setParams(p, { replace: true });
+  }
+
+  /** Campos de/até: passam a valer no lugar do atalho. Os dois vazios voltam ao padrão. */
+  function mudarDatas(novoDe: string, novoAte: string) {
+    const p = new URLSearchParams(params);
+    p.delete('periodo');
+    if (novoDe) p.set('de', novoDe); else p.delete('de');
+    if (novoAte) p.set('ate', novoAte); else p.delete('ate');
     setParams(p, { replace: true });
   }
 
@@ -82,14 +120,22 @@ export default function Painel() {
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[240px]">
           <h2 className="text-xl font-extrabold tracking-tight">Painel do fechamento</h2>
-          <p className="text-sm text-aco">NSIS executadas em <strong>{faixa.rotulo}</strong>, pela data de execução.</p>
+          <p className="text-sm text-aco">Período: <strong>{faixa.rotulo}</strong>, pela data de execução das NSIS.</p>
         </div>
-        <select value={periodo} onChange={(e) => mudar('periodo', e.target.value === '12m' ? null : e.target.value)}
-          className="h-9 px-2 text-sm border border-linha rounded-lg bg-white">
+        <select value={personalizado ? 'personalizado' : periodo} onChange={(e) => mudarPeriodo(e.target.value)}
+          className="h-9 px-2 text-sm border border-linha rounded-lg bg-white" aria-label="Atalhos de período">
+          {personalizado && <option value="personalizado">Datas escolhidas</option>}
           <option value="12m">Últimos 12 meses</option>
           {anos.map((a) => <option key={a} value={String(a)}>{a}</option>)}
           <option value="tudo">Todo o histórico</option>
         </select>
+        <div className="flex items-center gap-1.5">
+          <input type="date" value={deMostrado} max={ateMostrado || undefined} onChange={(e) => mudarDatas(e.target.value, ateMostrado)}
+            className={`h-9 px-2 text-sm border rounded-lg bg-white w-[150px] ${personalizado ? 'border-sinal' : 'border-linha'}`} aria-label="Execução de" />
+          <span className="text-xs text-aco">até</span>
+          <input type="date" value={ateMostrado} min={deMostrado || undefined} onChange={(e) => mudarDatas(deMostrado, e.target.value)}
+            className={`h-9 px-2 text-sm border rounded-lg bg-white w-[150px] ${personalizado ? 'border-sinal' : 'border-linha'}`} aria-label="Execução até" />
+        </div>
         <div className="flex gap-1 bg-white border border-linha rounded-xl p-1">
           {(['reais', 'us'] as Unidade[]).map((u) => (
             <button key={u} onClick={() => mudar('unidade', u === 'reais' ? null : u)}
@@ -128,15 +174,16 @@ export default function Painel() {
               cor="text-etapa-nspr" />
           </div>
 
-          <Bloco titulo="Pedido × pago por mês" subtitulo="Mês da execução. Pedido = NSMP gerada; pago = valor confirmado na NSPR.">
+          <Contratos dados={dados} unidade={unidade} />
+
+          <Bloco titulo="Contrato 2026 × Tabela CEMIG × Pago por mês"
+            subtitulo="Mês da execução. Contrato 2026 = valor do Anexo VI dos itens lançados por código (o histórico não tem código); Tabela CEMIG = valor pedido (NSMP gerada); Pago = valor confirmado na NSPR.">
             <BarrasMes dados={dados} unidade={unidade} />
           </Bloco>
 
-          <Contratos dados={dados} unidade={unidade} />
-
           <div className="grid lg:grid-cols-2 gap-5">
             <Bloco titulo="Onde estão as NSIS do período" subtitulo="Etapa atual de cada NSIS executada no período.">
-              <Etapas dados={dados} fmt={fmt} v={v} periodo={periodo === 'tudo' ? '' : `&de=${faixa.inicio}&ate=${faixa.fim}`} />
+              <Etapas dados={dados} fmt={fmt} v={v} periodo={filtroData} />
             </Bloco>
             <Bloco titulo="Pendências por idade" subtitulo="Hoje, todas as NSIS ainda não faturadas, por dias desde a execução.">
               <Idade dados={dados} />
@@ -144,20 +191,28 @@ export default function Painel() {
           </div>
 
           <div className="grid lg:grid-cols-3 gap-5">
-            <Bloco titulo="O que mais pedimos" subtitulo="Serviços com maior valor pedido no período.">
-              <Ranking itens={dados.servicos.map((s) => ({
-                chave: s.codigo ?? s.descricao,
-                rotulo: <>{s.codigo && <span className="font-codigo text-aco mr-1">{s.codigo}</span>}{s.descricao || 'sem descrição'}</>,
-                valor: v(s.pedido), detalhe: `${s.itens} ${s.itens === 1 ? 'item' : 'itens'}`,
-              }))} fmt={fmt} cor="bg-cobre" />
+            <Bloco titulo="O que mais pedimos" subtitulo="Códigos escolhidos em &quot;O que deve ser cobrado?&quot;, por valor pedido no período. Clique para ver as NSIS.">
+              {dados.servicos.length === 0 ? (
+                <p className="text-sm text-aco py-6 text-center">
+                  Nenhum item lançado por código no período. Aparece aqui o que for escolhido em &quot;O que deve ser cobrado?&quot; daqui para frente.
+                </p>
+              ) : (
+                <Ranking itens={dados.servicos.map((s) => ({
+                  chave: s.codigo ?? s.descricao,
+                  rotulo: <>{s.codigo && <span className="font-codigo text-aco mr-1">{s.codigo}</span>}{s.descricao || 'sem descrição'}</>,
+                  valor: v(s.pedido), detalhe: `${s.itens} ${s.itens === 1 ? 'item' : 'itens'}`,
+                  href: s.codigo ? `/fechamento?etapa=TODAS&codigo=${encodeURIComponent(s.codigo)}${filtroData}` : undefined,
+                }))} fmt={fmt} cor="bg-cobre" />
+              )}
             </Bloco>
-            <Bloco titulo="Equipes" subtitulo="Valor pedido por equipe no período.">
+            <Bloco titulo="Equipes" subtitulo="Valor pedido por equipe no período. Clique para ver as NSIS.">
               <Ranking itens={dados.equipes.map((e) => ({
                 chave: e.equipe, rotulo: <span className="font-codigo">{e.equipe}</span>,
                 valor: v(e.pedido), detalhe: `${e.nsis} NSIS`,
+                href: `/fechamento?etapa=TODAS&equipe=${encodeURIComponent(e.equipe)}${filtroData}`,
               }))} fmt={fmt} cor="bg-sinal" />
             </Bloco>
-            <Bloco titulo="Localidades" subtitulo="Valor pedido por localidade (4 primeiros dígitos da referência).">
+            <Bloco titulo="Localidades" subtitulo="Valor pedido por localidade (4 primeiros dígitos da referência). Clique para ver as NSIS.">
               {dados.localidades.every((l) => l.localidade === '—') ? (
                 <p className="text-sm text-aco py-6 text-center">
                   O histórico da planilha não traz localidade. Ela aparece nas NSIS importadas do relatório do GDIS.
@@ -166,6 +221,7 @@ export default function Painel() {
                 <Ranking itens={dados.localidades.filter((l) => l.localidade !== '—').map((l) => ({
                   chave: l.localidade, rotulo: <span className="font-codigo">{l.localidade}</span>,
                   valor: v(l.pedido), detalhe: `${l.nsis} NSIS`,
+                  href: `/fechamento?etapa=TODAS&loc=${encodeURIComponent(l.localidade)}${filtroData}`,
                 }))} fmt={fmt} cor="bg-etapa-fatura" />
               )}
             </Bloco>
@@ -229,130 +285,23 @@ function topoEscala(max: number) {
   return 10 * pot;
 }
 
+// ─── Contrato 2026 × Tabela CEMIG × Pago ────────────────────────────────────
+
+/** Cores das três séries (paleta validada; o petróleo é um pouco mais vivo que o da marca). */
+const SERIES = [
+  { chave: 'contrato', nome: 'Contrato 2026', marca: 'bg-revisao' },
+  { chave: 'pedido', nome: 'Tabela CEMIG', marca: 'bg-cobre' },
+  { chave: 'pago', nome: 'Pago', marca: 'bg-[#0a8aa3]' },
+] as const;
+
 function BarrasMes({ dados, unidade }: { dados: DadosPainel; unidade: Unidade }) {
   const [foco, setFoco] = useState<string | null>(null);
   const meses = dados.meses;
   if (!meses.length) return <p className="text-sm text-aco py-10 text-center">Nenhuma NSIS executada no período.</p>;
 
   const v = (p: Par) => (unidade === 'reais' ? p.reais : p.us);
-  const topo = topoEscala(Math.max(...meses.map((m) => Math.max(v(m.pedido), v(m.pago)))));
-  const grade = [1, 0.75, 0.5, 0.25];
-  const eixo = (x: number) => (unidade === 'reais' ? formatarReais(x, true) : formatarUS(x, x < 10 ? 1 : 0));
-  const mesFoco = meses.find((m) => m.mes === foco);
-
-  return (
-    <div>
-      <div className="flex items-center gap-4 text-[11px] text-aco mb-3">
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-cobre" /> Pedido</span>
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-sinal" /> Pago</span>
-        <span className="flex-1" />
-        {mesFoco ? (
-          <span className="text-tinta">
-            <strong>{rotuloMes(mesFoco.mes)}</strong> · {mesFoco.nsis} NSIS · pedido <strong className="text-cobre">{unidade === 'reais' ? formatarReais(mesFoco.pedido.reais) : `${formatarUS(mesFoco.pedido.us)} US`}</strong>
-            {' '}· pago <strong className="text-sinal">{unidade === 'reais' ? formatarReais(mesFoco.pago.reais) : `${formatarUS(mesFoco.pago.us)} US`}</strong>
-          </span>
-        ) : <span className="text-aco-claro hidden sm:inline">Passe o mouse sobre um mês para ver os valores</span>}
-      </div>
-      <div className="flex">
-        <div className="w-14 shrink-0 relative h-48 text-[10px] text-aco-claro">
-          {grade.map((g) => <span key={g} className="absolute right-2 -translate-y-1/2" style={{ top: `${(1 - g) * 100}%` }}>{eixo(topo * g)}</span>)}
-          <span className="absolute right-2 bottom-0 translate-y-1/2">0</span>
-        </div>
-        <div className="flex-1 overflow-x-auto">
-          <div className="relative h-48" style={{ minWidth: meses.length * 34 }}>
-            {grade.map((g) => <div key={g} className="absolute inset-x-0 border-t border-dashed border-linha" style={{ top: `${(1 - g) * 100}%` }} />)}
-            <div className="absolute inset-x-0 bottom-0 border-t border-linha" />
-            <div className="absolute inset-0 flex items-end">
-              {meses.map((m) => (
-                <Link key={m.mes} to={linkMes(m.mes)} onMouseEnter={() => setFoco(m.mes)} onMouseLeave={() => setFoco(null)}
-                  title="Ver as NSIS deste mês na fila"
-                  className={`flex-1 h-full flex items-end justify-center gap-0.5 px-0.5 rounded-t-md ${foco === m.mes ? 'bg-sinal-fundo/60' : ''}`}>
-                  <div className="w-full max-w-4 bg-cobre rounded-t-sm transition-[height] duration-500" style={{ height: `${(v(m.pedido) / topo) * 100}%` }} />
-                  <div className="w-full max-w-4 bg-sinal rounded-t-sm transition-[height] duration-500" style={{ height: `${(v(m.pago) / topo) * 100}%` }} />
-                </Link>
-              ))}
-            </div>
-          </div>
-          <div className="flex" style={{ minWidth: meses.length * 34 }}>
-            {meses.map((m) => (
-              <div key={m.mes} className={`flex-1 text-center pt-1.5 ${foco === m.mes ? 'text-tinta font-bold' : 'text-aco'}`}>
-                <p className="text-[10px] whitespace-nowrap">{rotuloMes(m.mes)}</p>
-                <p className="text-[10px] text-aco-claro">{m.nsis}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <p className="text-[10px] text-aco-claro text-right mt-1">número abaixo do mês = NSIS executadas</p>
-    </div>
-  );
-}
-
-// ─── Contrato 2026 × Tabela CEMIG × Pago ────────────────────────────────────
-
-/** Cores das três séries (paleta validada; o petróleo é um pouco mais vivo que o da marca). */
-const SERIES = [
-  { chave: 'contrato', nome: 'Contrato 2026', marca: 'bg-revisao' },
-  { chave: 'cemig', nome: 'Tabela CEMIG', marca: 'bg-cobre' },
-  { chave: 'pago', nome: 'Pago', marca: 'bg-[#0a8aa3]' },
-] as const;
-
-function Contratos({ dados, unidade }: { dados: DadosPainel; unidade: Unidade }) {
-  const c = dados.contratos;
-  const v = (p: Par) => (unidade === 'reais' ? p.reais : p.us);
   const fmt = (x: number) => (unidade === 'reais' ? formatarReais(x) : `${formatarUS(x)} US`);
-  const dif = (x: number) => (
-    <span className={Math.abs(x) < 0.005 ? '' : x < 0 ? 'text-erro font-bold' : 'text-concluido font-bold'}>
-      {x > 0 ? '+' : ''}{fmt(x)}
-    </span>
-  );
-  const t = c.totais;
-
-  return (
-    <section className="space-y-3">
-      <div>
-        <h3 className="text-sm font-extrabold">Contrato 2026 × Tabela CEMIG × Pago</h3>
-        <p className="text-[11px] text-aco">
-          Itens lançados com código da Tabela 03 e já pagos (NSPR com valor). Contrato 2026 = valor publicado no Anexo VI;
-          Tabela CEMIG = valor pedido, com os acertos da Tabela de valores; Pago = valor confirmado na NSPR.
-        </p>
-      </div>
-      <div className="grid sm:grid-cols-3 gap-3">
-        <Cartao rotulo="Contrato 2026" marca={SERIES[0].marca} valor={fmt(v(t.contrato))}
-          detalhe={<>Anexo VI · {t.itens.toLocaleString('pt-BR')} {t.itens === 1 ? 'item' : 'itens'} de {t.nsis.toLocaleString('pt-BR')} NSIS</>} />
-        <Cartao rotulo="Tabela CEMIG" marca={SERIES[1].marca} valor={fmt(v(t.cemig))}
-          detalhe={<>pedido · CEMIG − 2026 {dif(v(t.cemig) - v(t.contrato))}</>} />
-        <Cartao rotulo="Pago pela CEMIG" marca={SERIES[2].marca} valor={fmt(v(t.pago))}
-          detalhe={<>pago − 2026 {dif(v(t.pago) - v(t.contrato))} · pago − CEMIG {dif(v(t.pago) - v(t.cemig))}</>} />
-      </div>
-      <Bloco titulo="Por mês" subtitulo="Mês da execução. As três barras de cada mês são os mesmos itens.">
-        {t.itens === 0 ? (
-          <p className="text-sm text-aco py-8 text-center max-w-xl mx-auto">
-            Nenhum item pago com código da Tabela 03 neste período.
-            {c.semCodigo > 0 && <> Os {c.semCodigo.toLocaleString('pt-BR')} itens do período foram lançados sem código (histórico), então não dá para calcular o contrato 2026 deles.</>}
-            {' '}A comparação começa com os itens lançados pelo código.
-          </p>
-        ) : (
-          <BarrasContratos meses={c.meses} unidade={unidade} />
-        )}
-        {(c.aguardandoPagamento > 0 || (t.itens > 0 && c.semCodigo > 0)) && (
-          <p className="text-[10px] text-aco-claro mt-2">
-            Fora da comparação:
-            {c.aguardandoPagamento > 0 && <> {c.aguardandoPagamento.toLocaleString('pt-BR')} itens com código aguardando pagamento</>}
-            {c.aguardandoPagamento > 0 && t.itens > 0 && c.semCodigo > 0 && ' ·'}
-            {t.itens > 0 && c.semCodigo > 0 && <> {c.semCodigo.toLocaleString('pt-BR')} itens sem código (histórico)</>}.
-          </p>
-        )}
-      </Bloco>
-    </section>
-  );
-}
-
-function BarrasContratos({ meses, unidade }: { meses: DadosPainel['contratos']['meses']; unidade: Unidade }) {
-  const [foco, setFoco] = useState<string | null>(null);
-  const v = (p: Par) => (unidade === 'reais' ? p.reais : p.us);
-  const fmt = (x: number) => (unidade === 'reais' ? formatarReais(x) : `${formatarUS(x)} US`);
-  const topo = topoEscala(Math.max(...meses.map((m) => Math.max(v(m.contrato), v(m.cemig), v(m.pago)))));
+  const topo = topoEscala(Math.max(...meses.map((m) => Math.max(v(m.contrato), v(m.pedido), v(m.pago)))));
   const grade = [1, 0.75, 0.5, 0.25];
   const eixo = (x: number) => (unidade === 'reais' ? formatarReais(x, true) : formatarUS(x, x < 10 ? 1 : 0));
   const mesFoco = meses.find((m) => m.mes === foco);
@@ -364,7 +313,7 @@ function BarrasContratos({ meses, unidade }: { meses: DadosPainel['contratos']['
         <span className="flex-1" />
         {mesFoco ? (
           <span className="text-tinta">
-            <strong>{rotuloMes(mesFoco.mes)}</strong> · {mesFoco.itens} itens
+            <strong>{rotuloMes(mesFoco.mes)}</strong> · {mesFoco.nsis} NSIS
             {SERIES.map((s) => <span key={s.chave}> · {s.nome.toLowerCase()} <strong>{fmt(v(mesFoco[s.chave]))}</strong></span>)}
           </span>
         ) : <span className="text-aco-claro hidden sm:inline">Passe o mouse sobre um mês para ver os valores</span>}
@@ -395,12 +344,61 @@ function BarrasContratos({ meses, unidade }: { meses: DadosPainel['contratos']['
             {meses.map((m) => (
               <div key={m.mes} className={`flex-1 text-center pt-1.5 ${foco === m.mes ? 'text-tinta font-bold' : 'text-aco'}`}>
                 <p className="text-[10px] whitespace-nowrap">{rotuloMes(m.mes)}</p>
+                <p className="text-[10px] text-aco-claro">{m.nsis}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
+      <p className="text-[10px] text-aco-claro text-right mt-1">número abaixo do mês = NSIS executadas</p>
     </div>
+  );
+}
+
+/** Um card para cada métrica, sobre os mesmos itens (com código e já pagos). */
+function Contratos({ dados, unidade }: { dados: DadosPainel; unidade: Unidade }) {
+  const c = dados.contratos;
+  const v = (p: Par) => (unidade === 'reais' ? p.reais : p.us);
+  const fmt = (x: number) => (unidade === 'reais' ? formatarReais(x) : `${formatarUS(x)} US`);
+  const dif = (x: number) => (
+    <span className={Math.abs(x) < 0.005 ? '' : x < 0 ? 'text-erro font-bold' : 'text-concluido font-bold'}>
+      {x > 0 ? '+' : ''}{fmt(x)}
+    </span>
+  );
+  const t = c.totais;
+
+  return (
+    <section className="space-y-3">
+      <div>
+        <h3 className="text-sm font-extrabold">Contrato 2026 × Tabela CEMIG × Pago</h3>
+        <p className="text-[11px] text-aco">
+          Itens lançados com código da Tabela 03 e já pagos (NSPR com valor). Contrato 2026 = valor publicado no Anexo VI;
+          Tabela CEMIG = valor pedido, com os acertos da Tabela de valores; Pago = valor confirmado na NSPR.
+        </p>
+      </div>
+      <div className="grid sm:grid-cols-3 gap-3">
+        <Cartao rotulo="Contrato 2026" marca={SERIES[0].marca} valor={fmt(v(t.contrato))}
+          detalhe={<>Anexo VI · {t.itens.toLocaleString('pt-BR')} {t.itens === 1 ? 'item' : 'itens'} de {t.nsis.toLocaleString('pt-BR')} NSIS</>} />
+        <Cartao rotulo="Tabela CEMIG" marca={SERIES[1].marca} valor={fmt(v(t.cemig))}
+          detalhe={<>pedido · CEMIG − 2026 {dif(v(t.cemig) - v(t.contrato))}</>} />
+        <Cartao rotulo="Pago pela CEMIG" marca={SERIES[2].marca} valor={fmt(v(t.pago))}
+          detalhe={<>pago − 2026 {dif(v(t.pago) - v(t.contrato))} · pago − CEMIG {dif(v(t.pago) - v(t.cemig))}</>} />
+      </div>
+      {t.itens === 0 ? (
+        <p className="text-[11px] text-aco-claro">
+          Nenhum item pago com código da Tabela 03 neste período.
+          {c.semCodigo > 0 && <> Os {c.semCodigo.toLocaleString('pt-BR')} itens do período foram lançados sem código (histórico), então não dá para calcular o contrato 2026 deles.</>}
+          {' '}Os cards passam a somar os itens lançados por código.
+        </p>
+      ) : (c.aguardandoPagamento > 0 || c.semCodigo > 0) && (
+        <p className="text-[11px] text-aco-claro">
+          Fora dos cards:
+          {c.aguardandoPagamento > 0 && <> {c.aguardandoPagamento.toLocaleString('pt-BR')} itens com código aguardando pagamento</>}
+          {c.aguardandoPagamento > 0 && c.semCodigo > 0 && ' ·'}
+          {c.semCodigo > 0 && <> {c.semCodigo.toLocaleString('pt-BR')} itens sem código (histórico)</>}.
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -470,15 +468,16 @@ function Idade({ dados }: { dados: DadosPainel }) {
   );
 }
 
-interface ItemRanking { chave: string; rotulo: ReactNode; valor: number; detalhe: string }
+/** href: abre a fila já filtrada por este item (mesmo período do painel). */
+interface ItemRanking { chave: string; rotulo: ReactNode; valor: number; detalhe: string; href?: string }
 
 function Ranking({ itens, fmt, cor }: { itens: ItemRanking[]; fmt: (x: number, compacto?: boolean) => string; cor: string }) {
   if (!itens.length) return <p className="text-sm text-aco py-6 text-center">Sem dados no período.</p>;
   const max = Math.max(...itens.map((i) => i.valor), 0.0001);
   return (
-    <ol className="space-y-3">
-      {itens.map((i, n) => (
-        <li key={i.chave}>
+    <ol className="space-y-1">
+      {itens.map((i, n) => {
+        const conteudo = <>
           <div className="flex items-baseline gap-2 text-xs">
             <span className="text-aco-claro w-4 shrink-0">{n + 1}</span>
             <span className="flex-1 min-w-0 truncate" title={typeof i.rotulo === 'string' ? i.rotulo : undefined}>{i.rotulo}</span>
@@ -490,8 +489,15 @@ function Ranking({ itens, fmt, cor }: { itens: ItemRanking[]; fmt: (x: number, c
             </div>
             <span className="text-[10px] text-aco-claro whitespace-nowrap w-14 text-right">{i.detalhe}</span>
           </div>
-        </li>
-      ))}
+        </>;
+        return (
+          <li key={i.chave}>
+            {i.href ? (
+              <Link to={i.href} title="Ver na fila de NSIS" className="block -mx-2 px-2 py-1.5 rounded-lg hover:bg-nevoa">{conteudo}</Link>
+            ) : <div className="py-1.5">{conteudo}</div>}
+          </li>
+        );
+      })}
     </ol>
   );
 }

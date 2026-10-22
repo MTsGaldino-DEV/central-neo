@@ -43,6 +43,7 @@ export default function FilaFechamento() {
     localidade: params.get('loc') ?? '',
     equipe: params.get('equipe') ?? '',
     tipo: params.get('tipo') ?? '',
+    codigo: params.get('codigo') ?? '',
     de: params.get('de') ?? '',
     ate: params.get('ate') ?? '',
     alerta: (params.get('alerta') as FiltrosNsis['alerta']) || null,
@@ -122,7 +123,7 @@ export default function FilaFechamento() {
   }
 
   function limparFiltros() {
-    mudarParams({ q: null, loc: null, equipe: null, tipo: null, de: null, ate: null, alerta: null });
+    mudarParams({ q: null, loc: null, equipe: null, tipo: null, codigo: null, de: null, ate: null, alerta: null });
   }
 
   async function exportar() {
@@ -151,6 +152,7 @@ export default function FilaFechamento() {
       limpar: { de: null, ate: null },
     });
   }
+  if (filtros.codigo) chips.push({ rotulo: <>Código <b className="font-codigo">{filtros.codigo}</b></>, limpar: { codigo: null } });
   if (filtros.tipo) chips.push({ rotulo: <>Tipo <b>{filtros.tipo}</b></>, limpar: { tipo: null } });
   if (filtros.busca) chips.push({ rotulo: <>Busca: <b>{filtros.busca}</b></>, limpar: { q: null } });
   if (filtros.localidade) chips.push({ rotulo: <>Localidade <b>{filtros.localidade}</b></>, limpar: { loc: null } });

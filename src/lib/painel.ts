@@ -31,6 +31,9 @@ export interface PainelMes {
   nsis: number;
   semCobranca: number;
   faturadas: number;
+  /** contrato 2026 dos itens com código e NSMP (o histórico, sem código, fica 0) */
+  contrato: Par;
+  /** Tabela CEMIG: o valor pedido (NSMP gerada) */
   pedido: Par;
   pago: Par;
 }
@@ -44,7 +47,6 @@ export interface PainelEquipe { equipe: string; nsis: number; itens: number; ped
 /** Contrato 2026 (Anexo VI) × Tabela CEMIG (pedido) × Pago, sobre os mesmos itens. */
 export interface PainelContratos {
   totais: { itens: number; nsis: number; contrato: Par; cemig: Par; pago: Par };
-  meses: { mes: string; itens: number; contrato: Par; cemig: Par; pago: Par }[];
   /** com código da Tabela 03, mas ainda sem NSPR ou valor pago */
   aguardandoPagamento: number;
   /** lançados sem código (histórico): não dá para calcular o contrato 2026 */
@@ -101,9 +103,6 @@ export async function getPainel(inicio: string, fim: string): Promise<Painel> {
     },
     contratos: {
       totais: { itens: n(ct.itens), nsis: n(ct.nsis), contrato: par(ct, 'contrato'), cemig: par(ct, 'cemig'), pago: par(ct, 'pago') },
-      meses: ((c.meses ?? []) as Bruto[]).map((m) => ({
-        mes: String(m.mes), itens: n(m.itens), contrato: par(m, 'contrato'), cemig: par(m, 'cemig'), pago: par(m, 'pago'),
-      })),
       aguardandoPagamento: n(c.aguardando_pagamento),
       semCodigo: n(c.sem_codigo),
     },
@@ -112,6 +111,7 @@ export async function getPainel(inicio: string, fim: string): Promise<Painel> {
       nsis: n(m.nsis),
       semCobranca: n(m.sem_cobranca),
       faturadas: n(m.faturadas),
+      contrato: par(m, 'contrato'),
       pedido: par(m, 'pedido'),
       pago: par(m, 'pago'),
     })),
