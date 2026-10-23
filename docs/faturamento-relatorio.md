@@ -53,7 +53,7 @@ Valores da aba US_Servico, em US:
 
 | Situação calculada | Linhas |
 |---|---:|
-| CODIGO_FORA_CONTRATO | 657 |
+| CODIGO_FORA_CONTRATO | 652 |
 | DIVERGENTE | 13580 |
 | MOTO_PROVAVEL | 0 |
 | OK | 13101 |

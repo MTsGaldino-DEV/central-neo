@@ -62,7 +62,7 @@ integração for retomada.
 
 ## Última entrega: Faturamento
 
-**Revisão em 23/10/2026:** Matheus reprovou o resultado por não atender ao pedido.
+**Revisão da entrega inicial em 23/10/2026:** Matheus reprovou o resultado por não atender ao pedido.
 Não tratar os quatro commits como escopo aprovado ou integralmente concluído.
 A auditoria `docs/faturamento-checklist-auditoria.md` confronta requisitos e código:
 faltam aderência visual, apresentação do fator numérico e validação mais forte dos
@@ -83,7 +83,7 @@ auditoria não corrige o código nem redefine as regras de negócio.
   glosa positiva como estorno; guardar NOTA sem inferir regra; fator não validado fica nulo.
 - CSC é a referência provisória quando nenhum fator coincide. O devido é parcial,
   excluindo linhas sem fator. Configuração de multiplicadores: `neo_fat_config`.
-- Faltam a planilha serviço → veículo/turma, confirmação das regras e revisão dos
+- Na entrega inicial faltavam a planilha serviço → veículo/turma, confirmação das regras e revisão dos
   fatores pendentes. A lista completa está no relatório; não inventar esses valores.
 - Mudança nos dados da linha reabre revisão manual; mudança apenas no contrato ainda
   não invalida automaticamente a conferência já registrada. Histórico manual guarda
@@ -94,6 +94,15 @@ auditoria não corrige o código nem redefine as regras de negócio.
 - Ainda não verificados: aparência no navegador e deploy do Dokploy.
 - `.tmp-faturamento/` contém extrações locais não commitadas; exclusão foi bloqueada
   pela revisão automática. `ns_preventiva_c_fonte.jsp` é arquivo do usuário, fora da entrega.
+
+## Revisão de Faturamento — duas planilhas e PDF, 23/10/2026
+
+- A importação exige Fatura Resumida e Fatura Completa. Cruzamento: US_Servico.numserv → Serviço.numserv → Serviço.veiculo → US_Turma.numvei. Serviço.ident_turma desempata veículos usados por tipos de equipe diferentes no período e exige correspondência da frota. Não é preciso mover abas manualmente.
+- Os 21.910 serviços da 9844 foram identificados: 10.311 Moto, 9.657 Multifuncional, 1.872 Umpla, 70 Quarteto. Dados/vínculos publicados juntos; mudança de equipe/fatores reabre revisão manual anterior com contexto registrado.
+- O 1.13 estava vazio porque a extração anterior exigia crédito coincidente na fatura, apesar do fator publicado no PDF. Extração por célula, página e texto validou 215/219 pares; migration 020 complementou 99 fatores com histórico. 1.13: CSC 0,137718 / COD 0,165261. 1.62, 1.73, 5.63 e 5.64 seguem pendentes da NOTA 10.
+- Nova fotografia 9844: 27.389 linhas; 13.101 OK, 13.580 DIVERGENTE, 0 MOTO_PROVAVEL, 652 CODIGO_FORA_CONTRATO, 56 REVISAR_RC_MULTILINHA. Devido parcial 1.030,403921 US, crédito 917,112183, débito 21,226389. Em 10.224 linhas de Moto, o pago coincide com fator normal e diverge de 0,7/0,9; a regra provisória permanece, precisa de revisão do Matheus.
+- Migrations 019/020 passaram em --testar e foram aplicadas. Parser com arquivos reais, integração com rollback, typecheck/build e Chrome desktop/celular passaram. Navegador usou APIs interceptadas; a importação real foi feita separadamente. Deploy não verificado. Relatório atualizado em docs/faturamento-relatorio.md e auditoria em docs/faturamento-checklist-auditoria.md.
+- A importação tomou como referência o fluxo de prévia/validação do TraceOne. Design confirmado no código da NEO: Manrope e JetBrains Mono, petróleo #0B7285, cobre #D9822B. Preservar modificações da outra conversa no mesmo checkout.
 
 ## Origem da memória
 
