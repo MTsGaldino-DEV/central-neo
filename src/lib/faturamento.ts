@@ -43,3 +43,26 @@ export async function importarVinculosFat(fatura:string,linhas:RegistroFat[]){
   // Uma chamada mantém o vínculo completo da planilha na mesma transação.
   const {error}=await supabase.rpc('neo_fat_importar_vinculos',{p_fatura:fatura,p_linhas:linhas});if(error)throw error;
 }
+
+export interface LinhaFat {
+ fatura:string;id:string;numserv:string;tipo_serv:string;codserv:string;cidade:string;tabela:string|null;
+ urbano:number;rural:number;fator_csc:number|null;fator_cod:number|null;fator_aplicado:string|null;
+ devido_referencia:number|null;devido_csc:number|null;devido_cod:number|null;moto_csc:number|null;moto_cod:number|null;
+ creditado:number;glosa:number;diferenca:number|null;situacao:string;situacao_calculo:string;
+ justificativa:string|null;observacoes:string;observacao_manual:string|null;conferido_por:string|null;conferido_em:string|null;
+ revisao_desatualizada:boolean;liquido_servico:number;soma_csc:number;soma_cod:number;qtd_servico:number;
+}
+export const SITUACOES_FAT=['OK','DIVERGENTE','MOTO_PROVAVEL','CODIGO_FORA_CONTRATO','REVISAR_RC_MULTILINHA','CONFERIDO'];
+export async function linhasFat(p:URLSearchParams,pagina=0,limite=50){
+ let q=supabase.from('neo_fat_conferencia').select('*',{count:'exact'});
+ for(const k of ['fatura','situacao','tabela','tipo_serv','codserv','cidade'])if(p.get(k))q=q.eq(k,p.get(k)!);
+ if(p.get('q'))q=q.ilike('numserv',`%${p.get('q')!.replace(/[%_]/g,'')}%`);
+ const {data,error,count}=await q.order('fatura').order('id').range(pagina*limite,pagina*limite+limite-1);if(error)throw error;
+ return {linhas:(data??[]) as LinhaFat[],total:count??0};
+}
+export async function conferirFat(l:LinhaFat,observacao:string){const {error}=await supabase.rpc('neo_fat_conferir',{p_fatura:l.fatura,p_linha:l.id,p_observacao:observacao});if(error)throw error;}
+export async function exportarFat(p:URLSearchParams){
+ const X=await import('xlsx');const filtro=new URLSearchParams(p);filtro.set('situacao','DIVERGENTE');let pagina=0;const lista:LinhaFat[]=[];
+ for(;;){const r=await linhasFat(filtro,pagina++,1000);lista.push(...r.linhas);if(lista.length>=r.total)break;}
+ const w=X.utils.book_new();X.utils.book_append_sheet(w,X.utils.json_to_sheet(lista),'Divergências');X.writeFile(w,'faturamento-divergencias.xlsx');
+}
