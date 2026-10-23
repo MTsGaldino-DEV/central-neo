@@ -1,0 +1,43 @@
+{
+  "totais": {
+    "creditado": "917.112183",
+    "debitado": "21.226389",
+    "estorno": "7.446161",
+    "devido": "1050.866807",
+    "devido_csc": "1034.871004",
+    "devido_cod": "1241.842993",
+    "sem_fator": "657"
+  },
+  "contagens": [
+    {
+      "situacao_calculo": "CODIGO_FORA_CONTRATO",
+      "quantidade": 657
+    },
+    {
+      "situacao_calculo": "DIVERGENTE",
+      "quantidade": 3363
+    },
+    {
+      "situacao_calculo": "MOTO_PROVAVEL",
+      "quantidade": 121
+    },
+    {
+      "situacao_calculo": "OK",
+      "quantidade": 23192
+    },
+    {
+      "situacao_calculo": "REVISAR_RC_MULTILINHA",
+      "quantidade": 56
+    }
+  ],
+  "ajustes": [
+    {
+      "tipo": "D",
+      "valor": "64.963712"
+    },
+    {
+      "tipo": "C",
+      "valor": "95.344853"
+    }
+  ]
+}

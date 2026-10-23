@@ -34,6 +34,7 @@ export default function Inicio() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
+        {temModulo(acesso, 'faturamento') && <Link to="/faturamento/resumo" className="bg-white border border-linha rounded-2xl p-6 hover:border-sinal"><Receipt className="text-sinal"/><h3 className="text-lg font-extrabold mt-4">Faturamento</h3><p className="text-sm text-aco">Créditos e glosas CEMIG comparados com o contrato.</p></Link>}
         {veFechamento && (
           <Link to="/fechamento" className="group bg-white border border-linha rounded-2xl p-6 hover:border-sinal hover:shadow-md transition-all">
             <div className="flex items-start justify-between">
@@ -82,7 +83,6 @@ export default function Inicio() {
         <p className="text-[11px] font-bold uppercase tracking-widest text-aco-claro mb-3">Próximas frentes do NEO</p>
         <div className="grid sm:grid-cols-3 gap-3">
           {[
-            { icone: Receipt, nome: 'Faturamento', texto: 'Medição e faturamento dos serviços.' },
             { icone: MessageSquareWarning, nome: 'Notas de ouvidoria', texto: 'Acompanhamento das notas de ouvidoria.' },
             { icone: Scale, nome: 'Conciliação CEMIG', texto: 'O que foi enviado para pagamento × o que a CEMIG pagou.' },
           ].map(({ icone: Icone, nome, texto }) => (

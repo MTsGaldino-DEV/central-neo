@@ -55,6 +55,11 @@ export interface LinhaFat {
 export const SITUACOES_FAT=['OK','DIVERGENTE','MOTO_PROVAVEL','CODIGO_FORA_CONTRATO','REVISAR_RC_MULTILINHA','CONFERIDO'];
 export async function linhasFat(p:URLSearchParams,pagina=0,limite=50){
  let q=supabase.from('neo_fat_conferencia').select('*',{count:'exact'});
+ if(p.get('de')||p.get('ate')){
+   const faturas=(await faturasFat()).filter(f=>f.fim>=(p.get('de')||'2000-01-01')&&f.inicio<=(p.get('ate')||'2100-12-31'));
+   if(!faturas.length)return {linhas:[] as LinhaFat[],total:0};
+   q=q.in('fatura',faturas.map(f=>f.id));
+ }
  for(const k of ['fatura','situacao','tabela','tipo_serv','codserv','cidade'])if(p.get(k))q=q.eq(k,p.get(k)!);
  if(p.get('q'))q=q.ilike('numserv',`%${p.get('q')!.replace(/[%_]/g,'')}%`);
  const {data,error,count}=await q.order('fatura').order('id').range(pagina*limite,pagina*limite+limite-1);if(error)throw error;

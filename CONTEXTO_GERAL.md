@@ -11,7 +11,7 @@ Central do **NEO (Núcleo de Eficiência Operacional)**, irmã da Central NEC. R
 |---|---|
 | Controle de medidores (TraceOne) | ✅ no MVP |
 | Fechamento de notas de manutenção (controle de NSMC, aba "211 NSIS") | ✅ no MVP |
-| Faturamento | em breve |
+| Faturamento | conferência, importação, contrato e resumo implementados |
 | Notas de ouvidoria | em breve |
 | Conciliação: o que foi enviado para pagamento × o que a CEMIG pagou | em breve (o fechamento já traz o comparativo por fatura) |
 
@@ -147,3 +147,16 @@ Edge Function: `supabase functions deploy admin-usuarios --project-ref dxcxoimvw
 No painel do Supabase (central-neo), em Authentication → URL Configuration, cadastre a URL publicada da NEO em Site URL e em Redirect URLs. Sem isso, o link de "Esqueci minha senha" não volta para `/reset-senha`.
 
 Deploy no Dokploy: `docker-compose.yml` (rede `dokploy-network`). Não precisa de VPN, porque a NEO não acessa o GDIS diretamente.
+
+## 7. Faturamento
+
+Implementado em 23/10/2026. Compara créditos e glosas da CEMIG com as Tabelas 11 (código de fechamento) e 12 (RC por atendimento), sem compartilhar tabelas do Fechamento. Banco CENTRAL-NEO, objetos `neo_fat_*`, migrations 013–018 aplicadas após teste com rollback.
+
+- Rotas: `/faturamento` (conferência), `/faturamento/importar`, `/faturamento/tabelas`, `/faturamento/resumo`. Acesso via módulo `faturamento`; contrato editável por ADMIN com motivo e histórico.
+- Leitura pura: `src/lib/faturamentoPlanilhas.ts`. Dados originais são preservados em JSON; importação em lotes publica a fatura numa transação, mantendo conferências em tabela separada. Identificador estável: `idapropriacaotemposervico`. Alteração dos dados invalida a conferência anterior; ela permanece registrada para consulta.
+- Tabela 12 tem precedência sobre 11 inclusive para RCs sem fator validado. Comparação dos dois fatores CSC/COD, seis casas, tolerância 0,000001. Configuração de rural/moto em `neo_fat_config`; regras centralizadas nas views `neo_fat_base`/`neo_fat_calculo`.
+- Serviço → veículo/turma: `neo_fat_vinculos`, importação preparada; ainda falta a planilha. Coincidência exclusiva com moto sem vínculo gera `MOTO_PROVAVEL`. Soma de RC multilinha coincidente gera `REVISAR_RC_MULTILINHA`.
+- L/N/O são armazenadas sem cálculo. Glosa positiva tratada como estorno. Ajustes de `Debito_Credito` mostrados separadamente. Fatores sem reprodução validada ficam nulos e geram `CODIGO_FORA_CONTRATO`.
+- Fatura 9844 importada: 27.389 linhas; 23.192 OK, 3.363 divergentes, 121 moto provável, 657 sem fator e 56 para revisar RC multilinha. Devido é parcial, excluindo linhas sem fator.
+- Relatório completo: `docs/faturamento-relatorio.md`. Evidência da extração: `docs/faturamento-validacao-contrato.json`. Totais: `docs/faturamento-9844-resultados.json`.
+- Testes de integração com rollback: `node scripts/faturamento-testar.cjs`; verificação de tipos e build com `npm.cmd run typecheck` / `npm.cmd run build` no PowerShell.
