@@ -2,6 +2,7 @@
 
 > **Atualizado em:** 2026-10-20
 > Ponto de entrada para quem (pessoa ou IA) for trabalhar na Central NEO.
+> Continuidade entre Codex e Claude: leia também `MEMORIA_COMPARTILHADA.md`.
 
 ## 1. O que é
 
@@ -136,8 +137,8 @@ npm run build
 - **CENTRAL-NEO (principal)**, ref `dxcxoimvweeggrvtbmxb`, sa-east-1:
   - frontend: `VITE_NEO_SUPABASE_URL`, `VITE_NEO_SUPABASE_ANON_KEY` (ou `_PUBLISHABLE_KEY`);
   - só para scripts: `NEO_SUPABASE_SERVICE_ROLE_KEY`, `NEO_DB_PASSWORD`, `NEO_DATABASE_URL` (pooler `aws-1-sa-east-1`, porta 5432 = sessão, 6543 = transação).
-  - Em 2026-10-20 estava vazio, ainda sem tabelas nem usuários.
-- **TRACEONE (emprestado, medidores)**, ref `ctlaygzndbaojxpwqsco`: `VITE_TRACEONE_SUPABASE_URL`, `VITE_TRACEONE_SUPABASE_ANON_KEY`. **Hoje o app inteiro ainda roda aqui** (`src/lib/supabase.ts`).
+  - Banco principal em uso; login, colaboradores, acessos e fechamento migrados em 2026-10-20.
+- **TRACEONE (emprestado, medidores)**, ref `ctlaygzndbaojxpwqsco`: `VITE_TRACEONE_SUPABASE_URL`, `VITE_TRACEONE_SUPABASE_ANON_KEY`. Usado somente para medidores, com sessão própria (`src/lib/supabase.ts`).
 - `VITE_TRACEONE_URL`: URL do TraceOne web, usada nos botões que abrem telas de lá.
 
 Só variáveis `VITE_` vão para o navegador. Service_role e senha do banco nunca levam esse prefixo.
