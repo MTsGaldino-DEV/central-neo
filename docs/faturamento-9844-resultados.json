@@ -3,9 +3,9 @@
     "creditado": "917.112183",
     "debitado": "21.226389",
     "estorno": "7.446161",
-    "devido": "1030.403921",
-    "devido_csc": "1035.320784",
-    "devido_cod": "1242.382723",
+    "devido": "857.921936",
+    "devido_csc": "836.567217",
+    "devido_cod": "1003.879036",
     "sem_fator": "652"
   },
   "contagens": [
@@ -15,15 +15,15 @@
     },
     {
       "situacao_calculo": "REVISAR_RC_MULTILINHA",
-      "quantidade": 56
+      "quantidade": 1310
     },
     {
       "situacao_calculo": "DIVERGENTE",
-      "quantidade": 13580
+      "quantidade": 642
     },
     {
       "situacao_calculo": "OK",
-      "quantidade": 13101
+      "quantidade": 24785
     }
   ],
   "ajustes": [

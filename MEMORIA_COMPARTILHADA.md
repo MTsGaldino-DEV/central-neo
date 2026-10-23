@@ -29,8 +29,9 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 - A autorização se aplica às tarefas solicitadas; respeitar os limites explícitos
   de cada tarefa e registrar bloqueios reais que dependam do usuário.
 - Commit e push nas entregas prontas, usando o remote SSH existente.
-- Commit: `<tipo>(<escopo>): <descrição específica>`, seguido de parágrafo:
-  `Corrigimos alguns erros e melhoramos a experiência geral. Até Breve, Matheus`.
+- **Mensagem de commit vigente, determinada por Matheus em 23/10/2026:**
+  `Corrigimos alguns erros e melhoramos a experiência geral. Até breve, Matheus`.
+  Usar exatamente este assunto em cada novo commit; ele substitui o formato anterior.
   Atribuição de autoria, quando utilizada, deve corresponder ao agente real.
 - Não incluir arquivos de terceiros no commit nem reescrever histórico.
 
@@ -113,6 +114,14 @@ teste no navegador passaram. Não é preciso rodar migration manualmente.
 - Nova fotografia 9844: 27.389 linhas; 13.101 OK, 13.580 DIVERGENTE, 0 MOTO_PROVAVEL, 652 CODIGO_FORA_CONTRATO, 56 REVISAR_RC_MULTILINHA. Devido parcial 1.030,403921 US, crédito 917,112183, débito 21,226389. Em 10.224 linhas de Moto, o pago coincide com fator normal e diverge de 0,7/0,9; a regra provisória permanece, precisa de revisão do Matheus.
 - Migrations 019/020 passaram em --testar e foram aplicadas. Parser com arquivos reais, integração com rollback, typecheck/build e Chrome desktop/celular passaram. Navegador usou APIs interceptadas; a importação real foi feita separadamente. Deploy não verificado. Relatório atualizado em docs/faturamento-relatorio.md e auditoria em docs/faturamento-checklist-auditoria.md.
 - A importação tomou como referência o fluxo de prévia/validação do TraceOne. Design confirmado no código da NEO: Manrope e JetBrains Mono, petróleo #0B7285, cobre #D9822B. Preservar modificações da outra conversa no mesmo checkout.
+
+## Revisão integral dos dois PDFs — 23/10/2026
+
+- Foram lidas as 14 páginas da Tabela 11 e as 2 da Tabela 12, inclusive notas ao final. As notas 8 terminam cortadas nos PDFs fornecidos; a NOTA 10 referida nos códigos 1.62, 1.73, 5.63 e 5.64 não aparece. Não inferir seus fatores.
+- Migrations 023–027 testadas com `--testar` e aplicadas. Tabela 11: rural e Moto seguem as colunas por código; 5.70, 6.01, 6.05 têm Moto 1. Tabela 12: notas 2–3 transpõem RC para código de fechamento quando é o único remunerável (lista configurável em `neo_fat_rc_transposicao`); RC remanescente é pago uma vez por atendimento. O devido do RC com várias linhas é alocado à primeira linha por `id` somente para totalização. UI sinaliza transposição apenas para RCs publicados na Tabela 12 e explica a regra. A revisão manual agora inclui devido/situação no contexto; registros antigos são reabertos para nova validação. Nenhuma migration manual pendente.
+- Fatura 9844 após a revisão: 27.389 linhas; **24.785 OK, 642 DIVERGENTE, 1.310 REVISAR_RC_MULTILINHA, 652 CODIGO_FORA_CONTRATO, 0 MOTO_PROVAVEL**. Crédito 917,112183 US, débito 21,226389, estorno 7,446161, devido parcial **857,921936 US**. São 1.813 serviços/1.820 linhas transpostos. Os números anteriores nesta memória são fotografias históricas, não o estado atual.
+- Notas PSAP exigem relação apoio → principal e fator 0,3; as duas planilhas não dão vínculo confiável. Notas de documentação e unidade de lançamento não podem ser verificadas só com fatura. O rural de Moto 0,9 continua decisão expressa e provisória de Matheus, embora Tabela 12 notas 4–5 combinadas sugiram 0,84; registrar a dúvida. Alguns pagamentos do código 5.62 seguem o RC apesar da transposição literal, a revisar com Matheus. Relatório detalhado em `docs/faturamento-relatorio.md`.
+- Verificados: integração de cálculo/importação com rollback, conferência paginada/permissões, typecheck, build e Chrome desktop/celular com APIs simuladas; captura da Conferência inspecionada. Sem deploy verificado.
 
 ## Origem da memória
 

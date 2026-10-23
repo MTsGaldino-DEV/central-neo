@@ -7,6 +7,7 @@ const api=new URL(env.VITE_NEO_SUPABASE_URL),id='00000000-0000-0000-0000-0000000
 const usuario={id,email:'teste@example.invalid',aud:'authenticated',role:'authenticated'};
 const sessao={access_token:'teste-local',refresh_token:'teste-local',expires_at:Math.floor(Date.now()/1000)+86400,expires_in:86400,token_type:'bearer',user:usuario};
 const dir=path.resolve('Comparação de fatura'),arquivos=fs.readdirSync(dir),saida=path.resolve('.tmp-faturamento');
+const urlBase=(process.env.NEO_TEST_URL||'http://127.0.0.1:5173').replace(/\/$/,'');
 // Dados de leitura do banco da NEO; o navegador recebe respostas interceptadas.
 const postgres=require('../../traceone/frontend/node_modules/postgres');
 (async()=>{
@@ -18,6 +19,8 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
      await t`select set_config('request.jwt.claim.sub',${admin.user_id},true)`;
      contrato=await t`select * from neo_fat_contrato`;
      linhas=await t`select * from neo_fat_conferencia where fatura='9844' order by id limit 50`;
+     const [transposta]=await t`select * from neo_fat_conferencia where fatura='9844' and numserv='246450669' and codserv='8.82'`;
+     linhas=[transposta,...linhas];
    });
  }finally{await sql.end();}
  const browser=await chromium.launch({channel:'chrome',headless:true});let page;
@@ -48,7 +51,7 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
    await route.fulfill({status:200,contentType:'application/json',headers:{'content-range':'0-49/50'},body:JSON.stringify(corpo)});
  });
  page=await context.newPage();page.on('pageerror',e=>falhas.push(e.message));
- await page.goto(process.env.NEO_TEST_URL||'http://127.0.0.1:5173/faturamento/importar');
+ await page.goto(urlBase+'/faturamento/importar');
  await page.getByRole('heading',{name:'Uma fatura. As duas origens.'}).waitFor();
  await page.screenshot({path:path.join(saida,'importar-inicial.png'),fullPage:true});
  await page.getByLabel('Fatura Resumida',{exact:true}).setInputFiles(path.join(dir,arquivos.find(n=>n.startsWith('Resumo_Fat_9844'))));
@@ -75,18 +78,22 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  // Arquivo trocado: rejeição orienta qual origem deve ser anexada.
  await page.getByLabel('Fatura Completa',{exact:true}).setInputFiles(path.join(dir,arquivos.find(n=>n.startsWith('Resumo_Fat_9844'))));
  await page.getByRole('alert').filter({hasText:'Selecione a Fatura Completa'}).waitFor({timeout:120000});
- await page.goto('http://127.0.0.1:5173/faturamento/tabelas');
+ await page.goto(urlBase+'/faturamento/tabelas');
  await page.getByLabel('Buscar código ou descrição').fill('1.13');
  await page.getByRole('button',{name:'1.13',exact:true}).waitFor();
  assert(await page.getByRole('cell',{name:'0,137718',exact:true}).isVisible());
  assert(await page.getByRole('cell',{name:'0,165261',exact:true}).isVisible());
  assert(await page.getByRole('cell',{name:'Validado',exact:true}).isVisible());
  await page.screenshot({path:path.join(saida,'contrato-1.13.png'),fullPage:true});
- await page.goto('http://127.0.0.1:5173/faturamento?fatura=9844');
+ await page.goto(urlBase+'/faturamento?fatura=9844');
  await page.getByRole('columnheader',{name:'Equipe / frota'}).waitFor();
  await page.locator('tbody tr').first().waitFor();
+ await page.getByText('Transposição',{exact:true}).first().waitFor();
+ const rcFora=page.locator('tbody tr').filter({hasText:'RC86'});
+ if(await rcFora.count())assert.equal(await rcFora.getByText('Transposição',{exact:true}).count(),0);
  await page.locator('tbody tr').first().getByRole('button').click();
  await page.getByRole('dialog').getByText('Origem: Serviço da Fatura Completa × US_Turma da Fatura Resumida.').waitFor();
+ await page.getByRole('dialog').getByText('RC substituído pelo código',{exact:true}).waitFor();
  await page.screenshot({path:path.join(saida,'conferencia-equipe.png'),fullPage:true});
  assert.deepEqual(falhas,[]);
  console.log('OK: Chrome, desktop/celular, dois arquivos reais, prévia das equipes, bloqueio com um arquivo, envio dos lotes, sucesso, remoção, arquivo errado e valores do 1.13. APIs simuladas, sem escrita remota.');

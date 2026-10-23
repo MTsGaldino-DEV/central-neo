@@ -1,139 +1,85 @@
 # Faturamento — relatório para Matheus
 
-Atualizado em 23/10/2026 após a orientação sobre Fatura Resumida × Fatura Completa. Esta revisão entrega o cruzamento e a correção do catálogo; as outras ressalvas da auditoria continuam indicadas abaixo.
+Atualizado em 23/10/2026. Os dois PDFs fornecidos foram lidos por inteiro: [Código de Serviço Unificado.pdf](../Comparação%20de%20fatura/Código%20de%20Serviço%20Unificado.pdf) (Tabela 11, 14 páginas) e [Nota de Serviço Unificado.pdf](../Comparação%20de%20fatura/Nota%20de%20Serviço%20Unificado.pdf) (Tabela 12, 2 páginas). As tabelas, descrições, coluna **Como lançar** e notas ao fim de cada PDF foram confrontadas com a fatura 9844. O texto da NOTA 8 termina cortado nos dois arquivos e a NOTA 10, citada em quatro códigos, não consta neles.
 
-## Entregue
+## Entregue e como testar
 
-- /faturamento: conferência paginada, filtros na URL por fatura, situação, tabela, tipo, código, cidade, serviço e equipe; tipo da equipe/frota, fator numérico coincidente, detalhe com ident_turma e origem do vínculo, justificativa da glosa, observação, usuário/data e exportação das divergências em Excel.
-- /faturamento/importar: dois anexos obrigatórios, **Fatura Resumida** e **Fatura Completa**, com arrastar/selecionar, prévia, identificação de equipes e progresso. Lê as cinco abas da Resumida e Serviço/Apropriação da Completa. Publica dados e vínculos juntos, em lotes de 1.000. Não exige copiar abas manualmente. Período vem da aba Apropriação.
-- /faturamento/tabelas: consulta das tabelas 11/12; valores publicados preservados; acerto/ativação com motivo e histórico para ADMIN.
-- /faturamento/resumo: cards, comparação entre faturas com escala comum, barras com valores no hover, agrupamentos por tipo/código/cidade e ajustes. Filtro de período usa sobreposição do período da fatura.
-- Módulo de acesso faturamento, navegação lateral e cartão inicial.
-- Migrations 013 a 020 testadas com node scripts/migrar.cjs --testar antes de aplicar no CENTRAL-NEO. Nenhum objeto do Fechamento ou TraceOne alterado.
+- `/faturamento`: Conferência com filtro por fatura, situação, tabela, equipe e serviço; crédito, glosa, devido, fator, frota, turma e observações. RC transposto para Tabela 11 recebe um selo e uma explicação no detalhe. Em RC com várias linhas, o devido contratual é lançado **uma vez por atendimento** na primeira linha (ordem por `id`), apenas para totalização; o detalhe mostra o valor do atendimento.
+- `/faturamento/importar`: exige **Fatura Resumida** e **Fatura Completa**. Cruza `US_Servico.numserv → Serviço.numserv → Serviço.veiculo → US_Turma.numvei`, com `ident_turma` para desempate. Importação e vínculos são publicados juntos.
+- `/faturamento/tabelas`: Tabelas 11/12, fatores originais preservados, correções administrativas com motivo e histórico. `/faturamento/resumo`: totais, comparação e agrupamentos; o devido agora conta cada RC somente uma vez.
+- Migrations **023–027** testadas com `node scripts/migrar.cjs --testar` e aplicadas no banco CENTRAL-NEO. A 026 limita o aviso de transposição aos RCs publicados na Tabela 12; a 027 reabre conferências manuais antigas quando a regra/devido calculado mudou. Nenhuma migration manual pendente. Não houve alteração do Fechamento nem do TraceOne.
 
-## Como testar
+Para conferir exemplos em `/faturamento?fatura=9844`: o serviço **245531435**, código **6.01**, Moto, usa FATOR MOTO **1**, sem desconto de 0,7; o serviço **246450669**, RC07 com único código remunerável **8.82**, usa Tabela 11 e fecha em **0,016340 US**; o serviço **245881140** é RC08 multilinha com glosas e permanece divergente. Buscar **1.13** em `/faturamento/tabelas`: CSC/CSI **0,137718**, COD **0,165261**, 1 por conjunto. Reimportar os dois XLSX da pasta `Comparação de fatura/` mantém os vínculos e reabre revisões quando dados, equipe ou cálculo mudam.
 
-1. Entrar como ADMIN NEO ou liberar o módulo Faturamento em Logins e acessos.
-2. Abrir /faturamento?fatura=9844. A fatura já foi importada, com 27.389 linhas.
-3. Buscar 246220152: RC79 usa Tabela 11, código 7.28, 9 urbanos, 0,056511 US; situação OK.
-4. Filtrar por equipe Moto e abrir uma linha: consultar frota, turma, fatores e os quatro valores candidatos. MOTO_PROVAVEL está zerado na 9844 porque todas as equipes foram identificadas; REVISAR_RC_MULTILINHA permanece com 56 linhas.
-5. Em /faturamento/importar, anexar Resumo_Fat_9844_02-09_a_01-10-2026.xlsx como Resumida e RelatorioDadosFatura98442210261707592768056627079586513.xlsx como Completa. Conferir 21.910 serviços e as quatro equipes antes de atualizar. Reimportar os mesmos dados preserva a conferência; mudanças nos dados, equipe, frota ou fatores reabrem a linha e mantêm a observação anterior. Revisões antigas sem contexto de cálculo também precisam ser refeitas.
-6. Em /faturamento/tabelas, buscar 1.13: CSC 0,137718 / COD 0,165261. Alterações do administrador exigem motivo e atualizam cálculos e estado das revisões. Os fatores publicados seguem imutáveis após a complementação.
-7. Executar npm.cmd run typecheck e npm.cmd run build. Executar node scripts/faturamento-testar.cjs para testes de integração com rollback.
+## Leitura das notas e regra aplicada
 
-## Decisões provisórias
+| PDF e notas | Significado e tratamento |
+|---|---|
+| Tabela 11, corpo e notas 1–2 | Cada código tem descrição, instrução **Como lançar**, fator CSC/CSI, fator COD, FATOR RURAL e FATOR MOTO próprios. A migration 023 usa as colunas por código: por exemplo, **5.70, 6.01 e 6.05 têm moto = 1**; códigos com rural = 0 ou moto = 0 ficam com parcela zero. Para moto = 0,7, mantém-se provisoriamente 0,7 urbano / 0,9 rural conforme orientação de Matheus. Não dá para verificar em planilha se cada peça, conjunto ou dispositivo foi lançado corretamente.
+| Tabela 11, notas 3–4 | Dupla de motociclistas: serviço principal 0,7 e nota PSAP de apoio (fechamento 5.64) 0,3 do fator do principal. A fatura não traz ligação confiável PSAP → serviço principal; **não** se inventou rateio. Há duas linhas 5.64 com glosa na 9844, mas o fator remete à NOTA 10 ausente.
+| Tabela 11, notas 5–6 | O contrato permite atualização negociada das tabelas. O catálogo administrável com histórico de alterações já atende a mudança de fatores; novas regras exigem revisão específica.
+| Tabela 11, nota 7 | Atendimentos de operação/restauração são remunerados pela Tabela 12, salvo transposição expressa nas notas 2–3 daquela tabela.
+| Tabela 11, nota 8 | Exige códigos corretos e comprovantes de execução (imagens, equipamentos, materiais, coordenadas etc.). As duas planilhas não contêm todos esses comprovantes; a Conferência monetária não certifica execução física.
+| Tabela 12, corpo e nota 1 | Cada RC é **pago por atendimento**, não por código/linha. Os códigos de fechamento indicam o trabalho feito. A migration 025 limita a quantidade do RC a uma ocorrência e atribui um devido ao serviço; quando o líquido do atendimento bate, mas as linhas não, usa `REVISAR_RC_MULTILINHA`.
+| Tabela 12, notas 2–3 | Se o atendimento foi finalizado com **um único código remunerável da lista**, acompanhado ou não de códigos informativos com fator zero, o RC é descartado e paga-se apenas o código da Tabela 11. A lista está em `neo_fat_rc_transposicao`; migration 024 seleciona por serviço, independentemente do crédito. São **1.813 serviços / 1.820 linhas** transpostos na 9844. Havendo dois códigos remuneráveis, mantém-se o RC.
+| Tabela 12, nota 4 | Atendimento rural acrescenta 20%, exceto homem-hora. RC rural usa 1,2; as colunas L/N/O continuam guardadas sem conversão de homem-hora, como decidido provisoriamente. Na 9844, as 61 linhas com L/N/O preenchidas são MA62/1.62, sem RC.
+| Tabela 12, nota 5 | Um motociclista usa 0,7. Para rural, o sistema mantém **0,9 provisório** solicitado por Matheus; a leitura combinada das notas 4 e 5 poderia sugerir 1,2 × 0,7 = **0,84**, a confirmar antes de substituir a decisão explícita.
+| Tabela 12, notas 6–7 | PSAP de apoio e dupla de motos: principal 0,7, apoio 0,3 do atendimento. Sem chave de relacionamento entre serviços, o apoio não é calculado automaticamente.
+| Tabela 12, nota 8 | Obrigações de registro e evidência física. A verificação precisa dos documentos operacionais, além das planilhas de faturamento.
 
-| Regra | Onde trocar | Efeito na 9844 |
+A [extração por célula](faturamento-celulas-pdf.json) guarda página, posição e hash dos PDFs; [validação cruzada](faturamento-validacao-contrato.json) separa leitura do PDF da coincidência com pagamentos. São **215 pares numéricos validados de 219 códigos** (184 da Tabela 11 e os 31 RCs da Tabela 12). O extrator antigo deixava 1.13 vazio por exigir crédito coincidente, apesar do valor legível no PDF; a migration 020 já corrigiu isso. Nenhum fator foi inferido dos valores pagos.
+
+## Decisões provisórias e onde alterar
+
+| Decisão | Ponto de ajuste | Efeito na 9844 |
 |---|---|---|
-| Comparar CSC/CSI e COD; prioridade CSC quando ambos coincidem | neo_fat_calculo, candidatos; neo_fat_contrato.fator_csc/fator_cod | 13.101 linhas OK; fator aplicado exposto na conferência |
-| Devido de referência sem coincidência usa CSC; total é parcial | neo_fat_calculo.devido_referencia | 1.030,403921 US devidos; alternativas sem ajuste de moto: CSC 1.035,320784 / COD 1.242,382723 |
-| L/N/O guardadas sem cálculo; observação quando não coincide | neo_fat_calculo.observacoes; dados da neo_fat_linhas | qtdhh aparece em 61 linhas na fonte; não é convertido em US |
-| Ausência de vínculo: comparar também moto | neo_fat_base.tipo_turma e neo_fat_calculo | 0 MOTO_PROVAVEL na 9844; todos os serviços vinculados. Em outras faturas, mantém o tratamento para ausentes/ambíguos |
-| Moto urbano 0,7 e rural 0,9 substituem 1 e 1,2 | neo_fat_config.moto_urbano/moto_rural/rural | Calculados os dois fatores de moto em todas as linhas com contrato |
-| RC com várias linhas: somar devidos por linha e comparar com líquido do serviço | neo_fat_calculo, grupos e situacao_calculo | 56 linhas REVISAR_RC_MULTILINHA; não há deduplicação automática por atendimento |
-| Glosa positiva = estorno; validar magnitude contra o devido, além do crédito | neo_fat_calculo.candidatos e observacoes | 7,446161 US de estornos; destaque na tela |
-| Glosa negativa: débito positivo no resumo; líquido = crédito + glosa assinada | neo_fat_resumo e neo_fat_calculo | Débito 21,226389 US; glosa líquida −13,780228 US |
-| Crédito zero com débito integral pode coincidir; glosa não zero deve coincidir em magnitude com o mesmo fator | neo_fat_calculo.candidatos | Débitos parciais seguem para revisão; decisão explícita a confirmar |
-| NOTA armazenada, sem regra adicional | neo_fat_contrato.nota; neo_fat_calculo.observacoes | Códigos somente com NOTA 10 sem fator numérico ficam pendentes; o PDF não contém o texto dessa nota |
-| Fator publicado validado por células e texto do PDF, independentemente do crédito | scripts/faturamento-validar-pdf.py; scripts/faturamento-extrair.cjs; neo_fat_contrato | 215 códigos validados; 652 linhas sem fator. Regra anterior substituída pela orientação do usuário sobre 1.13 |
-| Tolerância de 0,000001, arredondamento a seis casas | neo_fat_config.tolerancia; neo_fat_base | Todos os cálculos em numeric no PostgreSQL |
+| Comparar CSC/CSI e COD, sem campo que identifique o centro acionador | `neo_fat_calculo`, seleção de candidatos; `neo_fat_contrato.fator_csc/fator_cod` | O fator que coincide é mostrado; referência CSC quando nenhum coincide. Devido parcial: **857,921936 US**; alternativas sem troca por coincidência: CSC **836,567217** / COD **1.003,879036**. |
+| Rural e moto por código da Tabela 11; moto 0,7/0,9 para códigos sem exceção e RC | `neo_fat_base`; `neo_fat_contrato.rural/moto`; `neo_fat_config.rural/moto_urbano/moto_rural` | 5.70, 6.01 e 6.05 de Moto deixam de ser falsamente divergentes por desconto indevido. O rural de Moto 0,9 ainda depende de confirmação. |
+| Lista de códigos que transpõem RC | Tabela `neo_fat_rc_transposicao` (campo `ativo`) e `neo_fat_base` | 1.813 serviços usam Tabela 11; exemplo RC07/8.82 fecha em 0,016340 US, sem somar RC. |
+| RC pago uma vez por atendimento; devido alocado à primeira linha para totalização | `neo_fat_base` e `neo_fat_calculo` | 1.310 linhas em `REVISAR_RC_MULTILINHA`; 642 `DIVERGENTE`. A alocação não afirma que a primeira linha executou todo o atendimento. |
+| L/N/O guardadas sem cálculo | `neo_fat_calculo.observacoes`; `neo_fat_linhas.dados` | 61 linhas MA62/1.62 com `qtdhh`; aguardam regra/fator da NOTA 10. |
+| Moto provável somente quando equipe não identificada | `neo_fat_calculo` e vínculo das duas planilhas | 0 `MOTO_PROVAVEL`; todos os 21.910 serviços têm equipe identificada. |
+| Glosa positiva como estorno; débito negativo separado | `neo_fat_calculo`; `neo_fat_resumo` | Crédito **917,112183**, débito **21,226389**, estorno **7,446161 US**. Glosa parcial continua caso de revisão. |
+| NOTA 10 sem regra nem fator inventado | `neo_fat_contrato.nota`, `fator_csc/fator_cod` nulos | 1.62/1.73/5.63/5.64 ficam sem cálculo quando aplicáveis. |
+| Tolerância e seis casas decimais | `neo_fat_config.tolerancia`; `round` em `neo_fat_base` | Tolerância atual: **0,000001 US**. |
 
 ## Números da fatura 9844
 
-Valores da aba US_Servico, em US:
-
-| Medida | Valor |
+| Medida da aba US_Servico | US |
 |---|---:|
-| Total creditado | 917,112183 |
-| Total debitado (glosas negativas, módulo) | 21,226389 |
-| Estornos (glosas positivas) | 7,446161 |
-| Líquido dos serviços | 903,331955 |
-| Devido parcial de referência | 1.030,403921 |
-| Linhas excluídas do devido por falta de fator | 652 |
+| Creditado | 917,112183 |
+| Debitado (glosas negativas, módulo) | 21,226389 |
+| Estorno (glosas positivas) | 7,446161 |
+| Líquido (crédito + glosa assinada) | 903,331955 |
+| Devido parcial de referência | 857,921936 |
 
 | Situação calculada | Linhas |
 |---|---:|
-| CODIGO_FORA_CONTRATO | 652 |
-| DIVERGENTE | 13580 |
+| OK | 24.785 |
+| DIVERGENTE | 642 |
 | MOTO_PROVAVEL | 0 |
-| OK | 13101 |
-| REVISAR_RC_MULTILINHA | 56 |
+| CODIGO_FORA_CONTRATO | 652 |
+| REVISAR_RC_MULTILINHA | 1.310 |
 
-Ajustes separados, aba Debito_Credito: débito 64,963712 US; crédito 95,344853 US. Não somar os valores repetidos das abas Cidades/US_Turma aos serviços. Não foram classificadas as abas Acima_Prazo e Sobreaviso: o escopo de importação solicitado enumera as cinco abas acima.
+Total: **27.389 linhas**. O devido é **parcial**: 652 linhas não possuem fator utilizável. Nas 734 ocorrências RC com várias linhas da 9844, 571 têm líquido compatível com um único valor de RC (considerando os candidatos CSC/COD/Moto); a classificação final também exige equipe compatível. Ajustes da aba `Debito_Credito` são separados: débito **64,963712**, crédito **95,344853 US**. Não se somam novamente valores repetidos de Cidades/US_Turma. As abas Acima_Prazo e Sobreaviso não foram classificadas nesta importação.
 
-## Fatores a carregar manualmente
+## Códigos e RCs não carregados
 
-A validação agora cruza a posição física das células no PDF com as extrações raw/layout, código a código. Dos 219 códigos, 215 têm os dois fatores numéricos confirmados. Todos os 31 RCs da Tabela 12 foram carregados. A migration 020 preencheu 99 códigos antes pendentes, com trilha e preservação dos acertos já feitos.
+Todos os **31 RCs** da Tabela 12 foram carregados. Faltam os valores numéricos de **1.62, 1.73, 5.63 e 5.64** da Tabela 11: as células remetem à **NOTA 10**, cujo texto não veio nos PDFs. Desses, 1.62 aparece em 61 linhas aplicáveis e 5.63 em duas. Outros códigos usados sem fator nos PDFs: **0.00 (209), 0.06 (1), 6.18 (2), 7.18 (34), 7.19 (320), 7.20 (7), V.01 (7), Z.22 (3), Z.23 (4), Z.38 (1), Z.41 (1)**. Essas 589 linhas, somadas às 63 da NOTA 10, permanecem `CODIGO_FORA_CONTRATO`. Não se supôs preço para elas.
 
-| Tabela | Código | Motivo | Linhas aplicáveis na 9844 |
-|---|---|---|---:|
-| 11 | 1.62 | NOTA 10, sem fator numérico nem texto da nota no PDF fornecido | 61 |
-| 11 | 1.73 | NOTA 10 | 0 |
-| 11 | 5.63 | NOTA 10 | 2 |
-| 11 | 5.64 | NOTA 10 | 0 |
+## Perguntas que continuam abertas
 
-Outras 589 linhas usam códigos ausentes dos PDFs fornecidos, sem RC contratual aplicável: **0.00 (209), 0.06 (1), 6.18 (2), 7.18 (34), 7.19 (320), 7.20 (7), V.01 (7), Z.22 (3), Z.23 (4), Z.38 (1), Z.41 (1)**. Com as 63 linhas da NOTA 10, são 652 linhas sem fator. Permanecem CODIGO_FORA_CONTRATO; não foram inventados valores.
-
-### Por que o 1.13 estava vazio
-
-O extrator anterior condicionava o carregamento do contrato à existência de pelo menos um crédito coincidente na fatura 9844. O 1.13 possui fatores claros no PDF, mas suas oito linhas nesta fatura pertencem a RCs com precedência da Tabela 12; não havia amostra aplicável da Tabela 11. Esse critério descartou indevidamente o valor publicado.
-
-Agora o 1.13 mostra **CSC/CSI 0,137718 e COD 0,165261**, rural 1,2, moto 0,7 e lançamento por conjunto. A correção do catálogo não altera diretamente suas oito linhas na 9844 enquanto vigorar a precedência dos RCs. O valor publicado e a coincidência do crédito são validações distintas.
-
-Evidências: [células do PDF](faturamento-celulas-pdf.json), com SHA-256/página/coordenada, e [validação cruzada](faturamento-validacao-contrato.json). A extração não reescreve a migration 014: produz um catálogo candidato separado para uma nova migration.
-
-## Perguntas para revisão
-
-1. Qual campo determina CSC/CSI ou COD? A coincidência numérica é provisória.
-2. O que significam L/N/O e como remunerar homem-hora?
-3. A ligação foi entregue e validada. Falta definir como ratear serviços com múltiplas equipes de apoio; a importação rejeita vínculos conflitantes para o mesmo serviço.
-4. Confirmar moto 0,7 urbano / 0,9 rural e exceções: 10.224 linhas de Moto divergem dessa regra, mas o crédito coincide com o fator normal. É necessário confirmar como a CEMIG remunera esses atendimentos; o sistema não muda a regra para fazer o pagamento coincidir.
-5. RC é pago uma vez por atendimento ou por linha? Como distribuir o valor no exemplo 245881140?
-6. Confirmar estornos positivos e a regra para glosas parciais, crédito zero e valores simultâneos.
-7. Disponibilizar o texto da NOTA 10 e confirmar a aplicação das demais notas.
-8. Fornecer fatores dos códigos ausentes dos PDFs e o conteúdo da NOTA 10. RC40 e códigos numéricos sem amostra já foram carregados e validados no PDF.
-9. Confirmar se o período do resumo deve seguir a fatura ou uma data de execução de outra fonte.
+1. Qual campo da origem indica que **CSC/CSI** ou **COD** acionou a equipe? A coincidência numérica é apenas diagnóstico.
+2. Fornecer a **NOTA 10** completa, os fatores dos códigos ausentes e eventual continuação da NOTA 8.
+3. Como ligar uma nota **PSAP** à equipe e ao atendimento principal para aplicar 0,3, especialmente quando há mais de uma equipe?
+4. Confirmar o multiplicador **rural de Moto** (0,9 solicitado; notas sugerem combinação 0,84) e como tratar homem-hora/L/N/O.
+5. Como revisar **glosas parciais e simultâneas**? O serviço 245881140 tem crédito, glosa positiva e negativa em linhas distintas.
+6. Em 5.62 há pagamentos que parecem seguir o RC apesar da lista de transposição da nota 3. Existe exceção contratual/operacional fora destes PDFs? O sistema manteve a regra literal e deixou esses casos divergentes.
+7. Para análise física, onde obter evidências exigidas pelas notas 8 e verificar as unidades da coluna **Como lançar**?
 
 ## Verificações e limites
 
-- Typecheck e build executados em cada entrega; o build mantém o aviso existente de bundle acima de 500 kB.
-- Integração com rollback: exemplo real 7.28, moto provável, código ausente, divergência, RC multilinha, preservação da revisão, alteração de dados e RLS sem módulo. Resumo após índices e novos vínculos: aproximadamente 2,0 s na conexão utilizada.
-- As quatro entregas têm commits separados. Nenhum arquivo preexistente do usuário foi incluído.
-- Chrome desktop (1440 px) e celular (390 px): seleção dos arquivos reais, prévia, envio dos lotes, conclusão, remoção, arquivo incompatível, contrato 1.13 e detalhe de equipe. APIs do navegador interceptadas; cálculos, importação real e permissões verificados separadamente no CENTRAL-NEO. Capturas inspecionadas. Deploy do Dokploy ainda não verificado.
-- Histórico de conferência mantém a última observação por linha. Histórico de fatores preserva todos os acertos.
-- Reimportação preserva conferências pelo identificador idapropriacaotemposervico da fonte. Se esse identificador mudar na CEMIG, a nova linha precisa de revisão.
-
-## Cruzamento das equipes — resultado real
-
-US_Servico.numserv → Serviço.numserv → Serviço.veiculo → US_Turma.numvei.
-Quando a frota tem mais de um tipo no período, Serviço.ident_turma seleciona a turma correta, exigindo correspondência do veículo. Sem esse desempate, 5.299 serviços teriam mais de um tipo possível; com ele, todos os 21.910 serviços são identificados.
-
-| Equipe | Serviços únicos | Linhas de faturamento |
-|---|---:|---:|
-| Multifuncional (D) | 9.657 | 14.303 |
-| Moto (M) | 10.311 | 10.426 |
-| Umpla (U) | 1.872 | 2.563 |
-| Quarteto (Q) | 70 | 97 |
-
-Com a identificação real, 10.238 linhas de Moto são DIVERGENTE; em 10.224 delas o crédito coincide com CSC/COD **normal**, não com o multiplicador provisório de Moto. Isso explica a maior parte do aumento de divergências em relação à fotografia anterior, quando a equipe não era conhecida e a coincidência normal também era aceita. Equipe confirmada restringe a comparação ao cálculo correspondente, inclusive no agregado de RC multilinha. Totais de crédito/débito não mudaram.
-
-A migration 020 reduz linhas sem fator de 657 para 652: as cinco linhas RC40 passam a ter cálculo. O total devido continua parcial e depende das regras provisórias. As ressalvas de glosa parcial, exceções das notas da Tabela 12, RC por atendimento e acabamento das outras telas não foram declaradas resolvidas por esta revisão.
-
-## Reprodução das verificações desta revisão
-
-**Correção do erro 500 na Conferência.** A view com RLS aplicado a cada subconsulta
-estourava o tempo limite ao atender `GET neo_fat_conferencia?select=*&fatura=eq.9844`.
-As migrations 021/022 foram testadas e aplicadas. A versão publicada da tela volta
-a consultar a view em cerca de 2,2 s para página/contagem; o novo frontend usa
-`neo_fat_listar`, que inclui filtros, paginação e total com verificação de acesso.
-Usuário sem módulo recebe zero linhas na view e erro de acesso na RPC. Não há
-migration manual pendente. O teste de regressão é
-`node scripts/faturamento-conferencia-testar.cjs`.
-
-- node scripts/faturamento-planilhas-testar.cjs: duas planilhas reais, faturas diferentes, frota ambígua, ident_turma incompatível, duplicidade e datas.
-- node scripts/faturamento-duas-planilhas-testar.cjs: rollback, publicação atômica, falta de lotes, mistura de faturas, reimportação, mudança de equipe/revisão, contrato 1.13 e permissões.
-- node scripts/faturamento-testar.cjs: suíte anterior de cálculo, resumo e RLS.
-- npm.cmd run typecheck e npm.cmd run build: aprovados; aviso preexistente de bundle acima de 500 kB.
-- node scripts/faturamento-ui-testar.cjs: requer npm.cmd run dev, Chrome e Playwright instalado em .tmp-faturamento/browser. Usa origens de dados locais para interceptar o Supabase, sem gravações pelo navegador. Capturas ficam em .tmp-faturamento/.
-- Extração: PyMuPDF para scripts/faturamento-validar-pdf.py; pdftotext -layout e -raw em .tmp-faturamento/tabela11/12[-raw].txt; depois node scripts/faturamento-extrair.cjs .tmp-faturamento <Fatura Resumida.xlsx>. A saída contrato-validado.json é candidata de carga, nunca uma migration aplicada.
-- Migrations 019/020: ensaiadas via node scripts/migrar.cjs --testar (saída DRY-RUN: desfeito), aplicadas e conferidas. Não há migration manual pendente desta entrega.
+- `node scripts/faturamento-testar.cjs`: integração com rollback, fator Moto 1/0, rural 0, transposição com código informativo zero, manutenção do RC com dois códigos remuneráveis, RC por atendimento e conferência/RLS.
+- `node scripts/faturamento-duas-planilhas-testar.cjs`: importação e vínculos com rollback. `node scripts/faturamento-conferencia-testar.cjs`: consulta antiga, RPC paginada, filtros e ausência de acesso sem módulo; consulta antiga de 50 linhas/contagem concluída em cerca de 4,9 s no teste.
+- `npm.cmd run typecheck` e `npm.cmd run build` passaram; permanece o aviso de bundle principal acima de 500 kB. Chrome com APIs simuladas validou os dois arquivos reais, a Conferência e o selo de transposição (inclusive ausência do selo para RC fora da Tabela 12); a captura foi inspecionada. Deploy Dokploy não foi verificado.
+- Reimportação conserva histórico de conferência com contexto do cálculo. Mudança de equipe, dados, fatores, devido ou situação calculada reabre revisão; os contextos antigos foram reabertos para que a nova regra seja validada. O devido de RC é atribuído à primeira linha apenas para totalização; agrupamentos por código podem atribuir esse valor a um código que não representa sozinho todo o trabalho.

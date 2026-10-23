@@ -14,7 +14,7 @@ const sql=postgres(env.NEO_DATABASE_URL,{ssl:'require',prepare:false,onnotice:()
     const [total]=await t`select count(*)::int n from neo_fat_conferencia where fatura='9844'`;
     assert.equal(linhas.length,50);assert.equal(total.n,27389);
     console.log('View usada pelo frontend anterior:',Date.now()-inicio,'ms, 50/27.389 linhas');
-    for(const [nome,filtros,esperado] of [['todas',{fatura:'9844'},27389],['Moto',{fatura:'9844',tipo_turma:'M'},10426],['divergentes',{fatura:'9844',situacao:'DIVERGENTE'},13580]]){
+    for(const [nome,filtros,esperado] of [['todas',{fatura:'9844'},27389],['Moto',{fatura:'9844',tipo_turma:'M'},10426],['divergentes',{fatura:'9844',situacao:'DIVERGENTE'},642]]){
       const [r]=await t`select neo_fat_listar(${t.json(filtros)},0,50) dados`;
       assert.equal(r.dados.total,esperado);assert.equal(r.dados.linhas.length,50);
       console.log('RPC',nome,r.dados.total);

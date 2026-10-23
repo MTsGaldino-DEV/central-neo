@@ -9,7 +9,7 @@ const sql=postgres(env.NEO_DATABASE_URL,{ssl:'require',prepare:false,onnotice:()
  await t`select set_config('request.jwt.claim.sub',${admin.user_id},true)`;
  const [ex]=await t`select dados from neo_fat_linhas where fatura='9844' and codserv='7.28' limit 1`;
  const fatura='__duas_planilhas__';
- const servico={...ex.dados,idapropriacao:fatura,idapropriacaotemposervico:'linha1',numserv:'servico1',tipo_serv:'RC79',codserv:'7.28',qtdurbanohn:9,qtdruralhn:0,ustotal:0.039558,usglosa:0};
+ const servico={...ex.dados,idapropriacao:fatura,idapropriacaotemposervico:'linha1',numserv:'servico1',tipo_serv:'RC79',codserv:'1.02',qtdurbanohn:9,qtdruralhn:0,ustotal:0.421205,usglosa:0};
  const turmas=[{idapropriacao:fatura,numvei:'7',ident_turma:'m',tipo_turma:'M'},{idapropriacao:fatura,numvei:'7',ident_turma:'d',tipo_turma:'D'}];
  async function preparar(){
    const contagens={US_Servico:1,US_Turma:2,Evento_Glosa:0,Glosa:0,Debito_Credito:0,Servico:1};

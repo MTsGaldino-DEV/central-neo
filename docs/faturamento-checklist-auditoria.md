@@ -67,3 +67,9 @@ Esta seção atualiza os pontos corrigidos sem apagar o diagnóstico da entrega 
 - Chrome desktop/celular: prévia/importação simulada com arquivos reais, resultado, erro de arquivo, contrato e equipe. Banco: importação real, preservação/reabertura de revisão, rollback e permissões. O teste do navegador usa respostas interceptadas e não comprova deploy.
 - Nova fotografia: 13.101 OK, 13.580 DIVERGENTE, 0 MOTO_PROVAVEL, 652 CODIGO_FORA_CONTRATO, 56 REVISAR_RC_MULTILINHA. Devido parcial 1.030,403921 US. Diagnóstico e perguntas no relatório atualizado.
 - Isso não homologa as regras provisórias de glosa/RC/NOTAs, nem resolve todas as lacunas do Resumo e das demais telas apontadas acima.
+
+## Revisão integral dos dois PDFs e notas (23/10/2026)
+
+As tabelas acima registram a auditoria **histórica** da entrega inicial e da primeira revisão. O estado atual do cálculo está no [relatório de Faturamento](faturamento-relatorio.md). Foram lidas todas as páginas disponíveis dos dois PDFs, inclusive as notas finais. As migrations 023–027, testadas com rollback antes da aplicação, corrigiram FATOR RURAL/MOTO por código, transposição de RC para um único código remunerável da lista das notas 2–3, remuneração de RC uma vez por atendimento e reabertura de revisões manuais antigas. A conferência mostra o motivo da transposição e o devido atribuído a uma linha para somar sem duplicidade. O teste visual em Chrome com APIs simuladas e os testes de integração passaram.
+
+Fotografia atual da 9844: **24.785 OK, 642 DIVERGENTE, 1.310 REVISAR_RC_MULTILINHA, 652 CODIGO_FORA_CONTRATO e 0 MOTO_PROVAVEL**, devido parcial **857,921936 US**. Permanecem abertas a NOTA 10 ausente, a ligação PSAP/apoio, o rural de Moto, glosas parciais, a verificação física da coluna Como lançar/notas 8 e a revisão de casos como 5.62. O deploy continua não verificado.
