@@ -54,6 +54,7 @@ export function useSecoesNav(): SecaoNav[] {
 
   if (temModulo(acesso, 'faturamento')) {
     secoes.push({ titulo: 'Faturamento', itens: [
+      { label: 'Importar fatura', href: '/faturamento/importar', icon: FileSpreadsheet },
       { label: 'Tabelas do contrato', href: '/faturamento/tabelas', icon: Receipt },
     ] });
   }
