@@ -17,6 +17,13 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 ## Preferências do Matheus
 
 - Trabalhar em português do Brasil, seguindo os padrões existentes.
+- **Prioridade visual explícita (23/10/2026):** Matheus valoriza muito sistemas
+  bonitos e interfaces bem acabadas. Qualidade visual é requisito central de
+  aceitação: cuidar de hierarquia, tipografia, espaçamento, cores, gráficos,
+  estados de interação e responsividade, mantendo a identidade da Central NEO.
+  Usar as telas existentes como referência de acabamento e validar a experiência
+  no navegador antes de declarar uma entrega de interface concluída. Registrar
+  qualquer impedimento dessa validação; compilação sozinha não comprova qualidade visual.
 - Entender o projeto antes de alterar. Resolver decisões técnicas rotineiras com
   autonomia, executar verificações e entregar o resultado sem pedir confirmações repetidas.
 - A autorização se aplica às tarefas solicitadas; respeitar os limites explícitos
