@@ -121,6 +121,15 @@ A migration 020 reduz linhas sem fator de 657 para 652: as cinco linhas RC40 pas
 
 ## Reprodução das verificações desta revisão
 
+**Correção do erro 500 na Conferência.** A view com RLS aplicado a cada subconsulta
+estourava o tempo limite ao atender `GET neo_fat_conferencia?select=*&fatura=eq.9844`.
+As migrations 021/022 foram testadas e aplicadas. A versão publicada da tela volta
+a consultar a view em cerca de 2,2 s para página/contagem; o novo frontend usa
+`neo_fat_listar`, que inclui filtros, paginação e total com verificação de acesso.
+Usuário sem módulo recebe zero linhas na view e erro de acesso na RPC. Não há
+migration manual pendente. O teste de regressão é
+`node scripts/faturamento-conferencia-testar.cjs`.
+
 - node scripts/faturamento-planilhas-testar.cjs: duas planilhas reais, faturas diferentes, frota ambígua, ident_turma incompatível, duplicidade e datas.
 - node scripts/faturamento-duas-planilhas-testar.cjs: rollback, publicação atômica, falta de lotes, mistura de faturas, reimportação, mudança de equipe/revisão, contrato 1.13 e permissões.
 - node scripts/faturamento-testar.cjs: suíte anterior de cálculo, resumo e RLS.

@@ -97,6 +97,16 @@ auditoria não corrige o código nem redefine as regras de negócio.
 
 ## Revisão de Faturamento — duas planilhas e PDF, 23/10/2026
 
+**Correção posterior do HTTP 500:** a consulta direta autenticada à view
+`neo_fat_conferencia` estourava o tempo limite porque as políticas de acesso eram
+reavaliadas nas subconsultas de cada linha. Migrations 021/022 aplicadas: a RPC
+`neo_fat_listar` pagina e filtra após conferir o módulo; as views passaram a
+consultar como dono com checagem explícita do módulo, mantendo a versão publicada
+funcional. Consulta antiga: 50 linhas e contagem 27.389 em ~2,2 s; novo caminho:
+~2–3 s para página filtrada. Teste sem módulo retornou zero linhas na view e
+acesso negado na RPC. Frontend atualizado para usar a RPC; typecheck/build e
+teste no navegador passaram. Não é preciso rodar migration manualmente.
+
 - A importação exige Fatura Resumida e Fatura Completa. Cruzamento: US_Servico.numserv → Serviço.numserv → Serviço.veiculo → US_Turma.numvei. Serviço.ident_turma desempata veículos usados por tipos de equipe diferentes no período e exige correspondência da frota. Não é preciso mover abas manualmente.
 - Os 21.910 serviços da 9844 foram identificados: 10.311 Moto, 9.657 Multifuncional, 1.872 Umpla, 70 Quarteto. Dados/vínculos publicados juntos; mudança de equipe/fatores reabre revisão manual anterior com contexto registrado.
 - O 1.13 estava vazio porque a extração anterior exigia crédito coincidente na fatura, apesar do fator publicado no PDF. Extração por célula, página e texto validou 215/219 pares; migration 020 complementou 99 fatores com histórico. 1.13: CSC 0,137718 / COD 0,165261. 1.62, 1.73, 5.63 e 5.64 seguem pendentes da NOTA 10.

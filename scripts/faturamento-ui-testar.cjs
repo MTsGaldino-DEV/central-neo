@@ -13,8 +13,12 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  const sql=postgres(env.NEO_DATABASE_URL,{ssl:'require',prepare:false,onnotice:()=>{}});
  let contrato,linhas;
  try{
-   contrato=await sql`select * from neo_fat_contrato`;
-   linhas=await sql`select * from neo_fat_conferencia where fatura='9844' order by id limit 50`;
+   await sql.begin(async t=>{
+     const [admin]=await t`select user_id from neo_acessos where papel='ADMIN' and ativo limit 1`;
+     await t`select set_config('request.jwt.claim.sub',${admin.user_id},true)`;
+     contrato=await t`select * from neo_fat_contrato`;
+     linhas=await t`select * from neo_fat_conferencia where fatura='9844' order by id limit 50`;
+   });
  }finally{await sql.end();}
  const browser=await chromium.launch({channel:'chrome',headless:true});let page;
  try{
@@ -34,9 +38,10 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
    }else if(recurso==='neo_fat_enviar_lote'){lotes.push(route.request().postDataJSON());corpo=null;}
    else if(recurso==='neo_fat_finalizar_completa'){finalizou=true;corpo=null;}
    else if(recurso==='neo_fat_contrato')corpo=contrato;
-   else if(recurso==='neo_fat_conferencia'){
-     corpo=linhas;
-     const tipo=url.searchParams.get('tipo_turma')?.replace('eq.','');if(tipo)corpo=corpo.filter(l=>l.tipo_turma===tipo);
+   else if(recurso==='neo_fat_listar'){
+     const filtros=route.request().postDataJSON().p_filtros;
+     const filtradas=filtros.tipo_turma?linhas.filter(l=>l.tipo_turma===filtros.tipo_turma):linhas;
+     corpo={linhas:filtradas,total:filtradas.length};
    }
    else if(recurso==='neo_fat_contrato_historico')corpo=[];
    else throw Error('Requisição inesperada: '+recurso);
