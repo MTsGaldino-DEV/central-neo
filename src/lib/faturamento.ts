@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { ABAS_FAT, type LeituraFat, type RegistroFat } from './faturamentoPlanilhas';
+import { ABAS_FAT, cruzarFaturas, type LeituraCompletaFat, type LeituraFat, type RegistroFat } from './faturamentoPlanilhas';
 
 export interface ContratoFat {
   tabela: string; codigo: string; descricao: string; como_lancar: string | null;
@@ -26,18 +26,23 @@ export async function historicoFat(c: ContratoFat): Promise<HistoricoFat[]> {
 export const usFat = (n: number | null | undefined) => n == null ? '—' : Number(n).toLocaleString('pt-BR',{minimumFractionDigits:6,maximumFractionDigits:6});
 export const erroFat = (e: unknown) => e instanceof Error ? e.message : (e as {message?:string})?.message ?? 'Não foi possível concluir a operação.';
 
-export interface FaturaFat { id:string; arquivo:string; inicio:string; fim:string; importado_em:string }
+export interface FaturaFat { id:string; arquivo:string; arquivo_completo:string|null; inicio:string; fim:string; importado_em:string }
 export async function faturasFat():Promise<FaturaFat[]> {
   const {data,error}=await supabase.from('neo_fat_faturas').select('*').order('fim',{ascending:false});if(error)throw error;return data??[];
 }
-export async function importarFat(l:LeituraFat,arquivo:string,inicio:string,fim:string,progresso:(s:string)=>void){
-  const contagens=Object.fromEntries(ABAS_FAT.map(a=>[a,l.abas[a].length]));
-  const {data:id,error}=await supabase.rpc('neo_fat_iniciar',{p_fatura:l.fatura,p_arquivo:arquivo,p_inicio:inicio,p_fim:fim,p_contagens:contagens});if(error)throw error;
-  for(const aba of ABAS_FAT)for(let i=0;i<l.abas[aba].length;i+=1000){
-    progresso(`${aba}: ${Math.min(i+1000,l.abas[aba].length)} de ${l.abas[aba].length}`);
-    const {error}=await supabase.rpc('neo_fat_enviar_lote',{p_importacao:id,p_aba:aba,p_numero:i/1000,p_dados:l.abas[aba].slice(i,i+1000)});if(error)throw error;
+export async function importarFat(l:LeituraFat,arquivo:string,completa:LeituraCompletaFat,arquivoCompleto:string,progresso:(s:string,percentual:number)=>void){
+  cruzarFaturas(l,completa);
+  const abas:Record<string,RegistroFat[]>={...l.abas,Servico:completa.vinculos.map(v=>({...v,idapropriacao:completa.fatura}))};
+  const contagens=Object.fromEntries(Object.entries(abas).map(([a,linhas])=>[a,linhas.length]));
+  const total=Object.values(contagens).reduce((a,b)=>a+b,0);let enviados=0;
+  const {data:id,error}=await supabase.rpc('neo_fat_iniciar_completa',{p_fatura:l.fatura,p_arquivo:arquivo,p_arquivo_completo:arquivoCompleto,p_inicio:completa.inicio,p_fim:completa.fim,p_contagens:contagens});if(error)throw error;
+  for(const aba of [...ABAS_FAT,'Servico'])for(let i=0;i<abas[aba].length;i+=1000){
+    const lote=abas[aba].slice(i,i+1000);
+    const {error}=await supabase.rpc('neo_fat_enviar_lote',{p_importacao:id,p_aba:aba,p_numero:i/1000,p_dados:lote});if(error)throw error;
+    enviados+=lote.length;progresso(`Enviando ${aba==='Servico'?'vínculos das equipes':aba}…`,Math.round(enviados/total*95));
   }
-  progresso('Concluindo a importação…');const {error:falha}=await supabase.rpc('neo_fat_finalizar',{p_importacao:id});if(falha)throw falha;
+  progresso('Concluindo a fatura e o cruzamento das equipes…',97);const {error:falha}=await supabase.rpc('neo_fat_finalizar_completa',{p_importacao:id});if(falha)throw falha;
+  progresso('Importação concluída.',100);
 }
 export async function importarVinculosFat(fatura:string,linhas:RegistroFat[]){
   // Uma chamada mantém o vínculo completo da planilha na mesma transação.
@@ -45,6 +50,7 @@ export async function importarVinculosFat(fatura:string,linhas:RegistroFat[]){
 }
 
 export interface LinhaFat {
+ tipo_turma:string|null;numvei:string|null;ident_turma:string|null;
  fatura:string;id:string;numserv:string;tipo_serv:string;codserv:string;cidade:string;tabela:string|null;
  urbano:number;rural:number;fator_csc:number|null;fator_cod:number|null;fator_aplicado:string|null;
  devido_referencia:number|null;devido_csc:number|null;devido_cod:number|null;moto_csc:number|null;moto_cod:number|null;
@@ -60,7 +66,7 @@ export async function linhasFat(p:URLSearchParams,pagina=0,limite=50){
    if(!faturas.length)return {linhas:[] as LinhaFat[],total:0};
    q=q.in('fatura',faturas.map(f=>f.id));
  }
- for(const k of ['fatura','situacao','tabela','tipo_serv','codserv','cidade'])if(p.get(k))q=q.eq(k,p.get(k)!);
+ for(const k of ['fatura','situacao','tabela','tipo_serv','codserv','cidade','tipo_turma'])if(p.get(k))q=q.eq(k,p.get(k)!);
  if(p.get('q'))q=q.ilike('numserv',`%${p.get('q')!.replace(/[%_]/g,'')}%`);
  const {data,error,count}=await q.order('fatura').order('id').range(pagina*limite,pagina*limite+limite-1);if(error)throw error;
  return {linhas:(data??[]) as LinhaFat[],total:count??0};

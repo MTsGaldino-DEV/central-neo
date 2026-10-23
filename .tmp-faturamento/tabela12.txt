@@ -1,0 +1,174 @@
+                                                       CLASSIFICAÇÃO: Reservado até a publicação do Edital
+
+TABELA 12 – FATORES DE REMUNERAÇÃO DOS SERVIÇOS DE OPERAÇÃO E RESTAURAÇÃO DO
+                                    SISTEMA ELÉTRICO PAGOS POR ATENDIMENTO
+
+ RC   DESCRIÇÃO DO ATENDIMENTO            O QUE FAZER                                                   FATOR DE US POR  FATOR DE US POR
+RC01                                                                                                     ATENDIMENTO      ATENDIMENTO
+RC03    ATENDIMENTO A ABALROAMENTO DE           TODAS AS ATIVIDADES NECESSÁRIAS PARA A ELIMINAÇÃO DA        CSC ou CSI           COD
+RC04                       POSTE                   CONDIÇÃO DE RISCO / RECOLHIMENTO DE MATERIAIS /           0,138131         0,165757
+
+RC05  ELIMINADO RISCO DE CHOQUE ELETRICO  NORMALIZAÇÃO DO FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS           0,085614         0,102737
+RC06                                                               ATIVIDADES PROGRAMÁVEIS.
+RC07     REPARADO CURTO NA TUBULACAO                                                                         0,085240         0,102289
+RC08                                             TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O
+RC09  REPARADO FAISCAMENTO NA REDE, IP E    FORNECIMENTO DE ENERGIA COM ELIMINAÇÃO DA CONDIÇÃO DE            0,092314         0,110776
+RC14                       RAMAL
+RC15                                               RISCO. EXCEÇÃO PARA AS ATIVIDADES PROGRAMÁVEIS.           0,113918         0,136701
+RC16   NORMALIZADO FALTA DE ENERGIA NO           TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O           0,084679         0,101615
+RC17                TRANSFORMADOR           FORNECIMENTO DE ENERGIA, ELIMINAR A CONDIÇÃO DE RISCO OU         0,116584         0,139901
+RC18                                      PARA FAZER O CORTE PARA CONSERTO. EXCEÇÃO PARA AS ATIVIDADES       0,154125         0,184950
+RC19        NORMALIZADO FALTA ENERGIA                                                                        0,067258         0,080709
+RC21                                                                       PROGRAMÁVEIS.                     0,093544         0,112252
+RC30  NORMALIZADO FALTA ENERGIA NA REDE          TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O
+RC31                DE MÉDIA TENSÃO         FORNECIMENTO DE ENERGIA, ELIMINAR A CONDIÇÃO DE RISCO OU         0,110331         0,132397
+RC32                                      PARA FAZER O CORTE PARA CONSERTO. EXCEÇÃO PARA AS ATIVIDADES
+RC39            REPARADO FIO PARTIDO                                                                         0,103409         0,124091
+RC40                                                                       PROGRAMÁVEIS.                     0,103409         0,124091
+RC41  RETIRADO OBJETOS ESTRANHOS NA REDE         TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O           0,103409         0,124091
+RC42                                            FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+RC43    VERIFICADO POSTE EM MAU ESTADO                                                                       0,118142         0,141770
+RC45                                                                       PROGRAMÁVEIS.
+              REPARADO RAMAL PARTIDO             TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O           0,111066         0,133279
+                                                FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES          0,074241         0,089090
+         ATENDIMENTO A TENSAO ELEVADA                                                                        0,062101         0,074521
+                                                                           PROGRAMÁVEIS.                     0,066858         0,080230
+           ATENDIMENTO A TENSAO BAIXA            TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O           0,074963         0,089955
+                                                FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES          0,064840         0,077808
+        ATENDIMENTO A TENSAO OSCILANTE                                                                       0,103927         0,124713
+                                                                           PROGRAMÁVEIS.                     0,080207         0,096249
+      ATENDIMENTO A TRANSFORMADOR EM             TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O           0,120280         0,144336
+            CHAMAS/CRUZETA QUEBRADA         FORNECIMENTO DE ENERGIA COM ELIMINAÇÃO DA CONDIÇÃO DE
+
+       NORMALIZADO FALTA DE ENERGIA NO             RISCO. EXCEÇÃO PARA AS ATIVIDADES PROGRAMÁVEIS.
+                    TRANSFORMADOR         TODAS AS ATIVIDADES NECESSÁRIAS PARA ELIMINAR A CONDIÇÃO DE
+
+           ELIMINADO VESPEIRO NO POSTE             RISCO. EXCEÇÃO PARA AS ATIVIDADES PROGRAMÁVEIS.
+      TROCADO DISJUNTOR C/FALTA ENERGIA       ANALISAR A CONDIÇÃO DO POSTE, FAZER TESTES NECESSÁRIOS,
+      REALIZADO LEITURA DE EQUIPAMENTOS         ORIENTAR AO SOLICITANTE E SE NECESSÁRIO, PROGRAMAR A
+
+                           DE MT                                     NORMALIZAÇÃO DA REDE.
+      VERIFICADO TRANSFORMADOR REDE OU           TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O
+       EQUIPAMENTO FURTADO/DANIFICADO       FORNECIMENTO DE ENERGIA, ELIMINAR A CONDIÇÃO DE RISCO OU
+                                             FAZER O CORTE PARA CONSERTO. EXCEÇÃO PARA AS ATIVIDADES
+            NORMALIZADO FALTA ENERGIA
+                                                                           PROGRAMÁVEIS.
+         NORMALIZADO FALTA ENERGIA NO            TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O
+            CONSUMIDOR FOTOVOLTAICO             FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+
+      VERIFICADO TRANSFORMADOR REDE OU                                     PROGRAMÁVEIS.
+       EQUIPAMENTO FURTADO/DANIFICADO            TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O
+                                                FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+                        VERIFICADO
+         VAZAMENTO/CONTAMINACÃO COM                                        PROGRAMÁVEIS.
+                                                   TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR
+                      OLEO ISOLANTE             FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+
+                                                                           PROGRAMÁVEIS.
+                                                TODAS AS ATIVIDADES NECESSÁRIAS PARA A ELIMINAÇÃO DA
+                                          CONDIÇÃO DE RISCO, RECOLHIMENTO DE MATERIAIS, NORMALIZAÇÃO
+                                             DO FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+
+                                                                           PROGRAMÁVEIS.
+                                                 TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O
+                                                FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+
+                                                                           PROGRAMÁVEIS.
+                                              TODAS AS ATIVIDADES NECESSÁRIAS PARA ELIMINAR VESPEIRO.
+
+                                                        EXCEÇÃO PARA AS ATIVIDADES PROGRAMÁVEIS.
+                                                 TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O
+
+                                                                   FORNECIMENTO DE ENERGIA.
+
+                                                  LEITURA DOS DADOS DOS EQUIPAMENTOS SOLICITADOS.
+
+                                           ANÁLISE DA SOLICITAÇÃO NO LOCAL, ORIENTAÇÃO AO SOLICITANTE,
+                                                 PROGRAMAR, SE NECESSÁRIO, A NORMALIZAÇÃO DA REDE.
+                                                 TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O
+                                                FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+                                                                           PROGRAMÁVEIS.
+                                                 TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O
+                                                FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+                                                                           PROGRAMÁVEIS.
+
+                                           ANÁLISE DA SOLICITAÇÃO NO LOCAL, ORIENTAÇÃO AO SOLICITANTE,
+                                                 PROGRAMAR, SE NECESSÁRIO, A NORMALIZAÇÃO DA REDE.
+
+                                           ANÁLISE DA SOLICITAÇÃO NO LOCAL, ORIENTAÇÃO AO SOLICITANTE,
+                                                 PROGRAMAR, SE NECESSÁRIO, A NORMALIZAÇÃO DA REDE.
+
+                                                                                                                         Classificação: Direcionado
+                                       CLASSIFICAÇÃO: Reservado até a publicação do Edital
+
+RC46  VERIFICADO RUIDO PROVOCADO POR    ANÁLISE DA SOLICITAÇÃO NO LOCAL, ORIENTAÇÃO AO SOLICITANTE,  0,067304  0,080765
+RC47          EQUIPAMENTO NA REDE             PROGRAMAR, SE NECESSÁRIO, A NORMALIZAÇÃO DA REDE.      0,104381  0,125258
+RC48                                                                                                 0,044294  0,053152
+RC73   VERIFICADO QUEIMADA SOB A REDE   ANÁLISE DA SOLICITAÇÃO NO LOCAL, ORIENTAÇÃO AO SOLICITANTE,  0,084679  0,101615
+RC74  ATENDIMENTO OUTRAS RECLAMACAO           PROGRAMAR, SE NECESSÁRIO, A NORMALIZAÇÃO DA REDE.      0,084679  0,101615
+RC90                                                                                                 0,103409  0,124091
+                   MEIO AMBIENTE        ANÁLISE DA SOLICITAÇÃO NO LOCAL, ORIENTAÇÃO AO SOLICITANTE,
+RC99      NORMALIZADO FALTA ENERGIA           PROGRAMAR, SE NECESSÁRIO, A NORMALIZAÇÃO DA REDE.      0,108281  0,129937
+                                              TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O
+          NORMALIZADO FALTA ENERGIA         FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+                                                                        PROGRAMÁVEIS.
+      VARIAÇÃO DE TENSÃO PERMANENTE           TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR O
+                                            FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+       ATENDIMENTO A OUTROS SERVIÇOS                                    PROGRAMÁVEIS.
+                    EMERGENCIAIS               TODAS AS ATIVIDADES NECESSÁRIAS PARA NORMALIZAR
+                                            FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+                                                                        PROGRAMÁVEIS.
+                                            TODAS AS ATIVIDADES NECESSÁRIAS PARA A ELIMINAÇÃO DA
+
+                                       CONDIÇÃO DE RISCO, RECOLHIMENTO DE MATERIAIS, NORMALIZAÇÃO
+                                          DO FORNECIMENTO DE ENERGIA. EXCEÇÃO PARA AS ATIVIDADES
+                                                                        PROGRAMÁVEIS.
+
+NOTA 1: Os atendimentos da tabela acima deverão ser finalizados, obrigatoriamente, com os códigos de
+serviços da TABELA DE FATORES DE REMUNERAÇÃO DOS SERVIÇOS EMERGENCIAIS E
+COMERCIAIS PAGOS POR CÓDIGO DE FECHAMENTO, que indicam os serviços executados no
+atendimento.
+
+NOTA 2: Os atendimentos da tabela acima serão remunerados pelo Fator de US correspondente, colunas “D”
+ou “E”, de acordo com Centro de Serviços que acionou a equipe para o atendimento (CSC, CSI ou COD).
+Exceção para os atendimentos finalizados com apenas um código (e/ou finalizados em combinação com
+códigos informativos de sistema com fatores de US igual a zero) e sendo este código um dos seguintes: 1.62,
+1.73, 2.01, 2.05, 2.06, 3.01, 3.05, 3.06, 4.01, 4.05, 4.06, 5.01, 5.62, 5.63, 5.64, 5.70, 7.70, 8.74, 8.75, 8.81,
+8.82, 8.83, 8.84, 8.85, 8.88, 8.8D, 8.93, 8.A1, 8.A2, 8.A3, 8.A4, 8.A5, 9.82, G.02 e T.10,.
+
+NOTA 3: Os atendimentos finalizados com apenas um código (e/ou finalizados em combinação com códigos
+informativos de sistema com fatores de US igual a zero) e sendo este código um dos seguintes: 1.62, 1.73,
+2.01, 2.05, 2.06, 3.01, 3.05, 3.06, 4.01, 4.05, 4.06, 5.01, 5.62, 5.63, 5.64, 5.70, 7.70, 8.74, 8.75, 8.81, 8.82,
+8.83, 8.84, 8.85, 8.88, 8.8D, 8.93, 8.A1, 8.A2, 8.A3, 8.A4, 8.A5, 9.82, G.02 e T.10 serão remunerados apenas
+pelo fator de US correspondente ao código (transposição do pagamento para a tabela de FATORES DE
+REMUNERAÇÃO DOS SERVIÇOS EMERGENCIAIS E COMERCIAIS PAGOS POR CÓDIGO DE
+FECHAMENTO), não cabendo somar o valor do código ao valor do atendimento e será descartado o
+pagamento por atendimento.
+
+NOTA 4: Os atendimentos realizados em área rural serão remunerados com acréscimo de 20% (vinte por
+cento), exceto para os serviços remunerados em homem-hora.
+
+NOTA 5: Quando os atendimentos da tabela acima forem realizados por apenas 1 (um) motociclista terão
+seus valores multiplicados por 0,7 (zero, vírgula sete).
+
+NOTA 6: Quando houver a necessidade de apoio de uma equipe motociclista a outra equipe motociclista para
+composição de dupla para realização de atendimentos, deverá ser criada no sistema uma nota ‘PSAP –
+Pedido de Apoio ao Serviço’ para acionamento da equipe de apoio.
+
+NOTA 7: Quando os atendimentos da tabela acima forem realizados por uma dupla de motociclistas, a equipe
+acionada para o serviço principal será remunerada pelo valor do atendimento multiplicada por 0,7 (zero,
+vírgula sete), sendo que a equipe acionada para a nota de serviço ‘PSAP – Pedido de Apoio ao Serviço’ será
+remunerada pelo valor do atendimento multiplicada por 0,3 (zero, vírgula três).
+
+NOTA 8: A CONTRATADA deverá, obrigatoriamente, utilizar de forma correta os códigos dos serviços
+executados, bem como preencher as informações complementares no sistema de fechamento do serviço
+(Web ou PDA) ou em formulário específico (digital ou físico), como NS, TOI, TOI-M etc. Deverão ser inseridas,
+obrigatoriamente, as informações inerentes à execução do serviço referentes à identificação e detalhamento
+do serviço executado, tais como: imagens, fotografias, vídeos, filmagens, croquis, coordenadas do ponto de
+atendimento, dados e números de equipamentos, números de série e nome dos fabricantes dos equipamentos
+instalados e/ou retirados do SEP, características de postes instalados e/ou retirados, recolhidos ou escorados,
+dados de circuitos e transformadores interligados e/ou trocados, tipo e bitola de condutor instalado e/ou
+retirado ou isolado, condições da árvore reclamada, NS emitida, números de série de módulos, modem e
+
+                                                                                                               Classificação: Direcionado
+

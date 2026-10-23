@@ -102,3 +102,31 @@ e dos arquivos locais do Claude `central-neo-escopo-mvp.md`,
 `commit-mensagem-padrao.md` e `lembrete-contrato-2026-gdis.md`.
 Referências antigas sobre todo o app rodar no TraceOne e importar somente NSIS
 foram superadas: CENTRAL-NEO é o principal e a migration 008 ampliou os tipos de serviço.
+
+## Mapeamento entre projetos — 23/10/2026
+
+Esta memória anterior foi preservada no levantamento geral de APPWEB.
+Perfil de trabalho consolidado em
+[memória geral](../MEMORIA_COMPARTILHADA.md), com preferências explícitas,
+inferências separadas e relações entre produtos. Referências de funcionalidades
+em [catálogo APPWEB](../CATALOGO_FUNCIONALIDADES.md).
+
+- Design real: `src/index.css`, petróleo `#0B7285`, cobre `#D9822B`,
+  fundo `#F4F7F8`, Archivo e Atkinson Hyperlegible Mono.
+  `src/components/Shell.tsx`, `NeoLogo.tsx` e `CircuitoAnimado.tsx`
+  são referências locais de identidade e navegação.
+- Para reaproveitar Fechamento: `src/paginas/fechamento/Fila.tsx`,
+  `PainelNsis.tsx`, `Painel.tsx`, `TabelaValores.tsx`,
+  `src/lib/fechamentoPlanilhas.ts`, `fechamento.ts` e `contrato.ts`.
+  Fluxo de serviço com vários itens e etapas NSMP → NSPR → fatura.
+- Importadores puros: `fechamentoPlanilhas.ts` para relatório/histórico e
+  `faturamentoPlanilhas.ts` para abas da fatura/vínculos.
+- Telas TraceOne em `src/paginas/traceone/` são cópias adaptadas. Manter
+  limites entre clientes, bancos, sessões e permissões ao portar atualizações.
+- O contexto geral lista Faturamento como implementado; isso não supera a
+  reprovação e as lacunas da auditoria registradas acima. Não apresentar a
+  existência de rotas/commits como aceitação da entrega.
+
+Levantamento estático de contexto, código, tokens, documentos e memórias do
+Claude, sem novos testes de cálculo, navegação, banco ou deploy. Nenhuma regra
+de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.

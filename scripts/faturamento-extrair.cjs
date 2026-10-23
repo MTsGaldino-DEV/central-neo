@@ -1,5 +1,6 @@
 // Extração reproduzível: pdftotext -layout para ordem/contagem, -raw para células.
 // Uso: node scripts/faturamento-extrair.cjs <pasta com tabela11/12[-raw].txt> <xlsx>
+// Antes: python scripts/faturamento-validar-pdf.py. Nunca reescreve migrations.
 const fs = require('fs');
 const path = require('path');
 const XLSX = require('xlsx');
@@ -7,6 +8,7 @@ const [pasta, arquivo] = process.argv.slice(2);
 const wb = XLSX.readFile(arquivo);
 const linhas = XLSX.utils.sheet_to_json(wb.Sheets.US_Servico);
 const todos = [], pendentes = [], validacao = [];
+const geometria=JSON.parse(fs.readFileSync('docs/faturamento-celulas-pdf.json','utf8'));
 for (const tabela of ['12', '11']) {
   const layout = fs.readFileSync(path.join(pasta, `tabela${tabela}.txt`), 'utf8');
   const raw = fs.readFileSync(path.join(pasta, `tabela${tabela}-raw.txt`), 'utf8');
@@ -26,7 +28,10 @@ for (const tabela of ['12', '11']) {
     const cod = par ? Number(par[2].replace(',','.')) : null;
     const amostras = linhas.filter(l => tabela === '12' ? l.tipo_serv.trim() === codigo : l.codserv.trim() === codigo && !todos.some(c => c.tabela==='12' && c.codigo===l.tipo_serv.trim()));
     const batem = amostras.filter(l => par && [csc,cod].some(f => [1,0.7].some(u => Math.abs(Math.round(f*(l.qtdurbanohn*u+l.qtdruralhn*(u===1?1.2:0.9))*1e6)/1e6-l.ustotal)<=0.0000011)));
-    const validado = !!par && batem.length > 0;
+    const celula=geometria.celulas.find(c=>c.tabela===tabela&&c.codigo===codigo);
+    if(!celula)throw Error('Código ausente na validação por coordenadas: '+codigo);
+    if(celula.csc!==csc||celula.cod!==cod)throw Error('Fatores diferentes entre texto e células do PDF: '+tabela+'/'+codigo);
+    const validado = !!par && celula.csc!==null && celula.cod!==null;
     const notaRefs = [...new Set([...bloco.matchAll(/NOTA\s+(\d+)/g)].map(m=>m[1]))];
     const notas = notaRefs.map(n => raw.match(new RegExp(`NOTA ${n}:[\\s\\S]*?(?=NOTA \\d+:|$)`))?.[0]?.trim() ?? `NOTA ${n}: texto não presente neste PDF`).join('\n');
     const descricao = bloco.slice(0,par?.index ?? bloco.length).replace(/CLASSIFICAÇÃO:.*|Classificação:.*/g,'').trim();
@@ -34,14 +39,14 @@ for (const tabela of ['12', '11']) {
       fator_original:validado?csc:null,fator_cod_original:validado?cod:null,fator_csc:validado?csc:null,fator_cod:validado?cod:null,
       rural: tabela==='11'?bloco.match(/(?:\d+,\d{6}|0) +(1,2|0) +(0,7|1|0)\b/)?.[1]??null:null,
       moto: tabela==='11'?bloco.match(/(?:\d+,\d{6}|0) +(1,2|0) +(0,7|1|0)\b/)?.[2]??null:null,
-      nota:notas||null,validado,origem:`${tabela==='11'?'Código':'Nota'} de Serviço Unificado.pdf; ordem layout/raw conferida; ${batem.length}/${amostras.length} créditos reproduzidos na fatura 9844` };
+      nota:notas||null,validado,origem:`${tabela==='11'?'Código':'Nota'} de Serviço Unificado.pdf; página ${celula.pagina}; células CSC/COD conferidas por posição e texto; ${batem.length}/${amostras.length} créditos reproduzidos na fatura 9844 (diagnóstico, não validação do contrato)` };
     todos.push(item);
-    if (!validado) pendentes.push({tabela,codigo,motivo:!par?'Fatores não numéricos ou extração ambígua':amostras.length?'Nenhum crédito reproduzido':'Sem amostra na fatura',linhas:amostras.length});
-    validacao.push({tabela,codigo,csc,cod,amostras:amostras.length,batem:batem.length,validado});
+    if (!validado) pendentes.push({tabela,codigo,motivo:'Fator não numérico: NOTA 10 sem texto neste PDF',linhas:amostras.length});
+    validacao.push({tabela,codigo,csc,cod,pagina:celula.pagina,amostras:amostras.length,batem:batem.length,validado});
   }
 }
-const literal = v => v===null?'null':typeof v==='boolean'?String(v):typeof v==='number'?String(v):"'"+v.replace(/'/g,"''")+"'";
-fs.writeFileSync('supabase/migrations/014_faturamento_carga.sql','-- Origem: PDFs Tabelas 11/12. Gerado por scripts/faturamento-extrair.cjs.\n-- Fatores sem reprodução na fatura ficam nulos; catálogo mantém precedência dos RCs.\ninsert into public.neo_fat_contrato ('+Object.keys(todos[0]).join(',')+') values\n'+todos.map(c=>'('+Object.values(c).map(literal).join(',')+')').join(',\n')+';\n');
+// Catálogo candidato para revisão e criação de UMA NOVA migration, sem sobrescrever a carga aplicada.
+fs.writeFileSync(path.join(pasta,'contrato-validado.json'),JSON.stringify(todos,null,2));
 fs.mkdirSync('docs',{recursive:true});
 fs.writeFileSync('docs/faturamento-validacao-contrato.json',JSON.stringify({validacao,pendentes},null,2));
 console.log(JSON.stringify({codigos:todos.length,validados:todos.filter(c=>c.validado).length,pendentes}));

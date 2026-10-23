@@ -55,3 +55,15 @@ Legenda: atendido = implementado com evidência; parcial = existe com lacunas; f
 ## Correção do status de entrega
 
 A implementação tem estrutura e funcionalidades úteis, mas a declaração anterior de escopo concluído foi excessiva. A entrega está em revisão por falta de aderência visual/operacional e lacunas de validação de cálculo. Prioridades: validar contrato e casos reais, explicitar crédito/débito/líquido, completar conferência/resumo no padrão do projeto e testar o fluxo no navegador.
+
+## Revisão posterior — duas planilhas e fatores do contrato (23/10/2026)
+
+Esta seção atualiza os pontos corrigidos sem apagar o diagnóstico da entrega inicial:
+
+- Importador redesenhado no padrão da NEO, com duas origens nomeadas, prévia das quatro equipes, período da Apropriação, progresso e publicação atômica. Arquivos reais cruzados: 21.910 serviços, nenhum ausente/ambíguo após ident_turma.
+- Conferência agora mostra equipe/frota e o valor numérico do fator coincidente; detalhe mostra ident_turma. Alterar dados, vínculo ou fatores reabre a revisão manual, mantendo a observação.
+- Fatores validados por coordenadas das células do PDF, ordem e extração textual: 215/219 pares numéricos. 99 códigos complementados, incluindo 1.13; apenas quatro dependem da NOTA 10. Extrator deixou de escrever a migration 014.
+- RC agregado passou a respeitar a equipe Moto confirmada. Demais ressalvas sobre somas incompletas e pagamento por atendimento permanecem.
+- Chrome desktop/celular: prévia/importação simulada com arquivos reais, resultado, erro de arquivo, contrato e equipe. Banco: importação real, preservação/reabertura de revisão, rollback e permissões. O teste do navegador usa respostas interceptadas e não comprova deploy.
+- Nova fotografia: 13.101 OK, 13.580 DIVERGENTE, 0 MOTO_PROVAVEL, 652 CODIGO_FORA_CONTRATO, 56 REVISAR_RC_MULTILINHA. Devido parcial 1.030,403921 US. Diagnóstico e perguntas no relatório atualizado.
+- Isso não homologa as regras provisórias de glosa/RC/NOTAs, nem resolve todas as lacunas do Resumo e das demais telas apontadas acima.

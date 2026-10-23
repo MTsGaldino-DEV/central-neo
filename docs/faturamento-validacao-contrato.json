@@ -5,6 +5,7 @@
       "codigo": "RC01",
       "csc": 0.138131,
       "cod": 0.165757,
+      "pagina": 1,
       "amostras": 18,
       "batem": 15,
       "validado": true
@@ -14,6 +15,7 @@
       "codigo": "RC03",
       "csc": 0.085614,
       "cod": 0.102737,
+      "pagina": 1,
       "amostras": 116,
       "batem": 39,
       "validado": true
@@ -23,6 +25,7 @@
       "codigo": "RC04",
       "csc": 0.08524,
       "cod": 0.102289,
+      "pagina": 1,
       "amostras": 188,
       "batem": 49,
       "validado": true
@@ -32,6 +35,7 @@
       "codigo": "RC05",
       "csc": 0.092314,
       "cod": 0.110776,
+      "pagina": 1,
       "amostras": 62,
       "batem": 32,
       "validado": true
@@ -41,6 +45,7 @@
       "codigo": "RC06",
       "csc": 0.113918,
       "cod": 0.136701,
+      "pagina": 1,
       "amostras": 761,
       "batem": 120,
       "validado": true
@@ -50,6 +55,7 @@
       "codigo": "RC07",
       "csc": 0.084679,
       "cod": 0.101615,
+      "pagina": 1,
       "amostras": 1976,
       "batem": 725,
       "validado": true
@@ -59,6 +65,7 @@
       "codigo": "RC08",
       "csc": 0.116584,
       "cod": 0.139901,
+      "pagina": 1,
       "amostras": 479,
       "batem": 76,
       "validado": true
@@ -68,6 +75,7 @@
       "codigo": "RC09",
       "csc": 0.154125,
       "cod": 0.18495,
+      "pagina": 1,
       "amostras": 90,
       "batem": 46,
       "validado": true
@@ -77,6 +85,7 @@
       "codigo": "RC14",
       "csc": 0.067258,
       "cod": 0.080709,
+      "pagina": 1,
       "amostras": 23,
       "batem": 11,
       "validado": true
@@ -86,6 +95,7 @@
       "codigo": "RC15",
       "csc": 0.093544,
       "cod": 0.112252,
+      "pagina": 1,
       "amostras": 77,
       "batem": 47,
       "validado": true
@@ -95,6 +105,7 @@
       "codigo": "RC16",
       "csc": 0.110331,
       "cod": 0.132397,
+      "pagina": 1,
       "amostras": 50,
       "batem": 11,
       "validado": true
@@ -104,6 +115,7 @@
       "codigo": "RC17",
       "csc": 0.103409,
       "cod": 0.124091,
+      "pagina": 1,
       "amostras": 17,
       "batem": 9,
       "validado": true
@@ -113,6 +125,7 @@
       "codigo": "RC18",
       "csc": 0.103409,
       "cod": 0.124091,
+      "pagina": 1,
       "amostras": 100,
       "batem": 44,
       "validado": true
@@ -122,6 +135,7 @@
       "codigo": "RC19",
       "csc": 0.103409,
       "cod": 0.124091,
+      "pagina": 1,
       "amostras": 155,
       "batem": 59,
       "validado": true
@@ -131,6 +145,7 @@
       "codigo": "RC21",
       "csc": 0.118142,
       "cod": 0.14177,
+      "pagina": 1,
       "amostras": 96,
       "batem": 36,
       "validado": true
@@ -140,6 +155,7 @@
       "codigo": "RC30",
       "csc": 0.111066,
       "cod": 0.133279,
+      "pagina": 1,
       "amostras": 116,
       "batem": 20,
       "validado": true
@@ -149,6 +165,7 @@
       "codigo": "RC31",
       "csc": 0.074241,
       "cod": 0.08909,
+      "pagina": 1,
       "amostras": 10,
       "batem": 4,
       "validado": true
@@ -158,6 +175,7 @@
       "codigo": "RC32",
       "csc": 0.062101,
       "cod": 0.074521,
+      "pagina": 1,
       "amostras": 54,
       "batem": 28,
       "validado": true
@@ -167,24 +185,27 @@
       "codigo": "RC39",
       "csc": 0.066858,
       "cod": 0.08023,
+      "pagina": 1,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "12",
       "codigo": "RC40",
       "csc": 0.074963,
       "cod": 0.089955,
+      "pagina": 1,
       "amostras": 5,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "12",
       "codigo": "RC41",
       "csc": 0.06484,
       "cod": 0.077808,
+      "pagina": 1,
       "amostras": 11,
       "batem": 4,
       "validado": true
@@ -194,15 +215,17 @@
       "codigo": "RC42",
       "csc": 0.103927,
       "cod": 0.124713,
+      "pagina": 1,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "12",
       "codigo": "RC43",
       "csc": 0.080207,
       "cod": 0.096249,
+      "pagina": 1,
       "amostras": 28,
       "batem": 7,
       "validado": true
@@ -212,6 +235,7 @@
       "codigo": "RC45",
       "csc": 0.12028,
       "cod": 0.144336,
+      "pagina": 1,
       "amostras": 9,
       "batem": 6,
       "validado": true
@@ -221,6 +245,7 @@
       "codigo": "RC46",
       "csc": 0.067304,
       "cod": 0.080765,
+      "pagina": 2,
       "amostras": 4,
       "batem": 1,
       "validado": true
@@ -230,6 +255,7 @@
       "codigo": "RC47",
       "csc": 0.104381,
       "cod": 0.125258,
+      "pagina": 2,
       "amostras": 2,
       "batem": 1,
       "validado": true
@@ -239,6 +265,7 @@
       "codigo": "RC48",
       "csc": 0.044294,
       "cod": 0.053152,
+      "pagina": 2,
       "amostras": 2,
       "batem": 2,
       "validado": true
@@ -248,24 +275,27 @@
       "codigo": "RC73",
       "csc": 0.084679,
       "cod": 0.101615,
+      "pagina": 2,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "12",
       "codigo": "RC74",
       "csc": 0.084679,
       "cod": 0.101615,
+      "pagina": 2,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "12",
       "codigo": "RC90",
       "csc": 0.103409,
       "cod": 0.124091,
+      "pagina": 2,
       "amostras": 14,
       "batem": 8,
       "validado": true
@@ -275,15 +305,17 @@
       "codigo": "RC99",
       "csc": 0.108281,
       "cod": 0.129937,
+      "pagina": 2,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "1.02",
       "csc": 0.066858,
       "cod": 0.08023,
+      "pagina": 1,
       "amostras": 825,
       "batem": 825,
       "validado": true
@@ -293,6 +325,7 @@
       "codigo": "1.03",
       "csc": 0,
       "cod": 0,
+      "pagina": 1,
       "amostras": 877,
       "batem": 877,
       "validado": true
@@ -302,6 +335,7 @@
       "codigo": "1.11",
       "csc": 0.26877,
       "cod": 0.322524,
+      "pagina": 1,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -311,6 +345,7 @@
       "codigo": "1.12",
       "csc": 0.652582,
       "cod": 0.783098,
+      "pagina": 1,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -320,24 +355,27 @@
       "codigo": "1.13",
       "csc": 0.137718,
       "cod": 0.165261,
+      "pagina": 1,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "1.14",
       "csc": 0.34898,
       "cod": 0.418776,
+      "pagina": 1,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "1.21",
       "csc": 0.274007,
       "cod": 0.328809,
+      "pagina": 1,
       "amostras": 5,
       "batem": 2,
       "validado": true
@@ -347,24 +385,27 @@
       "codigo": "1.22",
       "csc": 0.102827,
       "cod": 0.123393,
+      "pagina": 1,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "1.25",
       "csc": 0.114245,
       "cod": 0.137094,
+      "pagina": 1,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "1.26",
       "csc": 0.104406,
       "cod": 0.125287,
+      "pagina": 1,
       "amostras": 10,
       "batem": 10,
       "validado": true
@@ -374,15 +415,17 @@
       "codigo": "1.28",
       "csc": 0.084071,
       "cod": 0.100886,
+      "pagina": 1,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "1.61",
       "csc": 0.052966,
       "cod": 0.063559,
+      "pagina": 1,
       "amostras": 572,
       "batem": 572,
       "validado": true
@@ -392,6 +435,7 @@
       "codigo": "1.62",
       "csc": null,
       "cod": null,
+      "pagina": 1,
       "amostras": 61,
       "batem": 0,
       "validado": false
@@ -401,15 +445,17 @@
       "codigo": "1.64",
       "csc": 0.101042,
       "cod": 0.121251,
+      "pagina": 2,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "1.72",
       "csc": 0.0735,
       "cod": 0.0882,
+      "pagina": 2,
       "amostras": 34,
       "batem": 34,
       "validado": true
@@ -419,6 +465,7 @@
       "codigo": "1.73",
       "csc": null,
       "cod": null,
+      "pagina": 2,
       "amostras": 0,
       "batem": 0,
       "validado": false
@@ -428,6 +475,7 @@
       "codigo": "1.NS",
       "csc": 0,
       "cod": 0,
+      "pagina": 2,
       "amostras": 204,
       "batem": 204,
       "validado": true
@@ -437,15 +485,17 @@
       "codigo": "2.01",
       "csc": 0.085414,
       "cod": 0.102497,
+      "pagina": 2,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "2.05",
       "csc": 0.081517,
       "cod": 0.097821,
+      "pagina": 2,
       "amostras": 5,
       "batem": 5,
       "validado": true
@@ -455,6 +505,7 @@
       "codigo": "2.06",
       "csc": 0.081517,
       "cod": 0.097821,
+      "pagina": 2,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -464,15 +515,17 @@
       "codigo": "3.01",
       "csc": 0.085414,
       "cod": 0.102497,
+      "pagina": 2,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "3.05",
       "csc": 0.081517,
       "cod": 0.097821,
+      "pagina": 2,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -482,15 +535,17 @@
       "codigo": "3.06",
       "csc": 0.081517,
       "cod": 0.097821,
+      "pagina": 2,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "4.01",
       "csc": 0.085414,
       "cod": 0.102497,
+      "pagina": 2,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -500,33 +555,37 @@
       "codigo": "4.05",
       "csc": 0.081517,
       "cod": 0.097821,
+      "pagina": 2,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "4.06",
       "csc": 0.081517,
       "cod": 0.097821,
+      "pagina": 3,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.01",
       "csc": 0.085414,
       "cod": 0.102497,
+      "pagina": 3,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.10",
       "csc": 0.415731,
       "cod": 0.498877,
+      "pagina": 3,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -536,33 +595,37 @@
       "codigo": "5.11",
       "csc": 0.783198,
       "cod": 0.939838,
+      "pagina": 3,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.12",
       "csc": 0.511835,
       "cod": 0.614202,
+      "pagina": 3,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.13",
       "csc": 0.106664,
       "cod": 0.127997,
+      "pagina": 3,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.14",
       "csc": 0.094983,
       "cod": 0.113979,
+      "pagina": 3,
       "amostras": 9,
       "batem": 9,
       "validado": true
@@ -572,6 +635,7 @@
       "codigo": "5.21",
       "csc": 0.234177,
       "cod": 0.281012,
+      "pagina": 3,
       "amostras": 2,
       "batem": 1,
       "validado": true
@@ -581,15 +645,17 @@
       "codigo": "5.22",
       "csc": 0.122336,
       "cod": 0.146803,
+      "pagina": 3,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.27",
       "csc": 0.081998,
       "cod": 0.098397,
+      "pagina": 3,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -599,33 +665,37 @@
       "codigo": "5.31",
       "csc": 0.082246,
       "cod": 0.098696,
+      "pagina": 3,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.32",
       "csc": 0.082246,
       "cod": 0.098696,
+      "pagina": 3,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.33",
       "csc": 0.091367,
       "cod": 0.10964,
+      "pagina": 3,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.34",
       "csc": 0.091367,
       "cod": 0.10964,
+      "pagina": 3,
       "amostras": 96,
       "batem": 96,
       "validado": true
@@ -635,6 +705,7 @@
       "codigo": "5.35",
       "csc": 0.076738,
       "cod": 0.092085,
+      "pagina": 3,
       "amostras": 109,
       "batem": 109,
       "validado": true
@@ -644,6 +715,7 @@
       "codigo": "5.36",
       "csc": 0.093195,
       "cod": 0.111835,
+      "pagina": 3,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -653,6 +725,7 @@
       "codigo": "5.37",
       "csc": 0.093195,
       "cod": 0.111835,
+      "pagina": 3,
       "amostras": 25,
       "batem": 25,
       "validado": true
@@ -662,6 +735,7 @@
       "codigo": "5.39",
       "csc": 0.078566,
       "cod": 0.09428,
+      "pagina": 4,
       "amostras": 12,
       "batem": 12,
       "validado": true
@@ -671,33 +745,37 @@
       "codigo": "5.40",
       "csc": 0.317797,
       "cod": 0.381356,
+      "pagina": 4,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.41",
       "csc": 0.107727,
       "cod": 0.129273,
+      "pagina": 4,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.42",
       "csc": 0.118796,
       "cod": 0.142556,
+      "pagina": 4,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.43",
       "csc": 0.106952,
       "cod": 0.128342,
+      "pagina": 4,
       "amostras": 16,
       "batem": 16,
       "validado": true
@@ -707,24 +785,27 @@
       "codigo": "5.44",
       "csc": 0.097256,
       "cod": 0.116707,
+      "pagina": 4,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.45",
       "csc": 0.141243,
       "cod": 0.169492,
+      "pagina": 4,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "5.62",
       "csc": 0.023096,
       "cod": 0.027716,
+      "pagina": 4,
       "amostras": 62,
       "batem": 62,
       "validado": true
@@ -734,6 +815,7 @@
       "codigo": "5.63",
       "csc": null,
       "cod": null,
+      "pagina": 4,
       "amostras": 2,
       "batem": 0,
       "validado": false
@@ -743,6 +825,7 @@
       "codigo": "5.64",
       "csc": null,
       "cod": null,
+      "pagina": 4,
       "amostras": 0,
       "batem": 0,
       "validado": false
@@ -752,6 +835,7 @@
       "codigo": "5.70",
       "csc": 0.01522,
       "cod": 0.018264,
+      "pagina": 4,
       "amostras": 90,
       "batem": 90,
       "validado": true
@@ -761,6 +845,7 @@
       "codigo": "5.71",
       "csc": 0.050893,
       "cod": 0.061072,
+      "pagina": 5,
       "amostras": 5,
       "batem": 5,
       "validado": true
@@ -770,6 +855,7 @@
       "codigo": "6.01",
       "csc": 0.001065,
       "cod": 0.001279,
+      "pagina": 5,
       "amostras": 71,
       "batem": 71,
       "validado": true
@@ -779,33 +865,37 @@
       "codigo": "6.02",
       "csc": 0.109653,
       "cod": 0.131584,
+      "pagina": 5,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.03",
       "csc": 0.104614,
       "cod": 0.125536,
+      "pagina": 5,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.04",
       "csc": 0.111482,
       "cod": 0.133778,
+      "pagina": 5,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.05",
       "csc": 0.010307,
       "cod": 0.012369,
+      "pagina": 5,
       "amostras": 61,
       "batem": 61,
       "validado": true
@@ -815,15 +905,17 @@
       "codigo": "6.06",
       "csc": 0.010593,
       "cod": 0.012712,
+      "pagina": 5,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.07",
       "csc": 0.007704,
       "cod": 0.009245,
+      "pagina": 5,
       "amostras": 22,
       "batem": 22,
       "validado": true
@@ -833,15 +925,17 @@
       "codigo": "6.08",
       "csc": 0.082105,
       "cod": 0.098526,
+      "pagina": 5,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.15",
       "csc": 0.039248,
       "cod": 0.047097,
+      "pagina": 5,
       "amostras": 1055,
       "batem": 1051,
       "validado": true
@@ -851,6 +945,7 @@
       "codigo": "6.19",
       "csc": 0.02672,
       "cod": 0.032064,
+      "pagina": 6,
       "amostras": 5,
       "batem": 5,
       "validado": true
@@ -860,6 +955,7 @@
       "codigo": "6.20",
       "csc": 0.033418,
       "cod": 0.040101,
+      "pagina": 6,
       "amostras": 8,
       "batem": 8,
       "validado": true
@@ -869,6 +965,7 @@
       "codigo": "6.22",
       "csc": 0.070486,
       "cod": 0.084584,
+      "pagina": 6,
       "amostras": 313,
       "batem": 313,
       "validado": true
@@ -878,6 +975,7 @@
       "codigo": "6.24",
       "csc": 0.054069,
       "cod": 0.064883,
+      "pagina": 6,
       "amostras": 9,
       "batem": 9,
       "validado": true
@@ -887,15 +985,17 @@
       "codigo": "6.25",
       "csc": 0.014574,
       "cod": 0.017489,
+      "pagina": 6,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.30",
       "csc": 0.049762,
       "cod": 0.059714,
+      "pagina": 6,
       "amostras": 23,
       "batem": 23,
       "validado": true
@@ -905,33 +1005,37 @@
       "codigo": "6.31",
       "csc": 0.057937,
       "cod": 0.069525,
+      "pagina": 6,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.32",
       "csc": 0.068291,
       "cod": 0.081949,
+      "pagina": 6,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.34",
       "csc": 0,
       "cod": 0,
+      "pagina": 6,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.37",
       "csc": 0.042052,
       "cod": 0.050462,
+      "pagina": 6,
       "amostras": 25,
       "batem": 25,
       "validado": true
@@ -941,15 +1045,17 @@
       "codigo": "6.39",
       "csc": 0.031139,
       "cod": 0.037367,
+      "pagina": 6,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.40",
       "csc": 0.000653,
       "cod": 0.000784,
+      "pagina": 6,
       "amostras": 38,
       "batem": 37,
       "validado": true
@@ -959,15 +1065,17 @@
       "codigo": "6.42",
       "csc": 0.071547,
       "cod": 0.085856,
+      "pagina": 6,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.43",
       "csc": 0.039077,
       "cod": 0.046892,
+      "pagina": 6,
       "amostras": 1782,
       "batem": 1779,
       "validado": true
@@ -977,24 +1085,27 @@
       "codigo": "6.44",
       "csc": 0.129544,
       "cod": 0.155453,
+      "pagina": 7,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.46",
       "csc": 0.069368,
       "cod": 0.083242,
+      "pagina": 7,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.50",
       "csc": 0,
       "cod": 0,
+      "pagina": 7,
       "amostras": 15,
       "batem": 15,
       "validado": true
@@ -1004,24 +1115,27 @@
       "codigo": "6.52",
       "csc": 0.077567,
       "cod": 0.09308,
+      "pagina": 7,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.53",
       "csc": 0.122454,
       "cod": 0.146944,
+      "pagina": 7,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.60",
       "csc": 0.000653,
       "cod": 0.000784,
+      "pagina": 7,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -1031,33 +1145,37 @@
       "codigo": "6.82",
       "csc": 0.00021,
       "cod": 0.000252,
+      "pagina": 7,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.83",
       "csc": 0.110514,
       "cod": 0.132617,
+      "pagina": 7,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "6.84",
       "csc": 0.059507,
       "cod": 0.071408,
+      "pagina": 7,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.01",
       "csc": 0.064105,
       "cod": 0.076926,
+      "pagina": 7,
       "amostras": 233,
       "batem": 233,
       "validado": true
@@ -1067,6 +1185,7 @@
       "codigo": "7.03",
       "csc": 0.010655,
       "cod": 0.012785,
+      "pagina": 7,
       "amostras": 2562,
       "batem": 2562,
       "validado": true
@@ -1076,15 +1195,17 @@
       "codigo": "7.04",
       "csc": 0.002857,
       "cod": 0.003428,
+      "pagina": 7,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.05",
       "csc": 0.011849,
       "cod": 0.014219,
+      "pagina": 8,
       "amostras": 862,
       "batem": 862,
       "validado": true
@@ -1094,6 +1215,7 @@
       "codigo": "7.06",
       "csc": 0.00021,
       "cod": 0.000252,
+      "pagina": 8,
       "amostras": 223,
       "batem": 223,
       "validado": true
@@ -1103,6 +1225,7 @@
       "codigo": "7.07",
       "csc": 0.00021,
       "cod": 0.000252,
+      "pagina": 8,
       "amostras": 3769,
       "batem": 3769,
       "validado": true
@@ -1112,6 +1235,7 @@
       "codigo": "7.08",
       "csc": 0.00021,
       "cod": 0.000252,
+      "pagina": 8,
       "amostras": 113,
       "batem": 113,
       "validado": true
@@ -1121,6 +1245,7 @@
       "codigo": "7.09",
       "csc": 0.00021,
       "cod": 0.000252,
+      "pagina": 8,
       "amostras": 789,
       "batem": 789,
       "validado": true
@@ -1130,6 +1255,7 @@
       "codigo": "7.10",
       "csc": 0.098032,
       "cod": 0.117639,
+      "pagina": 8,
       "amostras": 407,
       "batem": 407,
       "validado": true
@@ -1139,6 +1265,7 @@
       "codigo": "7.11",
       "csc": 0.097145,
       "cod": 0.116574,
+      "pagina": 8,
       "amostras": 564,
       "batem": 564,
       "validado": true
@@ -1148,6 +1275,7 @@
       "codigo": "7.12",
       "csc": 0.104524,
       "cod": 0.125428,
+      "pagina": 8,
       "amostras": 94,
       "batem": 94,
       "validado": true
@@ -1157,6 +1285,7 @@
       "codigo": "7.13",
       "csc": 0.084476,
       "cod": 0.101371,
+      "pagina": 8,
       "amostras": 27,
       "batem": 27,
       "validado": true
@@ -1166,6 +1295,7 @@
       "codigo": "7.14",
       "csc": 0.094983,
       "cod": 0.113979,
+      "pagina": 8,
       "amostras": 5,
       "batem": 5,
       "validado": true
@@ -1175,6 +1305,7 @@
       "codigo": "7.15",
       "csc": 0.066746,
       "cod": 0.080096,
+      "pagina": 8,
       "amostras": 692,
       "batem": 692,
       "validado": true
@@ -1184,6 +1315,7 @@
       "codigo": "7.16",
       "csc": 0.071992,
       "cod": 0.08639,
+      "pagina": 8,
       "amostras": 266,
       "batem": 266,
       "validado": true
@@ -1193,6 +1325,7 @@
       "codigo": "7.17",
       "csc": 0.0788,
       "cod": 0.09456,
+      "pagina": 8,
       "amostras": 29,
       "batem": 29,
       "validado": true
@@ -1202,6 +1335,7 @@
       "codigo": "7.24",
       "csc": 0.006279,
       "cod": 0.007535,
+      "pagina": 8,
       "amostras": 22,
       "batem": 22,
       "validado": true
@@ -1211,15 +1345,17 @@
       "codigo": "7.27",
       "csc": 0.085881,
       "cod": 0.103057,
+      "pagina": 8,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.28",
       "csc": 0.006279,
       "cod": 0.007535,
+      "pagina": 8,
       "amostras": 31,
       "batem": 31,
       "validado": true
@@ -1229,6 +1365,7 @@
       "codigo": "7.35",
       "csc": 0.17509,
       "cod": 0.210107,
+      "pagina": 8,
       "amostras": 36,
       "batem": 36,
       "validado": true
@@ -1238,6 +1375,7 @@
       "codigo": "7.39",
       "csc": 0,
       "cod": 0,
+      "pagina": 9,
       "amostras": 382,
       "batem": 382,
       "validado": true
@@ -1247,15 +1385,17 @@
       "codigo": "7.42",
       "csc": 0.092023,
       "cod": 0.110428,
+      "pagina": 9,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.43",
       "csc": 0.092023,
       "cod": 0.110428,
+      "pagina": 9,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -1265,6 +1405,7 @@
       "codigo": "7.44",
       "csc": 0,
       "cod": 0,
+      "pagina": 9,
       "amostras": 50,
       "batem": 50,
       "validado": true
@@ -1274,6 +1415,7 @@
       "codigo": "7.45",
       "csc": 0,
       "cod": 0,
+      "pagina": 9,
       "amostras": 3,
       "batem": 3,
       "validado": true
@@ -1283,15 +1425,17 @@
       "codigo": "7.46",
       "csc": 0.095832,
       "cod": 0.114999,
+      "pagina": 9,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.47",
       "csc": 0.073279,
       "cod": 0.087935,
+      "pagina": 9,
       "amostras": 118,
       "batem": 118,
       "validado": true
@@ -1301,6 +1445,7 @@
       "codigo": "7.48",
       "csc": 0.027354,
       "cod": 0.032825,
+      "pagina": 9,
       "amostras": 5,
       "batem": 5,
       "validado": true
@@ -1310,15 +1455,17 @@
       "codigo": "7.49",
       "csc": 0.039077,
       "cod": 0.046892,
+      "pagina": 9,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.50",
       "csc": 0.017655,
       "cod": 0.021186,
+      "pagina": 9,
       "amostras": 32,
       "batem": 32,
       "validado": true
@@ -1328,6 +1475,7 @@
       "codigo": "7.53",
       "csc": 0.019274,
       "cod": 0.023128,
+      "pagina": 9,
       "amostras": 22,
       "batem": 22,
       "validado": true
@@ -1337,6 +1485,7 @@
       "codigo": "7.57",
       "csc": 0,
       "cod": 0,
+      "pagina": 9,
       "amostras": 97,
       "batem": 97,
       "validado": true
@@ -1346,6 +1495,7 @@
       "codigo": "7.62",
       "csc": 0.013307,
       "cod": 0.015969,
+      "pagina": 9,
       "amostras": 2175,
       "batem": 2175,
       "validado": true
@@ -1355,6 +1505,7 @@
       "codigo": "7.65",
       "csc": 0,
       "cod": 0,
+      "pagina": 9,
       "amostras": 22,
       "batem": 22,
       "validado": true
@@ -1364,15 +1515,17 @@
       "codigo": "7.66",
       "csc": 0.070621,
       "cod": 0.084745,
+      "pagina": 9,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.67",
       "csc": 0.052966,
       "cod": 0.063559,
+      "pagina": 9,
       "amostras": 68,
       "batem": 68,
       "validado": true
@@ -1382,6 +1535,7 @@
       "codigo": "7.70",
       "csc": 0,
       "cod": 0,
+      "pagina": 9,
       "amostras": 850,
       "batem": 850,
       "validado": true
@@ -1391,15 +1545,17 @@
       "codigo": "7.72",
       "csc": 0,
       "cod": 0,
+      "pagina": 9,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.73",
       "csc": 0.035311,
       "cod": 0.042373,
+      "pagina": 9,
       "amostras": 7,
       "batem": 7,
       "validado": true
@@ -1409,6 +1565,7 @@
       "codigo": "7.74",
       "csc": 0.023872,
       "cod": 0.028646,
+      "pagina": 9,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -1418,6 +1575,7 @@
       "codigo": "7.76",
       "csc": 0.071309,
       "cod": 0.085571,
+      "pagina": 10,
       "amostras": 3,
       "batem": 3,
       "validado": true
@@ -1427,24 +1585,27 @@
       "codigo": "7.78",
       "csc": 0.005778,
       "cod": 0.006934,
+      "pagina": 10,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.79",
       "csc": 0.001483,
       "cod": 0.001483,
+      "pagina": 10,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.7D",
       "csc": 0.035311,
       "cod": 0.042373,
+      "pagina": 10,
       "amostras": 30,
       "batem": 30,
       "validado": true
@@ -1454,15 +1615,17 @@
       "codigo": "7.83",
       "csc": 0.083793,
       "cod": 0.100551,
+      "pagina": 10,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.84",
       "csc": 0.05685,
       "cod": 0.06822,
+      "pagina": 10,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -1472,6 +1635,7 @@
       "codigo": "7.86",
       "csc": 0.056428,
       "cod": 0.067713,
+      "pagina": 10,
       "amostras": 2,
       "batem": 2,
       "validado": true
@@ -1481,24 +1645,27 @@
       "codigo": "7.87",
       "csc": 0.063688,
       "cod": 0.076426,
+      "pagina": 10,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.88",
       "csc": 0.088474,
       "cod": 0.106169,
+      "pagina": 10,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.89",
       "csc": 0.007704,
       "cod": 0.009245,
+      "pagina": 10,
       "amostras": 38,
       "batem": 33,
       "validado": true
@@ -1508,24 +1675,27 @@
       "codigo": "7.90",
       "csc": 0,
       "cod": 0,
+      "pagina": 10,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.91",
       "csc": 0,
       "cod": 0,
+      "pagina": 10,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.C5",
       "csc": 0.020436,
       "cod": 0.024523,
+      "pagina": 10,
       "amostras": 386,
       "batem": 386,
       "validado": true
@@ -1535,69 +1705,77 @@
       "codigo": "7.P1",
       "csc": 0.06809,
       "cod": 0.081708,
+      "pagina": 10,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.P3",
       "csc": 0.026001,
       "cod": 0.031201,
+      "pagina": 10,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.P5",
       "csc": 0.02082,
       "cod": 0.024984,
+      "pagina": 11,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.P6",
       "csc": 0.000079,
       "cod": 0.000095,
+      "pagina": 11,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.P7",
       "csc": 0.000079,
       "cod": 0.000095,
+      "pagina": 11,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.P8",
       "csc": 0.000079,
       "cod": 0.000095,
+      "pagina": 11,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.P9",
       "csc": 0.000079,
       "cod": 0.000095,
+      "pagina": 11,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.S1",
       "csc": 0.079942,
       "cod": 0.095931,
+      "pagina": 11,
       "amostras": 6,
       "batem": 6,
       "validado": true
@@ -1607,51 +1785,57 @@
       "codigo": "7.S3",
       "csc": 0.029832,
       "cod": 0.035799,
+      "pagina": 11,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.S6",
       "csc": 0.00021,
       "cod": 0.000252,
+      "pagina": 11,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.S7",
       "csc": 0.00021,
       "cod": 0.000252,
+      "pagina": 12,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.S8",
       "csc": 0.00021,
       "cod": 0.000252,
+      "pagina": 12,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "7.S9",
       "csc": 0.00021,
       "cod": 0.000252,
+      "pagina": 12,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "8.74",
       "csc": 0,
       "cod": 0,
+      "pagina": 12,
       "amostras": 64,
       "batem": 64,
       "validado": true
@@ -1661,6 +1845,7 @@
       "codigo": "8.75",
       "csc": 0.013905,
       "cod": 0.016686,
+      "pagina": 12,
       "amostras": 82,
       "batem": 82,
       "validado": true
@@ -1670,6 +1855,7 @@
       "codigo": "8.78",
       "csc": 0.010593,
       "cod": 0.012712,
+      "pagina": 12,
       "amostras": 11,
       "batem": 11,
       "validado": true
@@ -1679,24 +1865,27 @@
       "codigo": "8.79",
       "csc": 0.010593,
       "cod": 0.012712,
+      "pagina": 12,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "8.81",
       "csc": 0.018597,
       "cod": 0.022316,
+      "pagina": 12,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "8.82",
       "csc": 0.01634,
       "cod": 0.019608,
+      "pagina": 12,
       "amostras": 198,
       "batem": 198,
       "validado": true
@@ -1706,24 +1895,27 @@
       "codigo": "8.83",
       "csc": 0.016493,
       "cod": 0.019792,
+      "pagina": 12,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "8.84",
       "csc": 0.01816,
       "cod": 0.021792,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "8.85",
       "csc": 0.017374,
       "cod": 0.020849,
+      "pagina": 13,
       "amostras": 5,
       "batem": 5,
       "validado": true
@@ -1733,6 +1925,7 @@
       "codigo": "8.88",
       "csc": 0.016493,
       "cod": 0.019792,
+      "pagina": 13,
       "amostras": 158,
       "batem": 158,
       "validado": true
@@ -1742,6 +1935,7 @@
       "codigo": "8.8D",
       "csc": 0.018597,
       "cod": 0.022316,
+      "pagina": 13,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -1751,141 +1945,157 @@
       "codigo": "8.93",
       "csc": 0.033088,
       "cod": 0.039705,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "8.A1",
       "csc": 0.010593,
       "cod": 0.012712,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "8.A2",
       "csc": 0.010593,
       "cod": 0.012712,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "8.A3",
       "csc": 0.010593,
       "cod": 0.012712,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "8.A4",
       "csc": 0.010593,
       "cod": 0.012712,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "8.A5",
       "csc": 0.010593,
       "cod": 0.012712,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "9.01",
       "csc": 0.085579,
       "cod": 0.102694,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "9.02",
       "csc": 0.079961,
       "cod": 0.095954,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "9.03",
       "csc": 0.24083,
       "cod": 0.288996,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "9.04",
       "csc": 0.092228,
       "cod": 0.110674,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "9.05",
       "csc": 0.052966,
       "cod": 0.063559,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "9.08",
       "csc": 0.044717,
       "cod": 0.05366,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "9.09",
       "csc": 0.049435,
       "cod": 0.059322,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "9.11",
       "csc": 0.085005,
       "cod": 0.102007,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "9.12",
       "csc": 0.014875,
       "cod": 0.01785,
+      "pagina": 13,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "9.21",
       "csc": 0.01645,
       "cod": 0.01974,
+      "pagina": 13,
       "amostras": 67,
       "batem": 67,
       "validado": true
@@ -1895,15 +2105,17 @@
       "codigo": "9.82",
       "csc": 0,
       "cod": 0,
+      "pagina": 14,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "9.94",
       "csc": 0,
       "cod": 0,
+      "pagina": 14,
       "amostras": 1,
       "batem": 1,
       "validado": true
@@ -1913,6 +2125,7 @@
       "codigo": "G.02",
       "csc": 0,
       "cod": 0,
+      "pagina": 14,
       "amostras": 268,
       "batem": 268,
       "validado": true
@@ -1922,51 +2135,57 @@
       "codigo": "LC02",
       "csc": 0.070621,
       "cod": 0.084745,
+      "pagina": 14,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "LC03",
       "csc": 0.070621,
       "cod": 0.084745,
+      "pagina": 14,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "LC04",
       "csc": 0.070621,
       "cod": 0.084745,
+      "pagina": 14,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "T.10",
       "csc": 0.023096,
       "cod": 0.027716,
+      "pagina": 14,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "V.39",
       "csc": 0,
       "cod": 0,
+      "pagina": 14,
       "amostras": 0,
       "batem": 0,
-      "validado": false
+      "validado": true
     },
     {
       "tabela": "11",
       "codigo": "V.70",
       "csc": 0,
       "cod": 0,
+      "pagina": 14,
       "amostras": 2,
       "batem": 2,
       "validado": true
@@ -1974,621 +2193,27 @@
   ],
   "pendentes": [
     {
-      "tabela": "12",
-      "codigo": "RC39",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "12",
-      "codigo": "RC40",
-      "motivo": "Nenhum crédito reproduzido",
-      "linhas": 5
-    },
-    {
-      "tabela": "12",
-      "codigo": "RC42",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "12",
-      "codigo": "RC73",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "12",
-      "codigo": "RC74",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "12",
-      "codigo": "RC99",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "1.13",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "1.14",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "1.22",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "1.25",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "1.28",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
       "tabela": "11",
       "codigo": "1.62",
-      "motivo": "Fatores não numéricos ou extração ambígua",
+      "motivo": "Fator não numérico: NOTA 10 sem texto neste PDF",
       "linhas": 61
     },
     {
       "tabela": "11",
-      "codigo": "1.64",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
       "codigo": "1.73",
-      "motivo": "Fatores não numéricos ou extração ambígua",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "2.01",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "3.01",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "3.06",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "4.05",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "4.06",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.01",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.11",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.12",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.13",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.22",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.31",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.32",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.33",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.40",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.41",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.42",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.44",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "5.45",
-      "motivo": "Sem amostra na fatura",
+      "motivo": "Fator não numérico: NOTA 10 sem texto neste PDF",
       "linhas": 0
     },
     {
       "tabela": "11",
       "codigo": "5.63",
-      "motivo": "Fatores não numéricos ou extração ambígua",
+      "motivo": "Fator não numérico: NOTA 10 sem texto neste PDF",
       "linhas": 2
     },
     {
       "tabela": "11",
       "codigo": "5.64",
-      "motivo": "Fatores não numéricos ou extração ambígua",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.02",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.03",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.04",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.06",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.08",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.25",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.31",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.32",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.34",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.39",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.42",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.44",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.46",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.52",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.53",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.82",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.83",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "6.84",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.04",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.27",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.42",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.46",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.49",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.66",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.72",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.78",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.79",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.83",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.87",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.88",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.90",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.91",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.P1",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.P3",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.P5",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.P6",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.P7",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.P8",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.P9",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.S3",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.S6",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.S7",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.S8",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "7.S9",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "8.79",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "8.81",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "8.83",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "8.84",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "8.93",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "8.A1",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "8.A2",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "8.A3",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "8.A4",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "8.A5",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "9.01",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "9.02",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "9.03",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "9.04",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "9.05",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "9.08",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "9.09",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "9.11",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "9.12",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "9.82",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "LC02",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "LC03",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "LC04",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "T.10",
-      "motivo": "Sem amostra na fatura",
-      "linhas": 0
-    },
-    {
-      "tabela": "11",
-      "codigo": "V.39",
-      "motivo": "Sem amostra na fatura",
+      "motivo": "Fator não numérico: NOTA 10 sem texto neste PDF",
       "linhas": 0
     }
   ]

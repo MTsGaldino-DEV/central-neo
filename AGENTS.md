@@ -8,3 +8,7 @@ Não duplique a memória neste arquivo. Releia o estado do Git antes de editar o
 commitar: outro agente pode ter trabalhado no mesmo diretório.
 
 Instruções novas do Matheus prevalecem sobre registros históricos desses arquivos.
+
+Para referências entre projetos, consulte o
+[perfil APPWEB](../MEMORIA_COMPARTILHADA.md) e o
+[catálogo de funcionalidades](../CATALOGO_FUNCIONALIDADES.md), quando disponíveis.

@@ -18,7 +18,7 @@ export default function Contrato() {
   }
   return <div className="p-4 lg:p-6 space-y-5 max-w-7xl mx-auto">
     <div><h2 className="text-xl font-extrabold">Tabelas do contrato</h2><p className="text-sm text-aco">Tabela 11 · códigos de fechamento / Tabela 12 · atendimentos RC. Valores em US.</p></div>
-    <p className="p-4 rounded-xl bg-sinal-fundo text-sinal text-sm">Os dois fatores são comparados. Códigos aguardando validação ficam sem cálculo até o acerto pelo administrador.</p>
+    <p className="p-4 rounded-xl bg-sinal-fundo text-sinal text-sm">Os fatores publicados no contrato independem do valor pago na fatura. CSC/CSI e COD são comparados na Conferência. Códigos sem fator numérico validado permanecem pendentes.</p>
     {erro && <p role="alert" className="text-erro">{erro}</p>}
     <div className="flex gap-3"><input aria-label="Buscar código ou descrição" placeholder="Código ou descrição" value={busca} onChange={e=>setBusca(e.target.value)} className="border border-linha rounded-lg p-2 flex-1"/><select aria-label="Tabela" value={tabela} onChange={e=>setTabela(e.target.value)} className="border border-linha rounded-lg p-2"><option value="">Todas as tabelas</option><option>11</option><option>12</option></select></div>
     <div className="bg-white border border-linha rounded-2xl overflow-auto"><table className="w-full text-sm text-left"><thead className="bg-nevoa"><tr>{['Tabela','Código','Descrição','CSC/CSI','COD','Validação'].map(h=><th className="p-3" key={h}>{h}</th>)}</tr></thead><tbody>

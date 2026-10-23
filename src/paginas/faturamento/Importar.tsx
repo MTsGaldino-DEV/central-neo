@@ -1,21 +1,95 @@
-import { useEffect,useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { lerFatura,lerVinculos,type LeituraFat } from '@/lib/faturamentoPlanilhas';
-import { importarFat,importarVinculosFat,faturasFat,usFat,erroFat,type FaturaFat } from '@/lib/faturamento';
+import { ArrowRight, Check, CheckCircle2, FileSpreadsheet, Link2, Loader2, UploadCloud, X, AlertTriangle } from 'lucide-react';
+import { lerFatura, lerFaturaCompleta, cruzarFaturas, TIPOS_TURMA_FAT, type LeituraFat, type LeituraCompletaFat } from '@/lib/faturamentoPlanilhas';
+import { importarFat, faturasFat, usFat, erroFat, type FaturaFat } from '@/lib/faturamento';
 
-export default function Importar(){
-  const [leitura,setLeitura]=useState<LeituraFat|null>(null),[arquivo,setArquivo]=useState('');
-  const [inicio,setInicio]=useState(''),[fim,setFim]=useState(''),[fatura,setFatura]=useState('');
-  const [faturas,setFaturas]=useState<FaturaFat[]>([]),[ocupado,setOcupado]=useState(false),[erro,setErro]=useState(''),[mensagem,setMensagem]=useState('');
-  useEffect(()=>{faturasFat().then(setFaturas).catch(e=>setErro(erroFat(e)));},[]);
-  async function ler(f:File){setOcupado(true);setErro('');setMensagem('');setLeitura(null);try{const l=lerFatura(await f.arrayBuffer());setArquivo(f.name);setLeitura(l);const m=f.name.match(/(\d{2})-(\d{2})_a_(\d{2})-(\d{2})-(\d{4})/);if(m){setInicio(`${Number(m[2])>Number(m[4])?Number(m[5])-1:m[5]}-${m[2]}-${m[1]}`);setFim(`${m[5]}-${m[4]}-${m[3]}`);}}catch(e){setErro(erroFat(e));}finally{setOcupado(false);}}
-  async function importar(){if(!leitura)return;setOcupado(true);setErro('');try{await importarFat(leitura,arquivo,inicio,fim,setMensagem);setMensagem(`Fatura ${leitura.fatura} importada. As conferências anteriores foram preservadas.`);setFaturas(await faturasFat());}catch(e){setErro(erroFat(e));setMensagem('A importação não foi concluída. A versão anterior da fatura continua disponível.');}finally{setOcupado(false);}}
-  async function vincular(f:File){setOcupado(true);setErro('');try{const linhas=lerVinculos(await f.arrayBuffer());await importarVinculosFat(fatura,linhas);setMensagem(`${linhas.length} vínculos importados para a fatura ${fatura}.`);}catch(e){setErro(erroFat(e));}finally{setOcupado(false);}}
-  return <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-5"><div><h2 className="text-xl font-extrabold">Importar fatura</h2><p className="text-sm text-aco">Créditos, glosas, turmas, justificativas e ajustes da CEMIG.</p></div>
-    {erro&&<p role="alert" className="p-3 rounded-xl bg-erro-fundo text-erro">{erro}</p>}{mensagem&&<p role="status" className="p-3 bg-sinal-fundo text-sinal rounded-xl">{mensagem}</p>}
-    <section className="bg-white border border-linha rounded-2xl p-6 space-y-4"><label className="block font-bold">Planilha completa da fatura<input disabled={ocupado} type="file" accept=".xlsx" className="block mt-3 text-sm" onChange={e=>{const f=e.target.files?.[0];if(f)void ler(f);e.target.value='';}}/></label>
-    {leitura&&<><h3 className="font-bold">Fatura {leitura.fatura} · {arquivo}</h3><div className="grid sm:grid-cols-3 gap-3"><p>Linhas: {leitura.abas.US_Servico.length.toLocaleString('pt-BR')}</p><p>Crédito: {usFat(leitura.creditado)} US</p><p>Glosa com sinal: {usFat(leitura.glosa)} US</p></div><div className="flex gap-3"><label>Início<input type="date" value={inicio} onChange={e=>setInicio(e.target.value)} disabled={ocupado} className="block border rounded p-2"/></label><label>Fim<input type="date" value={fim} onChange={e=>setFim(e.target.value)} disabled={ocupado} className="block border rounded p-2"/></label></div>
-    <p className="text-sm text-aco">Reimportar substitui os dados desta fatura ao terminar todos os lotes. Conferências são mantidas; alterações nos valores exigem nova revisão.</p><button disabled={ocupado||!inicio||!fim||fim<inicio} onClick={()=>void importar()} className="bg-sinal text-white rounded-lg px-4 py-2 disabled:opacity-50">{ocupado?'Importando…':'Importar fatura'}</button> <Link className="text-sinal" to={`/faturamento?fatura=${leitura.fatura}`}>Abrir conferência</Link></>}
-    </section><section className="bg-white border border-linha rounded-2xl p-6 space-y-4"><h3 className="font-bold">Vincular serviço ao veículo / turma</h3><p className="text-sm text-aco">A planilha deve ter numserv e numvei ou ident_turma. A aba US_Turma da fatura identifica o tipo da equipe. Enquanto faltar o vínculo, coincidências com fator de moto ficam como moto provável.</p><select aria-label="Fatura dos vínculos" disabled={ocupado} value={fatura} onChange={e=>setFatura(e.target.value)} className="border rounded p-2"><option value="">Selecione a fatura</option>{faturas.map(f=><option key={f.id}>{f.id}</option>)}</select><input aria-label="Planilha de vínculos" type="file" accept=".xlsx,.csv" disabled={ocupado||!fatura} onChange={e=>{const f=e.target.files?.[0];if(f)void vincular(f);e.target.value='';}}/></section>
+const numero = (n: number) => n.toLocaleString('pt-BR');
+const data = (s: string) => s.split('-').reverse().join('/');
+
+type ArquivoLido<T> = { arquivo: File; dados: T };
+export default function Importar() {
+  const [resumida, setResumida] = useState<ArquivoLido<LeituraFat> | null>(null);
+  const [completa, setCompleta] = useState<ArquivoLido<LeituraCompletaFat> | null>(null);
+  const [faturas, setFaturas] = useState<FaturaFat[]>([]);
+  const [lendo, setLendo] = useState(''), [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState(''), [mensagem, setMensagem] = useState('');
+  const [percentual, setPercentual] = useState(0), [concluida, setConcluida] = useState(false);
+  const ocupado = !!lendo || enviando;
+  useEffect(() => { faturasFat().then(setFaturas).catch(e => setErro(erroFat(e))); }, []);
+  const previa = useMemo(() => {
+    if (!resumida || !completa) return null;
+    try { return { dados: cruzarFaturas(resumida.dados, completa.dados), erro: '' }; }
+    catch (e) { return { dados: null, erro: erroFat(e) }; }
+  }, [resumida, completa]);
+  const cruzamento = previa?.dados;
+  const existente = faturas.some(f => f.id === resumida?.dados.fatura);
+  async function ler(f: File, tipo: 'resumida' | 'completa') {
+    if (ocupado) return;
+    setLendo(tipo); setErro(''); setConcluida(false); setMensagem(''); setPercentual(0);
+    if (tipo === 'resumida') setResumida(null); else setCompleta(null);
+    try {
+      if (!/\.xlsx$/i.test(f.name)) throw Error('Selecione uma planilha Excel no formato .xlsx.');
+      // Deixa o navegador desenhar o estado de leitura antes de processar o Excel.
+      await new Promise(resolve => setTimeout(resolve, 40));
+      const buffer = await f.arrayBuffer();
+      if (tipo === 'resumida') setResumida({ arquivo: f, dados: lerFatura(buffer) });
+      else setCompleta({ arquivo: f, dados: lerFaturaCompleta(buffer) });
+    } catch (e) { setErro(erroFat(e)); } finally { setLendo(''); }
+  }
+  async function importar() {
+    if (!resumida || !completa || !cruzamento || ocupado) return;
+    setEnviando(true); setErro(''); setMensagem('Preparando a importação…'); setPercentual(0);
+    try {
+      await importarFat(resumida.dados, resumida.arquivo.name, completa.dados, completa.arquivo.name, (s, p) => { setMensagem(s); setPercentual(p); });
+      setConcluida(true);
+    } catch (e) { setErro(erroFat(e)); setMensagem('Não foi possível confirmar a conclusão. Você pode tentar novamente; a mesma fatura não será duplicada.'); }
+    finally { setEnviando(false); }
+  }
+  function limpar(tipo: 'resumida' | 'completa') {
+    if (tipo === 'resumida') setResumida(null); else setCompleta(null);
+    setConcluida(false); setErro(''); setMensagem(''); setPercentual(0);
+  }
+  return <div className="max-w-6xl mx-auto p-4 lg:p-8 space-y-6">
+    <header className="flex flex-wrap items-start justify-between gap-4">
+      <div><p className="text-xs font-bold uppercase tracking-[.16em] text-sinal mb-2">Faturamento · Importação</p><h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">Uma fatura. As duas origens.</h2><p className="mt-2 text-sm text-aco max-w-2xl leading-relaxed">Anexe o resumo para conferir os valores e o relatório completo para identificar a equipe de cada serviço.</p></div>
+      <Link to="/faturamento" className="text-sm font-semibold text-sinal flex items-center gap-2 py-2">Ir para conferência <ArrowRight size={16}/></Link>
+    </header>
+    <ol className="flex flex-wrap gap-x-6 gap-y-3 text-sm border-b border-linha pb-5" aria-label="Etapas da importação">
+      {['Selecionar arquivos', 'Revisar cruzamento', 'Conferir fatura'].map((s, i) => <li key={s} className={'flex items-center gap-2 ' + ((concluida ? 2 : cruzamento ? 1 : 0) >= i ? 'text-sinal font-bold' : 'text-aco')}><span className={'size-6 rounded-full flex items-center justify-center text-xs ' + ((concluida ? 2 : cruzamento ? 1 : 0) >= i ? 'bg-sinal text-white' : 'bg-linha')}>{concluida || (cruzamento && i === 0) ? <Check size={14}/> : i + 1}</span>{s}</li>)}
+    </ol>
+    {(erro || previa?.erro) && <div role="alert" className="flex items-start gap-3 rounded-xl border border-erro/15 bg-erro-fundo p-4 text-sm text-erro"><AlertTriangle size={19} className="shrink-0"/>{erro || previa?.erro}</div>}
+    <div className="grid md:grid-cols-2 gap-5">
+      <AreaArquivo titulo="Fatura Resumida" subtitulo="Valores e turmas da fatura" numero="01" dica="Planilha Resumo_Fat, com US_Servico e US_Turma." arquivo={resumida?.arquivo} detalhe={resumida ? numero(resumida.dados.abas.US_Servico.length) + ' linhas de faturamento' : ''} ocupado={ocupado} lendo={lendo === 'resumida'} onArquivo={f => void ler(f, 'resumida')} onLimpar={() => limpar('resumida')}/>
+      <AreaArquivo titulo="Fatura Completa" subtitulo="Serviços e veículos que executaram" numero="02" dica="Relatório completo, com as abas Serviço e Apropriação." arquivo={completa?.arquivo} detalhe={completa ? numero(completa.dados.vinculos.length) + ' serviços identificados' : ''} ocupado={ocupado} lendo={lendo === 'completa'} onArquivo={f => void ler(f, 'completa')} onLimpar={() => limpar('completa')}/>
+    </div>
+    {cruzamento && resumida && completa ? <section className="rounded-2xl border border-linha bg-white overflow-hidden">
+      <div className="p-5 lg:p-6 flex flex-wrap items-center justify-between gap-3 border-b border-linha"><div className="flex items-center gap-3"><span className="rounded-xl bg-sinal-fundo text-sinal p-3"><Link2 size={22}/></span><div><h3 className="font-extrabold text-lg">Fatura {resumida.dados.fatura}</h3><p className="text-xs text-aco mt-1">{data(completa.dados.inicio)} a {data(completa.dados.fim)}</p></div></div><span className="inline-flex items-center gap-1.5 bg-concluido-fundo text-concluido rounded-full px-3 py-1.5 text-xs font-bold"><CheckCircle2 size={14}/> Arquivos da mesma fatura</span></div>
+      <div className="p-5 lg:p-6 space-y-6">
+        <dl className="grid sm:grid-cols-3 gap-4"><Indicador titulo="Serviços únicos" valor={numero(cruzamento.servicos)}/><Indicador titulo="Total creditado" valor={usFat(resumida.dados.creditado)} unidade="US"/><Indicador titulo="Glosas e estornos · saldo" valor={usFat(resumida.dados.glosa)} unidade="US"/></dl>
+        <div><div className="flex flex-wrap justify-between gap-2 mb-3"><h4 className="text-sm font-bold">Equipes identificadas</h4><p className="text-xs text-aco">Serviço → veículo → turma</p></div><div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{Object.entries(TIPOS_TURMA_FAT).map(([tipo, nome]) => <div key={tipo} className="rounded-xl border border-linha p-4"><p className="text-xs font-semibold text-aco">{nome}</p><p className="text-2xl font-extrabold tracking-tight mt-2">{numero(cruzamento.porTipo[tipo])}</p><div className="h-1 rounded-full bg-nevoa mt-3 overflow-hidden"><div className="h-full rounded-full bg-sinal" style={{ width: (cruzamento.porTipo[tipo] / cruzamento.servicos * 100) + '%' }}/></div></div>)}</div></div>
+        {cruzamento.semVinculo + cruzamento.ambiguos > 0 ? <p className="bg-pendente-fundo text-pendente rounded-xl p-4 text-sm">{numero(cruzamento.semVinculo)} serviços sem equipe identificada e {numero(cruzamento.ambiguos)} com mais de um tipo possível. Eles permanecem sem equipe confirmada; coincidências exclusivas com moto serão sinalizadas como moto provável.</p> : <p className="text-concluido text-sm flex gap-2 items-center"><CheckCircle2 size={17}/> Todos os serviços têm uma equipe identificada.</p>}
+        {existente && !concluida && <p className="text-sm text-aco border-t border-linha pt-4">A fatura {resumida.dados.fatura} já existe. Ao concluir, os dois arquivos substituirão a versão anterior. Mudanças nos dados, na equipe ou nos fatores reabrem as linhas já conferidas.</p>}
+      </div>
+      <div className="bg-nevoa/60 border-t border-linha p-5 lg:px-6">
+        {concluida ? <div role="status" className="flex flex-wrap justify-between items-center gap-4"><div className="flex gap-3 text-concluido items-center"><CheckCircle2 size={24}/><div><p className="font-bold">Fatura importada e equipes vinculadas</p><p className="text-sm mt-1">Os valores já estão disponíveis para conferência.</p></div></div><Link to={'/faturamento?fatura=' + resumida.dados.fatura} className="bg-sinal text-white rounded-xl px-5 py-3 text-sm font-bold inline-flex items-center gap-2">Conferir fatura <ArrowRight size={16}/></Link></div> : <div className="space-y-3"><div className="flex flex-wrap justify-between items-center gap-4"><p className="text-xs text-aco max-w-lg">Os valores e os vínculos são publicados juntos, após a validação de todos os registros.</p><button disabled={ocupado} onClick={() => void importar()} className="bg-sinal hover:bg-sinal-forte text-white rounded-xl px-5 py-3 font-bold text-sm flex items-center gap-2 disabled:opacity-50">{enviando ? <Loader2 size={17} className="animate-spin"/> : <UploadCloud size={17}/>} {enviando ? 'Importando…' : existente ? 'Atualizar fatura e equipes' : 'Importar fatura e equipes'}</button></div>{mensagem && <div role="status" className="text-sm text-aco">{mensagem}{enviando && <div role="progressbar" aria-label="Progresso da importação" aria-valuenow={percentual} aria-valuemin={0} aria-valuemax={100} className="h-1.5 mt-3 bg-linha rounded-full overflow-hidden"><div className="bg-sinal h-full transition-all" style={{ width: percentual + '%' }}/></div>}</div>}</div>}
+      </div>
+    </section> : <section className="rounded-2xl bg-sinal-fundo/60 border border-sinal/10 p-5 flex items-start gap-3"><Link2 size={21} className="text-sinal shrink-0 mt-0.5"/><div><h3 className="font-bold text-sm text-sinal">O cruzamento acontece aqui</h3><p className="text-sm text-aco leading-relaxed mt-1">O número do serviço liga as duas planilhas. O veículo da aba Serviço encontra a frota em US_Turma e identifica Multifuncional, Moto, Umpla ou Quarteto. Não é preciso copiar abas no Excel.</p></div></section>}
   </div>;
+}
+
+function Indicador({ titulo, valor, unidade }: { titulo: string; valor: string; unidade?: string }) {
+  return <div className="rounded-xl bg-nevoa p-4 min-w-0"><dt className="text-xs font-semibold text-aco">{titulo}</dt><dd className="text-xl lg:text-2xl font-extrabold mt-2 tracking-tight tabular-nums">{valor} {unidade && <span className="text-xs font-semibold text-aco">{unidade}</span>}</dd></div>;
+}
+
+function AreaArquivo({ titulo, subtitulo, numero, dica, arquivo, detalhe, ocupado, lendo, onArquivo, onLimpar }: { titulo: string; subtitulo: string; numero: string; dica: string; arquivo?: File; detalhe: string; ocupado: boolean; lendo: boolean; onArquivo: (f: File) => void; onLimpar: () => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [arrastando, setArrastando] = useState(false);
+  return <section className="bg-white rounded-2xl border border-linha p-5 lg:p-6 min-w-0">
+    <div className="flex gap-3 items-center mb-5"><span className="text-xs font-codigo font-bold text-sinal bg-sinal-fundo rounded-lg size-9 flex items-center justify-center">{numero}</span><div><h3 className="font-extrabold">{titulo}</h3><p className="text-xs text-aco mt-1">{subtitulo}</p></div></div>
+    <input ref={input} type="file" accept=".xlsx" aria-label={titulo} className="hidden" disabled={ocupado} onChange={e => { const f = e.target.files?.[0]; if (f) onArquivo(f); e.target.value = ''; }}/>
+    {arquivo ? <div className="rounded-xl bg-sinal-fundo/40 border border-sinal/20 min-h-44 p-4 flex flex-col justify-between gap-4"><div className="flex gap-3 items-start"><FileSpreadsheet size={24} className="text-sinal shrink-0"/><p className="text-sm font-semibold break-all flex-1">{arquivo.name}</p><button aria-label={'Remover ' + titulo} disabled={ocupado} onClick={onLimpar} className="text-aco hover:text-erro p-1 rounded disabled:opacity-40"><X size={16}/></button></div><div><p className="text-xs text-aco">{(arquivo.size / 1024 / 1024).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB · {detalhe}</p><p className="text-xs font-bold text-concluido flex items-center gap-1.5 mt-3"><CheckCircle2 size={15}/> Leitura concluída</p></div></div> : <button type="button" disabled={ocupado} onClick={() => input.current?.click()} onDragOver={e => { e.preventDefault(); if (!ocupado) setArrastando(true); }} onDragLeave={() => setArrastando(false)} onDrop={e => { e.preventDefault(); setArrastando(false); if (!ocupado && e.dataTransfer.files[0]) onArquivo(e.dataTransfer.files[0]); }} className={'w-full min-h-44 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 p-5 transition-colors disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-sinal ' + (arrastando ? 'border-sinal bg-sinal-fundo' : 'border-linha hover:border-sinal hover:bg-sinal-fundo/30')}>
+      {lendo ? <Loader2 size={27} className="text-sinal animate-spin"/> : <UploadCloud size={27} className="text-sinal"/>}<span className="text-sm font-bold mt-1">{lendo ? 'Lendo planilha…' : 'Arraste o arquivo ou selecione'}</span><span className="text-xs text-aco text-center leading-relaxed">{dica}</span>
+    </button>}
+  </section>;
 }
