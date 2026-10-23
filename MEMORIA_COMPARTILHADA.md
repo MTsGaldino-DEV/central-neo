@@ -55,6 +55,15 @@ integração for retomada.
 
 ## Última entrega: Faturamento
 
+**Revisão em 23/10/2026:** Matheus reprovou o resultado por não atender ao pedido.
+Não tratar os quatro commits como escopo aprovado ou integralmente concluído.
+A auditoria `docs/faturamento-checklist-auditoria.md` confronta requisitos e código:
+faltam aderência visual, apresentação do fator numérico e validação mais forte dos
+PDFs/casos reais; há hipóteses extras nas glosas, limitações no RC multilinha e
+ausência de teste completo no navegador. O terceiro commit também referenciava a
+tela Resumo antes de seu arquivo entrar no quarto. Pedido atual: checklist; a
+auditoria não corrige o código nem redefine as regras de negócio.
+
 - Quatro partes enviadas ao GitHub: `08b22c0`, `c7d3c33`, `217804a`, `cf2b28a`.
 - Rotas: `/faturamento`, `/faturamento/importar`, `/faturamento/tabelas`,
   `/faturamento/resumo`. Migrations 013–018 testadas e aplicadas no CENTRAL-NEO.
