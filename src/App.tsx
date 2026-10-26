@@ -29,6 +29,7 @@ const ContratoFat = lazy(() => import('@/paginas/faturamento/Contrato'));
 const ImportarFat = lazy(() => import('@/paginas/faturamento/Importar'));
 const ConferenciaFat = lazy(() => import('@/paginas/faturamento/Conferencia'));
 const ResumoFat = lazy(() => import('@/paginas/faturamento/Resumo'));
+const FaturasFat = lazy(() => import('@/paginas/faturamento/Faturas'));
 
 function Carregando() {
   return (
@@ -122,7 +123,8 @@ export default function App() {
           <Route path="painel" element={<PainelFechamento />} />
         </Route>
         <Route path="faturamento" element={<ExigeModulo modulo="faturamento"><Outlet /></ExigeModulo>}>
-          <Route index element={<ConferenciaFat />} />
+          <Route index element={<FaturasFat />} />
+          <Route path="conferencia" element={<ConferenciaFat />} />
           <Route path="tabelas" element={<ContratoFat />} />
           <Route path="importar" element={<ImportarFat />} />
           <Route path="resumo" element={<ResumoFat />} />

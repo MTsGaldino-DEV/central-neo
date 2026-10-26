@@ -54,10 +54,11 @@ export function useSecoesNav(): SecaoNav[] {
 
   if (temModulo(acesso, 'faturamento')) {
     secoes.push({ titulo: 'Faturamento', itens: [
+      { label: 'Faturas', href: '/faturamento', icon: Receipt, fim: true },
       { label: 'Resumo', href: '/faturamento/resumo', icon: BarChart3 },
-      { label: 'Conferência', href: '/faturamento', icon: ClipboardList, fim: true },
+      { label: 'Conferência', href: '/faturamento/conferencia', icon: ClipboardList },
       { label: 'Importar fatura', href: '/faturamento/importar', icon: FileSpreadsheet },
-      { label: 'Tabelas do contrato', href: '/faturamento/tabelas', icon: Receipt },
+      { label: 'Tabelas do contrato', href: '/faturamento/tabelas', icon: Table2 },
     ] });
   }
   secoes.push({ titulo: 'Em breve', itens: EM_BREVE, emBreve: true });
