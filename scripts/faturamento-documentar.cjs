@@ -84,7 +84,7 @@ ${pendentes.map(c=>`| ${c.tabela} | ${c.codigo} | ${c.motivo} | ${c.linhas} |`).
 - Typecheck e build executados em cada entrega; o build mantém o aviso existente de bundle acima de 500 kB.
 - Integração com rollback: exemplo real 7.28, moto provável, código ausente, divergência, RC multilinha, preservação da revisão, alteração de dados e RLS sem módulo. Resumo após índices: aproximadamente 1,6 s na conexão utilizada.
 - As quatro entregas têm commits separados. Nenhum arquivo preexistente do usuário foi incluído.
-- A interface foi validada por compilação; não foi realizado teste visual em navegador nem verificação do deploy do Dokploy.
+- A interface foi validada por compilação; não foi realizado teste visual em navegador.
 - Histórico de conferência mantém a última observação por linha. Histórico de fatores preserva todos os acertos.
 - Reimportação preserva conferências pelo identificador idapropriacaotemposervico da fonte. Se esse identificador mudar na CEMIG, a nova linha precisa de revisão.
 `;

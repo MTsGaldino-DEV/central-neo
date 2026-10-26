@@ -18,7 +18,7 @@ Central do **NEO (Núcleo de Eficiência Operacional)**, irmã da Central NEC. R
 
 ## 2. Arquitetura
 
-- **Frontend:** React 19 + Vite 6 + TypeScript + Tailwind v4 + React Router 6. Deploy: Docker/Nginx no Dokploy (`Dockerfile`, `docker-compose.yml`).
+- **Frontend:** React 19 + Vite 6 + TypeScript + Tailwind v4 + React Router 6.
 - **Backend principal: projeto Supabase `central-neo`** (`dxcxoimvweeggrvtbmxb`, sa-east-1). Nele ficam login (`auth.users`), cadastro único de colaboradores, acessos, fechamento, contrato e painel. Migração feita em 2026-10-20.
 - **TraceOne emprestado** (`ctlaygzndbaojxpwqsco`): só para os medidores. O app abre uma segunda sessão lá com o mesmo e-mail e senha (`lib/auth.ts`, cliente `supabaseTraceone`), porque a RLS dos medidores depende do papel do usuário no TraceOne (`profiles.role`). Se a senha de lá for diferente, a tela "Conectar ao TraceOne" pede uma vez.
 - O TraceOne web (Next.js) **continua no ar** em paralelo. As telas de medidores da NEO foram copiadas de `../traceone/frontend` e adaptadas.
@@ -149,7 +149,7 @@ Migrations do banco central-neo: `node scripts/migrar.cjs` (usa `NEO_DATABASE_UR
 Edge Function: `supabase functions deploy admin-usuarios --project-ref dxcxoimvweeggrvtbmxb --use-api`.
 No painel do Supabase (central-neo), em Authentication → URL Configuration, cadastre a URL publicada da NEO em Site URL e em Redirect URLs. Sem isso, o link de "Esqueci minha senha" não volta para `/reset-senha`.
 
-Deploy no Dokploy: `docker-compose.yml` (rede `dokploy-network`). Não precisa de VPN, porque a NEO não acessa o GDIS diretamente.
+A NEO não acessa o GDIS diretamente, então não precisa de VPN.
 
 ## 7. Faturamento
 
@@ -165,4 +165,4 @@ Implementado em 23/10/2026. Compara créditos e glosas da CEMIG com as Tabelas 1
 - Testes de integração com rollback: `node scripts/faturamento-testar.cjs`; verificação de tipos e build com `npm.cmd run typecheck` / `npm.cmd run build` no PowerShell.
 - Conferência após migrations 021/022: `neo_fat_listar` retorna linhas e total com filtros/paginação em uma RPC autenticada; `src/lib/faturamento.ts` a chama em vez de consultar a view com contagem direta pelo PostgREST. As views `neo_fat_base`, `neo_fat_calculo` e `neo_fat_conferencia` usam dono da view para evitar checagem de RLS por linha em subconsultas, com `neo_tem_modulo('faturamento')` explícito na base e na conferência. A consulta antiga continua funcional para o frontend já publicado. Teste: `node scripts/faturamento-conferencia-testar.cjs`.
 
-- Revisão visual e funcional de importação/contrato/equipe no Chrome desktop e celular; APIs do navegador simuladas com dados lidos da NEO. Importação real e testes transacionais verificados separadamente. Scripts `faturamento-planilhas-testar.cjs`, `faturamento-duas-planilhas-testar.cjs`, `faturamento-ui-testar.cjs`; extração geométrica em `faturamento-validar-pdf.py`. Deploy Dokploy não verificado.
+- Revisão visual e funcional de importação/contrato/equipe no Chrome desktop e celular; APIs do navegador simuladas com dados lidos da NEO. Importação real e testes transacionais verificados separadamente. Scripts `faturamento-planilhas-testar.cjs`, `faturamento-duas-planilhas-testar.cjs`, `faturamento-ui-testar.cjs`; extração geométrica em `faturamento-validar-pdf.py`.

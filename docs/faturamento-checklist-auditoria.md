@@ -42,7 +42,7 @@ Legenda: atendido = implementado com evidência; parcial = existe com lacunas; f
 | Quatro partes funcionais, cada commit com checks | Falha | Há quatro commits e checks executados, mas 217804a importa Resumo.tsx, ausente naquele commit; arquivo só entra em cf2b28a. O estado commitado não correspondeu ao estado isolado validado. |
 | Relatório e CONTEXTO_GERAL atualizados | Atendido com ressalvas | Arquivos existem. Números refletem as regras implementadas, cuja aderência não estava completamente validada. |
 | Memória compartilhada | Atendido | Arquivo comum, AGENTS.md/CLAUDE.md e referência na memória local do Claude. |
-| Garantir experiência funcionando de ponta a ponta | Não verificado | Sem navegador, upload real pela UI, exportação visual ou confirmação do Dokploy. |
+| Garantir experiência funcionando de ponta a ponta | Não verificado | Sem navegador, upload real pela UI ou exportação visual. |
 
 ## Problemas adicionais encontrados
 
@@ -93,5 +93,5 @@ Esta seção cobre as lacunas de interface, Resumo e RC multilinha apontadas aci
 | Documentação para leigos, fora da sidebar | Atendido | `/faturamento/documentacao`, teste de UI |
 | Tela abre com os últimos dados | Atendido | `cacheTela.ts` (cache bloqueado não quebra a tela) |
 | Celular 390 px sem rolagem horizontal | Atendido | Teste de UI em seis rotas |
-| Deploy no Dokploy e uso com login real | **Não verificado** | Teste de UI usa APIs simuladas |
+| Uso com login real | **Não verificado** | Teste de UI usa APIs simuladas |
 | Regras de negócio abertas (NOTA 10, PSAP, rural de Moto, 5.62) | **Sem mudança** | Ver perguntas no relatório |
