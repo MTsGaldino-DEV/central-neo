@@ -226,6 +226,8 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  assert(await page.getByRole('cell',{name:'0,165261',exact:true}).isVisible());
  await page.getByLabel('Buscar código ou descrição').fill('6.01');
  await page.locator('tr[data-codigo="6.01"]').getByText('sem desconto').waitFor();
+ const colContrato=(await page.getByRole('columnheader').allTextContents()).map(t=>t.trim());
+ assert(colContrato.indexOf('Valor Moto')>=0&&colContrato.indexOf('Valor Moto')<colContrato.indexOf('Fator Moto'),'Valor Moto deve vir antes de Fator Moto: '+colContrato);
  await foto('contrato-moto');
 
  // Documentação abre no tema pelo link
