@@ -29,3 +29,6 @@ Thumbs.db
 
 # Migrations e funções do Supabase ficam só na máquina local (pedido do Matheus, 26/10/2026).
 /supabase/
+
+# Vídeos finais e dados de produção permanecem locais.
+/entregas/central-neo/

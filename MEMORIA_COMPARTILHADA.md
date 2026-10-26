@@ -287,13 +287,13 @@ Levantamento estático de contexto, código, tokens, documentos e memórias do
 Claude, sem novos testes de cálculo, navegação, banco ou deploy. Nenhuma regra
 de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
 
-## Vídeo de apresentação — briefing em andamento, 26/10/2026 (Codex)
+## Vídeo de apresentação — produzido, 26/10/2026 (Codex)
 
 - Pedido de Matheus: motion design para TV, até 2 minutos, explicativo, ritmo com
   tempo de leitura, narração e textos de apoio. Público: diretoria e gestores;
   objetivo: mostrar o que foi desenvolvido na Central NEO, principalmente Faturamento
   (comparação de faturas). Tom institucional e elegante. Dados reais autorizados como
-  exemplos. Ainda sem data de reunião nem roteiro aprovado.
+  exemplos. Ainda sem data de reunião; texto-base escolhido conforme a direção vigente abaixo.
 - Referências em `Importação/`: `Download.mp4` (48,85 s, 576×1024) e vídeo iniciado
   por `From Klickpin.com-` (28,18 s, 720×540). Matheus quer a apresentação do sistema
   do Klickpin e o dinamismo, cores e narrativa do Download.
@@ -305,7 +305,8 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
   Imagens de análise geradas só na pasta temporária do sistema.
 - Direção confirmada por Matheus: identidade visual da Central NEO; abertura
   persuasiva em forma de pergunta; telas completas combinadas com elementos
-  destacados. Apenas Manutenção e Faturamento; TraceOne/Medidores ficam fora.
+  destacados. O conteúdo apresenta a manutenção da UEN 211 de forma abrangente,
+  incluindo serviços, faturamento e pagamentos; TraceOne/Medidores ficam fora.
   Voz masculina, natural e próxima, mantendo a elegância.
 - Mensagem confirmada: valorizar a facilidade de analisar as planilhas a partir
   da importação dos dois arquivos, entender o pagamento da CEMIG e identificar
@@ -314,15 +315,46 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
   a CEMIG e aumentar o faturamento; destacar trabalho manual de horas/dias no Excel
   frente a análises em segundos na NEO. A comparação de tempo veio do briefing,
   sem medição nesta etapa. X vermelho no Excel foi sugestão, com liberdade criativa.
-- Roteiro versão 2 incorpora o tempo à abertura/importação e destaca negociação
-  fundamentada e oportunidades de aumento do faturamento nas cenas finais. Proposta
-  visual: X discreto sobre “conferência manual”; arquivos Excel continuam como entrada.
-- Proposta em `docs/video-central-neo-roteiro.md`: 7 cenas, 1min58s estimado,
-  narração e descrição visual, com Manutenção e maior tempo para Faturamento.
-  Roteiro, tempos e assinatura ainda não aprovados. Premissa de produção: TV 16:9.
-- Verificação desta etapa: leitura estática das telas de importação/conferência,
-  funcionalidades documentadas e tokens atuais em `src/index.css` (Manrope e
-  JetBrains Mono). Nenhuma validação nova de dados no banco ou de uso no navegador.
-- Pendente: discutir roteiro, preparar storyboard, selecionar fatura/serviço e
-  verificar os números do exemplo na preparação das capturas. Nenhum vídeo final,
-  gravação de voz ou mudança no aplicativo nesta etapa.
+- Direção vigente, substituindo as alternativas de abertura: Matheus escolheu
+  explicitamente o **primeiro roteiro**, que ele reenviou, começando por “Horas,
+  às vezes dias, conferindo planilhas”, com as mesmas pausas e sequência, pedindo
+  generalização para **manutenção da UEN 211**. Guia de voz e roteiro visual
+  atualizados (versão 6, na duração da voz entregue). Introdução da marca: “A Central NEO reúne ferramentas
+  para acompanhar a manutenção da UEN duzentos e onze, trazendo mais clareza ao
+  controle dos serviços, do faturamento e dos pagamentos.” As propostas “Sabemos
+  o que executamos...” e “Milhares de serviços. Cada valor importa...” não são a
+  escolha final. Negociação fundamentada e oportunidades de aumento do faturamento
+  continuam nas cenas finais; Excel continua como entrada dos dados.
+- Entrega em `entregas/central-neo/Central-NEO-UEN-211.mp4`: **88,63 s**, Full HD
+  1920×1080, 30 fps, H.264 High nível 4.1, YUV420P faixa TV/BT.709, áudio AAC
+  estéreo 48 kHz. Capa JPG e legendas SRT opcionais na mesma pasta. Binários ficam
+  locais, ignorados pelo Git. Roteiro visual em `docs/video-central-neo-roteiro.md`.
+- Matheus enviou a voz Hale/ElevenLabs v4, autorizou usar os 1min28s e executar
+  toda a produção autonomamente, inclusive capturar telas/consultar o código.
+  Confirmou assinatura apenas Central NEO e UEN 211, entendida como o setor.
+- Montagem em 15 planos/7 partes narrativas, com identidade NEO, aproximações das
+  telas, textos/cards ampliados e trilha instrumental original criada localmente.
+  Fonte Manrope e JetBrains Mono; símbolo baseado no componente NeoLogo real.
+  Voz original mantida, com ajuste de nível e sem alteração de velocidade.
+- Capturas do app atual no Chrome headless. Respostas locais alimentadas por
+  consultas ao CENTRAL-NEO em transação **somente leitura**, sem importação ou revisão
+  gravada no banco. Fatura 9844; serviço 246445398/código 1.21 (contrato validado),
+  pago R$ 0 e previsto R$ 974,70. Totais a menos R$ 22.076,19/106 serviços e a mais
+  R$ 50.398,90/172 serviços. Valores apresentados como saldos para análise, não
+  receita recuperada. TraceOne e créditos pessoais não aparecem.
+- Código de produção em `video/central-neo/`; capturas, fontes, transcrição local
+  e dados brutos em `.tmp-faturamento/video-central-neo/`. Faster-whisper/base usado
+  localmente para alinhar a voz; áudio não enviado a serviço externo.
+- Verificado: decodificação completa do MP4 sem erros; codecs, cores, duração e
+  resolução com FFprobe; 15 prévias e 12 quadros do arquivo final inspecionados;
+  loudness da mixagem -16 LUFS, pico verdadeiro -4,2 dBFS; sintaxe Node/Python e
+  diff sem problemas de espaço. Não testado fisicamente na TV da reunião.
+- Pendente: Matheus assistir ao vídeo e indicar eventuais ajustes criativos.
+  Nenhuma mudança no aplicativo ou no banco foi feita para produzir o vídeo.
+- Narração: Matheus pediu instruções práticas e pausas, além do texto bruto, e
+  enviou `https://elevenlabs.io/docs/eleven-creative/playground/text-to-speech`.
+  Página e guia oficial de prompting consultados. Guia pronto em
+  `docs/video-central-neo-elevenlabs.md`, com configurações iniciais, texto completo
+  com audio tags para Eleven v4/v3, teste de pronúncia, orientação de download e
+  relação entre trechos e cenas. Áudio final recebido no v4. SSML de pausas não
+  funciona no v4/v3; não misturar sintaxes. A montagem já usa os tempos do áudio real.
