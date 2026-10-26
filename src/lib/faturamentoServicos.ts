@@ -97,6 +97,26 @@ export async function painelFat(): Promise<TotaisFat[]> {
   return data ?? [];
 }
 
+const SITUACOES_XLSX: Record<string,string> = { OK:'Confere', A_MENOS:'Pagou a menos', A_MAIS:'Pagou a mais', FORA_CONTRATO:'Fora do contrato', CONFERIDO:'Conferido' };
+/** XLSX da lista como está filtrada na Conferência (todas as páginas), valores em US. */
+export async function exportarListaFat(filtros: FiltrosListaFat, fatura: string): Promise<void> {
+  const X = await import('xlsx');
+  const lista: ServicoFat[] = [];
+  for (let pagina = 0; ; pagina++) {
+    const r = await listarServicosFat(filtros, pagina, 1000);
+    lista.push(...r.servicos);
+    if (!r.servicos.length || lista.length >= r.total) break;
+  }
+  const w = X.utils.book_new();
+  X.utils.book_append_sheet(w, X.utils.json_to_sheet(lista.map(s => ({
+    'Situação': SITUACOES_XLSX[s.situacao] ?? s.situacao, 'Nº serviço': s.numserv, 'Tipo serv.': s.tipo_serv, 'Códigos': s.codigos.join(', '),
+    'Frota': s.numvei ?? '', 'Tipo frota': TIPOS_TURMA_FAT[s.tipo_turma ?? ''] ?? s.tipo_turma ?? '', 'Cidade': s.cidade ?? '',
+    'Pago (US)': s.pago_comparado, 'Devido (US)': s.devido, 'Diferença (US)': s.diferenca, 'Multa (US)': s.multas,
+    'Motivo': MOTIVOS_FAT[s.motivo ?? ''] ?? '', 'Contém 1.NS': s.tem_1ns ? 'sim' : 'não', 'Na Manutenção': s.na_manutencao ? 'sim' : 'não',
+  }))), 'Conferência');
+  X.writeFile(w, `conferencia-fatura-${fatura}.xlsx`);
+}
+
 /** XLSX com tudo o que foi pago a menos e a mais (sem os conferidos), uma aba para cada lado. */
 export async function exportarNegociacaoFat(fatura: string): Promise<void> {
   const X = await import('xlsx');

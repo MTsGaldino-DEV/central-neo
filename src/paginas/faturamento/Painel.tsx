@@ -118,9 +118,9 @@ export default function Painel() {
 
         <div className="grid gap-3 md:grid-cols-3">
           <Grupo titulo="Por tipo de equipe" itens={t.grupos.tipo_turma} rotulo={v => v ? TIPOS_TURMA_FAT[v] ?? v : 'Sem equipe'} unidade={unidade} taxa={taxa}
-            link={v => conferencia({ visao: 'todos', ...(v ? { tipo_turma: v } : {}) })} />
-          <Grupo titulo="Por código" itens={t.grupos.codserv} rotulo={v => v ?? '—'} unidade={unidade} taxa={taxa} link={v => conferencia({ visao: 'todos', ...(v ? { codigo_principal: v } : {}) })} />
-          <Grupo titulo="Por cidade" itens={t.grupos.cidade} rotulo={v => v ?? 'Sem cidade'} unidade={unidade} taxa={taxa} link={v => conferencia({ visao: 'todos', ...(v ? { cidade: v } : {}) })} />
+            link={v => conferencia({ atalho: 'todos', tipos_turma: v ?? '—' })} />
+          <Grupo titulo="Por código" itens={t.grupos.codserv} rotulo={v => v ?? '—'} unidade={unidade} taxa={taxa} link={v => conferencia({ atalho: 'todos', ...(v ? { codigo_principal: v } : {}) })} />
+          <Grupo titulo="Por cidade" itens={t.grupos.cidade} rotulo={v => v ?? 'Sem cidade'} unidade={unidade} taxa={taxa} link={v => conferencia({ atalho: 'todos', cidades: v ?? '—' })} />
         </div>
 
         <section className={cartao}>

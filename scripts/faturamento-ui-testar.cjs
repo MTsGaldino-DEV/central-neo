@@ -56,7 +56,7 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
      hash_resumida:estado.hashes==='iguais'?hash(arqResumida):'antigo',hash_completa:estado.hashes==='iguais'?hash(arqCompleta):'antigo'}];
    else if(recurso==='neo_fat_painel')corpo=estado.painel==='vazio'?[]:real.painel;
    else if(recurso==='neo_fat_faturas_desatualizadas')corpo=estado.desatualizadas;
-   else if(recurso==='neo_fat_servicos_listar'){const f=dados();chamadasLista.push({lado:f.p_filtros.lado,offset:f.p_offset,modo:estado.lista,fatura:f.p_filtros.fatura});corpo=listar(f);}
+   else if(recurso==='neo_fat_servicos_listar'){const f=dados();chamadasLista.push({lado:f.p_filtros.lado,offset:f.p_offset,modo:estado.lista,fatura:f.p_filtros.fatura,filtros:f.p_filtros});corpo=listar(f);}
    else if(recurso==='neo_fat_servico_linhas')corpo=real.linhas;
    else if(recurso==='neo_fat_valor_us')corpo=estado.valorUs==='nenhum'?null:real.valorUs;
    else if(recurso==='neo_fat_servicos_valores'){const f=dados();chamadasValores.push(f);corpo=[{valor:'ALPERCATA',n:2},{valor:'COLUNA',n:1}];}
@@ -77,6 +77,7 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
    await route.fulfill({status:200,contentType:'application/json',headers:{'content-range':'0-49/50'},body:JSON.stringify(corpo)});
  });
  page=await context.newPage();page.on('pageerror',e=>falhas.push(e.message));
+ const chamadasListaF=()=>chamadasLista.map(c=>c.filtros);
  const cabe=async nome=>{const fora=await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth?[]:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>window.innerWidth+1).slice(-4).map(e=>e.tagName+'.'+String(e.className).slice(0,80)+' '+Math.round(e.getBoundingClientRect().right)));assert(!fora.length,`${nome} estoura a largura no celular: ${fora.join(' | ')}`);};
  const foto=nome=>page.screenshot({path:path.join(saida,nome+'.png'),fullPage:true});
 
@@ -133,15 +134,38 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('neo-fat:')).forEach(k=>localStorage.removeItem(k)));
  chamadasLista.length=0;
  await page.goto(urlBase+'/faturamento/conferencia');
- await page.getByText('A receber · pagou a menos').waitFor();
+ await page.getByRole('heading',{name:'Conferência'}).waitFor();
+ await page.getByRole('columnheader',{name:/Cidade/}).waitFor();
  assert(chamadasLista.length>0&&chamadasLista.every(c=>c.fatura==='9844'),'consulta sem fatura: '+JSON.stringify(chamadasLista));
- await page.getByRole('button',{name:/9844 ▾/}).click();
+ await page.getByRole('button',{name:/^Fatura 9844/}).click();
  assert.equal(await page.getByRole('option',{name:/Todas as faturas/}).count(),0);
  await page.keyboard.press('Escape');
- // Conferência: janela fecha por Esc, Cancelar e X
+ // Lista em colunas com filtro estilo Excel
  await page.goto(urlBase+'/faturamento/conferencia?fatura=9844');
- await page.getByText('A receber · pagou a menos').waitFor();
- const primeiro=page.locator('main li button, li button').filter({hasText:real.a_menos.servicos[0].numserv}).first();
+ await page.getByRole('columnheader',{name:/Motivo/}).waitFor();
+ const cabecalhos=(await page.getByRole('columnheader').allTextContents()).map(t=>t.replace(/\s+/g,' ').trim());
+ assert.deepEqual(cabecalhos,['Situação','Nº serviço','Tipo serv.','Códigos','Frota','Tipo frota','Cidade','Pago','Devido','Diferença','Multa','Motivo']);
+ chamadasValores.length=0;
+ await page.getByRole('button',{name:'Filtrar Cidade'}).click();
+ const menu=page.getByRole('dialog',{name:'Filtro de Cidade'});await menu.waitFor();
+ await menu.getByText('ALPERCATA').waitFor();
+ assert(chamadasValores.some(c=>c.p_coluna==='cidade'),'lista de valores não pedida');
+ await menu.getByRole('checkbox',{name:'(Selecionar tudo)'}).uncheck();
+ await menu.getByRole('checkbox',{name:/ALPERCATA/}).check();
+ chamadasLista.length=0;await menu.getByRole('button',{name:'OK'}).click();
+ await page.waitForURL(u=>u.searchParams.getAll('cidades').join()==='ALPERCATA');
+ await page.waitForFunction(()=>true);
+ assert(chamadasListaF().some(f=>JSON.stringify(f.cidades)==='["ALPERCATA"]'),'filtro de cidade não enviado');
+ await page.getByRole('button',{name:'Remover filtro Cidade'}).click();
+ await page.waitForURL(u=>!u.searchParams.has('cidades'));
+ chamadasLista.length=0;await page.getByRole('button',{name:/Contém 1.NS/}).click();
+ await page.waitForURL(u=>u.searchParams.get('tem_1ns')==='sim');
+ await page.waitForFunction(()=>true);
+ assert(chamadasListaF().some(f=>f.tem_1ns==='sim'),'Contém 1.NS não enviado');
+ await page.getByRole('button',{name:'Limpar todos'}).click();await page.waitForURL(u=>!u.searchParams.has('tem_1ns'));
+ assert(await page.locator('[title="Tem 1.NS e não foi encontrado na Manutenção"]').count()>0,'sem o aviso de 1.NS fora da Manutenção');
+ // Janela fecha por Esc, Cancelar e X
+ const primeiro=page.getByRole('button',{name:'Abrir serviço '+real.a_menos.servicos[0].numserv});
  await primeiro.click();await page.getByRole('dialog').waitFor();
  await page.getByRole('dialog').getByText('O que aconteceu').waitFor();
  await foto('conferencia-janela');
@@ -149,12 +173,16 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await primeiro.click();await page.getByRole('dialog').getByRole('button',{name:'Cancelar'}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  await primeiro.click();await page.getByRole('dialog').getByRole('button',{name:'Fechar'}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  await foto('conferencia-desktop');
- // Exportação percorre as páginas dos dois lados
+ // Exportações percorrem as páginas
  estado.lista='exportar';chamadasLista.length=0;
  const [baixado]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.getByRole('button',{name:'Exportar para negociação'}).click()]);
  assert.equal(baixado.suggestedFilename(),'negociacao-fatura-9844.xlsx');
  const exp=chamadasLista.filter(c=>c.modo==='exportar').map(c=>`${c.lado}:${c.offset}`);
  for(const c of ['a_menos:0','a_menos:1000','a_mais:0','a_mais:1000'])assert(exp.includes(c),`exportação sem ${c}: ${exp}`);
+ chamadasLista.length=0;
+ const [planilha]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.getByRole('button',{name:'Exportar para Excel'}).click()]);
+ assert.equal(planilha.suggestedFilename(),'conferencia-fatura-9844.xlsx');
+ const exp2=chamadasLista.filter(c=>c.modo==='exportar').map(c=>c.offset);assert.deepEqual(exp2,[0,1000]);
  estado.lista='vazio';await page.reload();
  await page.getByText('Nada pago a menos nesta fatura.',{exact:false}).waitFor();estado.lista='real';
 
@@ -179,7 +207,7 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
    await page.goto(urlBase+rota);await page.waitForLoadState('networkidle');await page.waitForTimeout(300);await cabe(rota);
    await foto('celular-'+(rota.split('/')[2]?.split('?')[0]||'lista'));
  }
- await page.goto(urlBase+'/faturamento/conferencia?fatura=9844');await primeiro.click();await page.getByRole('dialog').waitFor();
+ await page.goto(urlBase+'/faturamento/conferencia?fatura=9844');await page.getByRole('button',{name:'Abrir serviço '+real.a_menos.servicos[0].numserv}).click();await page.getByRole('dialog').waitFor();
  const larg=await page.getByRole('dialog').evaluate(e=>e.getBoundingClientRect().width);assert(larg>=380,`janela com ${larg}px no celular`);
  await foto('celular-janela');await page.keyboard.press('Escape');
  await page.setViewportSize({width:1440,height:1100});
