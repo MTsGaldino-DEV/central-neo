@@ -5,6 +5,9 @@ import { useSessao } from '@/contexto/Sessao';
 import { temModulo } from '@/lib/neo';
 import { getResumo, formatarUS, type ResumoFechamento } from '@/lib/fechamento';
 import { getMedidoresMetrics, type DashboardMetrics } from '@/lib/api';
+import { painelFat, valorUsFat } from '@/lib/faturamentoServicos';
+import { useDadosComCache } from '@/lib/useDadosComCache';
+import { rotuloPeriodo } from '@/components/faturamento/SeletorPeriodo';
 
 function saudacao() {
   const h = new Date().getHours();
@@ -15,6 +18,7 @@ export default function Inicio() {
   const { cadastro, acesso, session, traceone } = useSessao();
   const veTraceone = temModulo(acesso, 'traceone');
   const veFechamento = temModulo(acesso, 'fechamento');
+  const veFaturamento = temModulo(acesso, 'faturamento');
   const [resumo, setResumo] = useState<ResumoFechamento | null>(null);
   const [metricas, setMetricas] = useState<DashboardMetrics | null>(null);
 
@@ -25,6 +29,17 @@ export default function Inicio() {
 
   const primeiroNome = (cadastro?.nome ?? session?.user.email ?? '').split(/[\s@]/)[0];
   const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+  const numero = (n: number) => n.toLocaleString('pt-BR');
+  // Mesmos totais e cache do Painel do Faturamento; a lista vem da fatura mais recente para a mais antiga.
+  const painel = useDadosComCache('painel', painelFat, [], veFaturamento);
+  const valorUs = useDadosComCache('valor-us', valorUsFat, [], veFaturamento);
+  const atual = painel.dados?.[0] ?? null;
+  const taxa = valorUs.dados?.valor ?? null;
+  // Sem centavos para caber no card; sem o valor da US, fica em US.
+  const dinheiroFat = (us: number, sinal = false) => {
+    const s = sinal ? (us > 0 ? '+' : us < 0 ? '−' : '') : '';
+    return taxa ? `${s}${brl(Math.abs(us) * taxa)}` : `${s}${Math.abs(us).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} US`;
+  };
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto space-y-8">
@@ -34,7 +49,30 @@ export default function Inicio() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {temModulo(acesso, 'faturamento') && <Link to="/faturamento/painel" className="bg-white border border-linha rounded-2xl p-6 hover:border-sinal"><Receipt className="text-sinal"/><h3 className="text-lg font-extrabold mt-4">Faturamento</h3><p className="text-sm text-aco">Créditos e glosas CEMIG comparados com o contrato.</p></Link>}
+        {veFaturamento && (
+          <Link to={atual ? `/faturamento/painel?fatura=${encodeURIComponent(atual.fatura)}` : '/faturamento/painel'} className="group bg-white border border-linha rounded-2xl p-6 hover:border-sinal hover:shadow-md transition-all">
+            <div className="flex items-start justify-between">
+              <span className="size-11 rounded-xl bg-sinal-fundo text-sinal flex items-center justify-center"><Receipt size={22} /></span>
+              <ArrowRight size={18} className="text-aco-claro group-hover:text-sinal group-hover:translate-x-0.5 transition-transform" />
+            </div>
+            <h3 className="text-lg font-extrabold mt-4">Faturamento</h3>
+            <p className="text-sm text-aco">
+              {atual ? <>Fatura atual <b className="text-tinta">{atual.fatura}</b> · {rotuloPeriodo({ de: atual.inicio, ate: atual.fim })}</>
+                : painel.dados ? 'Nenhuma fatura importada ainda.' : 'Créditos da CEMIG comparados com o contrato.'}
+            </p>
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-2 mt-5">
+              <Mini rotulo="Pago pela CEMIG" valor={atual ? dinheiroFat(atual.creditado) : '—'} cor="text-tinta" pequeno classe="col-span-2 xl:col-span-1" />
+              <Mini rotulo="Pago a menos" valor={atual ? dinheiroFat(-(atual.a_menos.us ?? atual.saldo_a_receber), true) : '—'} cor="text-erro" pequeno />
+              <Mini rotulo="Pago a mais" valor={atual ? dinheiroFat(atual.a_mais.us ?? atual.pago_a_mais, true) : '—'} cor="text-concluido" pequeno />
+            </div>
+            {atual && (
+              <p className="mt-3 text-xs text-aco">
+                <b className="text-erro">{numero(atual.a_menos.servicos)}</b> serviços a menos · <b className="text-concluido">{numero(atual.a_mais.servicos)}</b> a mais
+                {!taxa && ' · valores em US'}
+              </p>
+            )}
+          </Link>
+        )}
         {veFechamento && (
           <Link to="/fechamento" className="group bg-white border border-linha rounded-2xl p-6 hover:border-sinal hover:shadow-md transition-all">
             <div className="flex items-start justify-between">
@@ -98,9 +136,9 @@ export default function Inicio() {
   );
 }
 
-function Mini({ rotulo, valor, cor, pequeno }: { rotulo: string; valor: number | string; cor: string; pequeno?: boolean }) {
+function Mini({ rotulo, valor, cor, pequeno, classe = '' }: { rotulo: string; valor: number | string; cor: string; pequeno?: boolean; classe?: string }) {
   return (
-    <div className="bg-nevoa rounded-xl px-3 py-2.5">
+    <div className={`bg-nevoa rounded-xl px-3 py-2.5 ${classe}`}>
       <p className={`${pequeno ? 'text-base' : 'text-2xl'} font-extrabold ${cor}`}>{valor}</p>
       <p className="text-[11px] font-semibold text-aco">{rotulo}</p>
     </div>

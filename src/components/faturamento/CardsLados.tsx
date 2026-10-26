@@ -4,9 +4,9 @@ import { MOTIVOS_FAT, outraUnidadeFat, valorFat, type UnidadeFat } from '@/lib/f
 
 const numero = (n: number) => n.toLocaleString('pt-BR');
 
-/** Os dois cards do Painel: o que a CEMIG pagou a menos (principal) e a mais. */
+/** Os três cards do Painel: o que a CEMIG pagou no total, a menos (principal) e a mais. */
 export function CardsLados({ totais, unidade, taxa, onVer }: {
-  totais: TotaisFat; unidade: UnidadeFat; taxa: number | null; onVer: (lado: 'a_menos' | 'a_mais') => void;
+  totais: TotaisFat; unidade: UnidadeFat; taxa: number | null; onVer: (lado: 'todos' | 'a_menos' | 'a_mais') => void;
 }) {
   const v = (us: number, sinal = false) => valorFat(us, unidade, taxa, sinal);
   const menos = totais.a_menos, mais = totais.a_mais;
@@ -14,13 +14,30 @@ export function CardsLados({ totais, unidade, taxa, onVer }: {
   const motivos = Object.entries(menos.por_motivo).sort((a, b) => b[1].us - a[1].us);
   const etiqueta = 'inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold';
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
+    <div className="grid gap-3 lg:grid-cols-3">
+      <section className="rounded-2xl border-2 border-sinal bg-white p-4 sm:p-5" aria-label="Pagou no total">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-[11px] font-extrabold tracking-wide text-sinal uppercase">Pagou no total</p>
+          <p className="text-xs text-aco"><b className="text-tinta">{numero(totais.servicos)}</b> serviços</p>
+        </div>
+        <p className="mt-1 font-codigo text-3xl font-extrabold text-tinta xl:text-4xl">{v(totais.creditado)}</p>
+        {outraUnidadeFat(totais.creditado, unidade, taxa) && <p className="font-codigo text-xs text-aco">{outraUnidadeFat(totais.creditado, unidade, taxa)}</p>}
+        <p className="mt-2 text-sm text-tinta">Crédito da CEMIG na fatura, sem as glosas. O contrato prevê <b className="font-codigo">{v(totais.devido)}</b>.</p>
+        {totais.multas !== 0 && <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className={`${etiqueta} bg-nevoa text-aco`}>multas {v(-Math.abs(totais.multas), true)} · fora do saldo</span>
+        </div>}
+        <button type="button" onClick={() => onVer('todos')} disabled={!totais.servicos}
+          className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-sinal px-3 py-2 text-xs font-bold text-white hover:bg-sinal/90 disabled:opacity-50">
+          Ver os {numero(totais.servicos)} serviços <ArrowRight className="size-4" aria-hidden="true" />
+        </button>
+      </section>
+
       <section className="rounded-2xl border-2 border-erro-marca bg-white p-4 sm:p-5" aria-label="Pagou a menos">
         <div className="flex items-baseline justify-between gap-2">
           <p className="text-[11px] font-extrabold tracking-wide text-erro uppercase">Pagou a menos</p>
           <p className="text-xs text-aco"><b className="text-tinta">{numero(menos.servicos)}</b> serviços</p>
         </div>
-        <p className="mt-1 font-codigo text-3xl font-extrabold text-erro sm:text-4xl">{v(-(menos.us ?? totais.saldo_a_receber), true)}</p>
+        <p className="mt-1 font-codigo text-3xl font-extrabold text-erro xl:text-4xl">{v(-(menos.us ?? totais.saldo_a_receber), true)}</p>
         {outraUnidadeFat(menos.us ?? totais.saldo_a_receber, unidade, taxa) && <p className="font-codigo text-xs text-aco">{outraUnidadeFat(menos.us ?? totais.saldo_a_receber, unidade, taxa)}</p>}
         <p className="mt-2 text-sm text-tinta">A CEMIG pagou <b className="font-codigo">{v(menos.pago ?? 0)}</b> e o contrato prevê <b className="font-codigo">{v(menos.devido ?? 0)}</b>.</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -38,7 +55,7 @@ export function CardsLados({ totais, unidade, taxa, onVer }: {
           <p className="text-[11px] font-extrabold tracking-wide text-concluido uppercase">Pagou a mais</p>
           <p className="text-xs text-aco"><b className="text-tinta">{numero(mais.servicos)}</b> serviços</p>
         </div>
-        <p className="mt-1 font-codigo text-3xl font-extrabold text-concluido sm:text-4xl">{v(mais.us ?? totais.pago_a_mais, true)}</p>
+        <p className="mt-1 font-codigo text-3xl font-extrabold text-concluido xl:text-4xl">{v(mais.us ?? totais.pago_a_mais, true)}</p>
         {outraUnidadeFat(mais.us ?? totais.pago_a_mais, unidade, taxa) && <p className="font-codigo text-xs text-aco">{outraUnidadeFat(mais.us ?? totais.pago_a_mais, unidade, taxa)}</p>}
         <p className="mt-2 text-sm text-tinta">A CEMIG pagou <b className="font-codigo">{v(mais.pago ?? 0)}</b> e o contrato prevê <b className="font-codigo">{v(mais.devido ?? 0)}</b>.</p>
         <div className="mt-3 flex flex-wrap gap-1.5">

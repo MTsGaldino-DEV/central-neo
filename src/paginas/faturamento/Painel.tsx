@@ -103,7 +103,7 @@ export default function Painel() {
           <p className="mt-1 text-sm text-aco">Escolha outro período ou uma fatura no título.</p></div>
       ) : t && <>
         <CardsLados totais={t} unidade={unidade} taxa={taxa}
-          onVer={lado => navegar(conferencia(lado === 'a_mais' ? { atalho: 'a_mais' } : {}))} />
+          onVer={lado => navegar(conferencia(lado === 'a_menos' ? {} : { atalho: lado }))} />
 
         <div className="grid gap-3 lg:grid-cols-[1fr_1.5fr]">
           <section className={cartao}>

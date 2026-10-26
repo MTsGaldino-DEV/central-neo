@@ -38,7 +38,7 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 ## Arquitetura e cuidados
 
 - NEO = Núcleo de Eficiência Operacional.
-- React 19, TypeScript, Vite 6, Tailwind 4 e React Router 6. Docker/Nginx no Dokploy.
+- React 19, TypeScript, Vite 6, Tailwind 4 e React Router 6.
 - Supabase CENTRAL-NEO é o banco principal: autenticação, colaboradores, acessos,
   Manutenção (antigo Fechamento de Notas) e Faturamento. A migração do login principal já ocorreu.
 - TraceOne permanece em paralelo e fornece somente o módulo de medidores, com
@@ -67,12 +67,24 @@ fica fora e pode deixar os cards zerados. Matheus pretende resolver com a sincro
 com o GDIS. Não ampliar a base desses cards sem solicitação. Relembrar quando essa
 integração for retomada.
 
+## Ajuste: total pago no Início e no Painel — 26/10/2026 (Claude)
+
+- **Início:** o card Faturamento mostra a fatura mais recente (`neo_fat_painel()[0]`, mesmo
+  cache `painel` do Painel) com Pago pela CEMIG (`creditado`), pago a menos e pago a mais,
+  em R$ sem centavos pelo valor da US (sem valor, fica em US). Leva ao Painel já na fatura.
+- **Painel:** terceiro card principal **Pagou no total** à esquerda de "Pagou a menos"
+  (crédito sem glosas, devido do contrato, multas fora do saldo, "Ver os N serviços" →
+  atalho `todos`). Os três ficam em 3 colunas a partir de `lg`.
+- Verificado: typecheck, build e capturas com APIs simuladas e dados reais da 9844
+  (1440 px e 390 px). Não verificado: login real. Notado e não alterado: no celular, os
+  números das barras do funil "Como ficou a conferência" ficam cortados.
+
 ## Última entrega: Faturamento rodada 2 — 26/10/2026 (Claude)
 
 Desenho: `docs/superpowers/specs/2026-10-26-faturamento-rodada2-design.md` (modelos
 aprovados no navegador, arquivos em `.superpowers/brainstorm/1866-1793030000/content/`).
 Plano: `docs/superpowers/plans/2026-10-26-faturamento-rodada2.md` (11 tarefas, direto na
-sessão). Commits `c0f6d21`..último `docs(faturamento)` na `main`, **sem push**.
+sessão). Commits `c0f6d21`..`c8f6e7c` na `main`; **push feito em 26/10/2026**.
 
 O que mudou:
 - **Painel** (antigo Resumo, rota `/faturamento/painel`; `/resumo` redireciona): dois
@@ -104,7 +116,9 @@ quando a impressão muda; acabou o "statement timeout" da Conferência), **036**
 1.NS/5.62/multado/Manutenção na lista, filtros por coluna, `neo_fat_servicos_valores`,
 totais por lado, `neo_fat_servico_manutencao`, `neo_fat_eventos` com gatilhos,
 `neo_fat_servico_historico`, `neo_fat_valor_us`, `neo_doc_avaliacoes`), **037** (filtros
-rápidos: a 036 deixou a lista em 6 s; voltou a 0,1–0,2 s).
+rápidos: a 036 deixou a lista em 6 s; voltou a 0,1–0,2 s). **038** (revisão final: soma da
+diferença do cabeçalho segue os filtros). Revisão final por um revisor novo: 0 críticos;
+os importantes foram corrigidos com teste (`a6ac102`); os menores adiados estão no fim do plano.
 
 Cruzamento 1.NS: `neo_nsis.servico = numserv`. Na 9844, 204 serviços com 1.NS, 94 na
 Manutenção, 63 com valor; os 2.155 itens da Manutenção ainda não têm `codigo`
@@ -113,10 +127,10 @@ entra em nenhum total.
 
 Verificado em 26/10/2026: typecheck, build e todos os `scripts/faturamento-*testar.cjs`
 (banco em transação desfeita; navegador com APIs simuladas, desktop e 390 px; carga com
-10 chamadas simultâneas abaixo de 8 s). Não verificado: deploy no Dokploy e login real.
+10 chamadas simultâneas abaixo de 8 s). Não verificado: login real.
 
 Pendências: Matheus mostrar a quem usa o modelo "Conferência como sistema"
-(`docs/modelos/conferencia-sistema.html`) antes de decidir; push não feito; código 1.62
+(`docs/modelos/conferencia-sistema.html`) antes de decidir; conferir o deploy; código 1.62
 (61 serviços) sem fator no contrato; envio para a gestora adiado pelo Matheus.
 
 ## Entrega anterior: redesenho do Faturamento por serviço — 26/10/2026 (Claude)
@@ -162,7 +176,7 @@ Decisões em vigor:
 Verificado em 26/10/2026: typecheck, build e os scripts `faturamento-planilhas`,
 `-texto`, `-servicos`, `-conferencia`, `faturamento-testar`, `-duas-planilhas` e
 `-ui` (Chrome com APIs simuladas, desktop e 390 px; capturas inspecionadas).
-Não verificado: deploy no Dokploy e uso com o login real.
+Não verificado: uso com o login real.
 
 Pendências: Matheus conferir os exemplos no navegador; 5.62 responde por 158 dos
 172 serviços "pagos a mais" (exceção aberta); motivo `MOTO_INDEVIDO` não apareceu
@@ -206,7 +220,7 @@ auditoria não corrige o código nem redefine as regras de negócio.
 - Verificados: typecheck, build e `node scripts/faturamento-testar.cjs` (rollback,
   cálculo, classificação, preservação de revisão, RLS e resumo). Resumo em cerca de
   1,6 segundo na conexão usada. Há aviso de bundle acima de 500 kB.
-- Ainda não verificados: aparência no navegador e deploy do Dokploy.
+- Ainda não verificados: aparência no navegador.
 - `.tmp-faturamento/` contém extrações locais não commitadas; exclusão foi bloqueada
   pela revisão automática. `ns_preventiva_c_fonte.jsp` é arquivo do usuário, fora da entrega.
 
@@ -272,3 +286,43 @@ em [catálogo APPWEB](../CATALOGO_FUNCIONALIDADES.md).
 Levantamento estático de contexto, código, tokens, documentos e memórias do
 Claude, sem novos testes de cálculo, navegação, banco ou deploy. Nenhuma regra
 de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
+
+## Vídeo de apresentação — briefing em andamento, 26/10/2026 (Codex)
+
+- Pedido de Matheus: motion design para TV, até 2 minutos, explicativo, ritmo com
+  tempo de leitura, narração e textos de apoio. Público: diretoria e gestores;
+  objetivo: mostrar o que foi desenvolvido na Central NEO, principalmente Faturamento
+  (comparação de faturas). Tom institucional e elegante. Dados reais autorizados como
+  exemplos. Ainda sem data de reunião nem roteiro aprovado.
+- Referências em `Importação/`: `Download.mp4` (48,85 s, 576×1024) e vídeo iniciado
+  por `From Klickpin.com-` (28,18 s, 720×540). Matheus quer a apresentação do sistema
+  do Klickpin e o dinamismo, cores e narrativa do Download.
+- Verificação: metadados via ffprobe; sequência visual completa amostrada a cada 2 s
+  e trechos com intervalos de 0,5 s. Klickpin: interface clara, entrada inclinada,
+  indicadores animados, aproximações, navegação e modais. Download: branco/vermelho,
+  frases curtas animadas, ícones, formas e demonstrações em dispositivos; narrativa
+  visual de necessidade → facilidade → funcionalidades → marca. Áudio não transcrito.
+  Imagens de análise geradas só na pasta temporária do sistema.
+- Direção confirmada por Matheus: identidade visual da Central NEO; abertura
+  persuasiva em forma de pergunta; telas completas combinadas com elementos
+  destacados. Apenas Manutenção e Faturamento; TraceOne/Medidores ficam fora.
+  Voz masculina, natural e próxima, mantendo a elegância.
+- Mensagem confirmada: valorizar a facilidade de analisar as planilhas a partir
+  da importação dos dois arquivos, entender o pagamento da CEMIG e identificar
+  se corresponde ao contrato. Mostrar também escala, explicação e apoio à negociação.
+- Matheus acrescentou dois benefícios: facilitar o uso dos dados para negociar com
+  a CEMIG e aumentar o faturamento; destacar trabalho manual de horas/dias no Excel
+  frente a análises em segundos na NEO. A comparação de tempo veio do briefing,
+  sem medição nesta etapa. X vermelho no Excel foi sugestão, com liberdade criativa.
+- Roteiro versão 2 incorpora o tempo à abertura/importação e destaca negociação
+  fundamentada e oportunidades de aumento do faturamento nas cenas finais. Proposta
+  visual: X discreto sobre “conferência manual”; arquivos Excel continuam como entrada.
+- Proposta em `docs/video-central-neo-roteiro.md`: 7 cenas, 1min58s estimado,
+  narração e descrição visual, com Manutenção e maior tempo para Faturamento.
+  Roteiro, tempos e assinatura ainda não aprovados. Premissa de produção: TV 16:9.
+- Verificação desta etapa: leitura estática das telas de importação/conferência,
+  funcionalidades documentadas e tokens atuais em `src/index.css` (Manrope e
+  JetBrains Mono). Nenhuma validação nova de dados no banco ou de uso no navegador.
+- Pendente: discutir roteiro, preparar storyboard, selecionar fatura/serviço e
+  verificar os números do exemplo na preparação das capturas. Nenhum vídeo final,
+  gravação de voz ou mudança no aplicativo nesta etapa.
