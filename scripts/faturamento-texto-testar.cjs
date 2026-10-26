@@ -57,3 +57,12 @@ assert.deepEqual(atalhoPeriodo('mes','2026-02-10'),{de:'2026-02-01',ate:'2026-02
 assert.deepEqual(atalhoPeriodo('6m','2026-03-15'),{de:'2025-10-01',ate:'2026-03-31'});
 assert.deepEqual(atalhoPeriodo('ano','2026-03-15'),{de:'2026-01-01',ate:'2026-12-31'});
 console.log('OK: período do cabeçalho.');
+// fator e valor Moto da tabela do contrato (mesma regra urbana da migration 023)
+const {valorMoto}=require('../src/lib/faturamentoMoto.ts');
+assert.deepEqual(valorMoto({tabela:'11',moto:'1',fator_csc:0.0234,fator_cod:0.03},0.7),{fator:1,csc:0.0234,cod:0.03,semDesconto:true,naoPaga:false});
+assert.deepEqual(valorMoto({tabela:'11',moto:'0',fator_csc:0.0234,fator_cod:0.03},0.7),{fator:0,csc:null,cod:null,semDesconto:false,naoPaga:true});
+const vm=valorMoto({tabela:'11',moto:'0,7',fator_csc:0.0234,fator_cod:null},0.7);
+assert.equal(vm.fator,0.7);assert.equal(vm.csc.toFixed(6),'0.016380');assert.equal(vm.cod,null);
+assert.equal(valorMoto({tabela:'12',moto:null,fator_csc:0.0912,fator_cod:0.1},0.7).fator,0.7);
+assert.equal(valorMoto({tabela:'12',moto:'1',fator_csc:0.0912,fator_cod:0.1},0.7).fator,0.7);   // exceção só vale na Tabela 11
+console.log('OK: valor Moto do contrato.');

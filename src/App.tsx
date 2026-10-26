@@ -30,6 +30,7 @@ const ImportarFat = lazy(() => import('@/paginas/faturamento/Importar'));
 const ConferenciaFat = lazy(() => import('@/paginas/faturamento/Conferencia'));
 const ResumoFat = lazy(() => import('@/paginas/faturamento/Resumo'));
 const FaturasFat = lazy(() => import('@/paginas/faturamento/Faturas'));
+const DocumentacaoFat = lazy(() => import('@/paginas/faturamento/Documentacao'));
 
 function Carregando() {
   return (
@@ -128,6 +129,7 @@ export default function App() {
           <Route path="tabelas" element={<ContratoFat />} />
           <Route path="importar" element={<ImportarFat />} />
           <Route path="resumo" element={<ResumoFat />} />
+          <Route path="documentacao" element={<DocumentacaoFat />} />
         </Route>
         <Route path="acessos" element={<ExigeAdminNeo><Acessos /></ExigeAdminNeo>} />
         <Route path="colaboradores" element={<ExigeAdminNeo><Colaboradores /></ExigeAdminNeo>} />
