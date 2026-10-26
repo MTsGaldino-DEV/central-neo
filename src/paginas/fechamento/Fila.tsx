@@ -166,7 +166,7 @@ export default function FilaFechamento() {
       {/* Cabeçalho */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[220px]">
-          <h2 className="text-xl font-extrabold tracking-tight">Fechamento de NSIS</h2>
+          <h2 className="text-xl font-extrabold tracking-tight">Manutenção · fila de NSIS</h2>
           <p className="text-sm text-aco">Leia o que foi feito, peça o pagamento (NSMP) e acompanhe até a fatura.</p>
         </div>
         <button onClick={() => setNovaAberta(true)} className="h-9 px-3 rounded-lg border border-linha bg-white text-sm font-semibold flex items-center gap-1.5 hover:border-sinal hover:text-sinal">

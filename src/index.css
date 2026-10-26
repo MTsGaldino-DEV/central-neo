@@ -137,3 +137,22 @@
   button { cursor: pointer; }
   button:disabled { cursor: not-allowed; }
 }
+
+/* Rolagem da barra lateral: trilho escuro arredondado, alça em degradê petróleo que clareia no
+ * mouse e esmaecido no topo e no pé. No Chrome, scrollbar-color desliga o ::-webkit-scrollbar,
+ * então ele fica só para quem não tem o ::-webkit-scrollbar (Firefox). */
+.rolagem-neo {
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 18px), transparent 100%);
+}
+.rolagem-neo::-webkit-scrollbar { width: 10px; }
+.rolagem-neo::-webkit-scrollbar-track { background: rgb(255 255 255 / 0.03); border-radius: 9px; margin-block: 8px; }
+.rolagem-neo::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--color-sinal-claro), var(--color-sinal));
+  border: 3px solid transparent; border-radius: 9px; background-clip: padding-box; min-height: 40px;
+}
+.rolagem-neo::-webkit-scrollbar-thumb:hover {
+  border-width: 2px; background: linear-gradient(#66d9e8, var(--color-sinal-claro)); background-clip: padding-box;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .rolagem-neo { scrollbar-width: thin; scrollbar-color: var(--color-sinal-claro) transparent; }
+}

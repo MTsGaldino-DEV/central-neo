@@ -1,5 +1,5 @@
 /**
- * lib/fechamento.ts — Fechamento de notas de manutenção (NSIS)
+ * lib/fechamento.ts — Manutenção (antigo Fechamento de Notas): notas de NSIS
  *
  * Ciclo de uma NSIS finalizada no GDIS:
  *   A_FECHAR           → o rapaz do fechamento lê o que foi feito e decide o que cobrar

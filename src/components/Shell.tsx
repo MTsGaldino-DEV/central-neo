@@ -1,15 +1,16 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, LayoutDashboard, PlusCircle, UploadCloud, CheckSquare, AlarmClockCheck, DatabaseBackup,
   ClipboardList, FileSpreadsheet, Table2, BarChart3, Receipt, MessageSquareWarning, Scale, Users, KeyRound, LogOut, Contact,
-  Menu, X, type LucideIcon,
+  ChevronDown, Menu, X, type LucideIcon,
 } from 'lucide-react';
 import NeoLogo from './NeoLogo';
 import { useSessao } from '@/contexto/Sessao';
 import { temModulo } from '@/lib/neo';
 import { sair as encerrarSessao, trocarMinhaSenha } from '@/lib/auth';
 import { isAdmin } from '@/lib/permissions';
+import { gravarRecolhidas, lerRecolhidas } from '@/lib/secoesRecolhidas';
 
 interface ItemNav { label: string; href: string; icon: LucideIcon; fim?: boolean }
 interface SecaoNav { titulo: string; itens: ItemNav[]; emBreve?: boolean }
@@ -42,7 +43,7 @@ export function useSecoesNav(): SecaoNav[] {
 
   if (temModulo(acesso, 'fechamento')) {
     secoes.push({
-      titulo: 'Fechamento de Notas',
+      titulo: 'Manutenção',
       itens: [
         { label: 'Painel', href: '/fechamento/painel', icon: BarChart3 },
         { label: 'Fila de NSIS', href: '/fechamento', icon: ClipboardList, fim: true },
@@ -94,8 +95,23 @@ export default function Shell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [menuAberto, setMenuAberto] = useState(false);
   const [modalSenha, setModalSenha] = useState(false);
+  // Seções começam abertas; as que o usuário fechar ficam fechadas neste navegador.
+  const [recolhidas, setRecolhidas] = useState<Set<string>>(() => lerRecolhidas());
+  const alternar = (titulo: string) => setRecolhidas(r => {
+    const n = new Set(r);
+    if (n.has(titulo)) n.delete(titulo); else n.add(titulo);
+    gravarRecolhidas(n);
+    return n;
+  });
 
   const atual = tituloDaRota(secoes, pathname);
+  // Ao abrir uma página, a seção dela aparece (o usuário ainda pode fechar a seção em que está).
+  const secaoAtual = atual?.secao;
+  useEffect(() => {
+    if (secaoAtual) setRecolhidas(r => { if (!r.has(secaoAtual)) return r; const n = new Set(r); n.delete(secaoAtual); gravarRecolhidas(n); return n; });
+    // só na troca de página
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
   const nome = cadastro?.nome ?? session?.user.email ?? '';
 
   async function sair() {
@@ -112,13 +128,20 @@ export default function Shell({ children }: { children: ReactNode }) {
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
-        {secoes.map((s) => (
+      <nav className="rolagem-neo flex-1 overflow-y-auto py-4 pr-1.5 pl-3 space-y-3" aria-label="Menu">
+        {secoes.map((s) => {
+          const fechada = !!s.titulo && recolhidas.has(s.titulo);
+          return (
           <div key={s.titulo || 'raiz'}>
             {s.titulo && (
-              <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">{s.titulo}</p>
+              <button type="button" onClick={() => alternar(s.titulo)} aria-expanded={!fechada}
+                className="w-full flex items-center justify-between gap-2 px-3 py-1.5 mb-0.5 rounded-md text-[10px] font-bold uppercase tracking-[0.16em] text-white/40 hover:text-white/70 hover:bg-white/5">
+                <span className="flex items-center gap-1.5 text-left">{s.titulo}
+                  {fechada && <span className="rounded-full bg-white/10 px-1.5 tracking-normal text-white/60">{s.itens.length}</span>}</span>
+                <ChevronDown size={13} className={`shrink-0 transition-transform motion-reduce:transition-none ${fechada ? '-rotate-90' : ''}`} aria-hidden="true" />
+              </button>
             )}
-            <div className="space-y-0.5">
+            {!fechada && <div className="space-y-0.5">
               {s.itens.map((item) => {
                 const Icone = item.icon;
                 if (s.emBreve) {
@@ -148,9 +171,10 @@ export default function Shell({ children }: { children: ReactNode }) {
                   </NavLink>
                 );
               })}
-            </div>
+            </div>}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="p-3 border-t border-white/5">

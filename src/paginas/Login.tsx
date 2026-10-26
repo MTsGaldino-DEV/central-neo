@@ -13,7 +13,7 @@ import CircuitoAnimado from '@/components/CircuitoAnimado';
 
 const FRENTES = [
   { icone: Gauge, nome: 'Controle de medidores', ativo: true },
-  { icone: ClipboardCheck, nome: 'Fechamento de notas de manutenção', ativo: true },
+  { icone: ClipboardCheck, nome: 'Manutenção · notas de NSIS', ativo: true },
   { icone: Receipt, nome: 'Faturamento', ativo: false },
   { icone: MessageSquareWarning, nome: 'Notas de ouvidoria', ativo: false },
   { icone: Scale, nome: 'Conciliação de pagamentos CEMIG', ativo: false },

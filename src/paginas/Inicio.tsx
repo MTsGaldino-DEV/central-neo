@@ -41,7 +41,7 @@ export default function Inicio() {
               <span className="size-11 rounded-xl bg-sinal-fundo text-sinal flex items-center justify-center"><ClipboardCheck size={22} /></span>
               <ArrowRight size={18} className="text-aco-claro group-hover:text-sinal group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <h3 className="text-lg font-extrabold mt-4">Fechamento de notas</h3>
+            <h3 className="text-lg font-extrabold mt-4">Manutenção</h3>
             <p className="text-sm text-aco">NSIS de manutenção: do GDIS até a fatura.</p>
             <div className="grid grid-cols-3 gap-2 mt-5">
               <Mini rotulo="A fechar" valor={resumo?.etapas.A_FECHAR ?? '—'} cor="text-etapa-fechar" />

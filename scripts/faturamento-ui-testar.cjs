@@ -82,6 +82,21 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  const cabe=async nome=>{const fora=await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth?[]:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>window.innerWidth+1).slice(-4).map(e=>e.tagName+'.'+String(e.className).slice(0,80)+' '+Math.round(e.getBoundingClientRect().right)));assert(!fora.length,`${nome} estoura a largura no celular: ${fora.join(' | ')}`);};
  const foto=nome=>page.screenshot({path:path.join(saida,nome+'.png'),fullPage:true});
 
+ // Menu lateral: Manutenção no lugar de Fechamento de Notas; seções recolhem e o navegador lembra
+ await page.goto(urlBase+'/faturamento');await page.getByRole('heading',{name:'Faturas da CEMIG'}).waitFor();
+ const menuLateral=page.getByRole('navigation',{name:'Menu'});
+ assert.equal(await page.getByText('Fechamento de Notas',{exact:false}).count(),0,'ainda diz Fechamento de Notas');
+ await menuLateral.getByRole('button',{name:/Administração/}).click();
+ await menuLateral.locator('a[href="/acessos"]').waitFor({state:'detached'});
+ await page.reload();await page.getByRole('heading',{name:'Faturas da CEMIG'}).waitFor();
+ assert.equal(await page.getByRole('navigation',{name:'Menu'}).locator('a[href="/acessos"]').count(),0,'não lembrou a seção fechada');
+ await page.getByRole('navigation',{name:'Menu'}).getByRole('button',{name:/Administração/}).click();
+ await page.getByRole('navigation',{name:'Menu'}).getByRole('button',{name:/Faturamento/}).click();
+ await page.getByRole('navigation',{name:'Menu'}).locator('a[href="/faturamento/conferencia"]').waitFor({state:'detached'});
+ await page.goto(urlBase+'/faturamento/conferencia?fatura=9844');
+ await page.getByRole('navigation',{name:'Menu'}).locator('a[href="/faturamento/conferencia"]').waitFor();
+ await page.goto(urlBase+'/faturamento');
+
  // Lista de faturas
  estado.desatualizadas=['9844'];
  await page.goto(urlBase+'/faturamento');
