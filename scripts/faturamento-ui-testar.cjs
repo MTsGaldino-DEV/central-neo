@@ -77,7 +77,7 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
    await route.fulfill({status:200,contentType:'application/json',headers:{'content-range':'0-49/50'},body:JSON.stringify(corpo)});
  });
  page=await context.newPage();page.on('pageerror',e=>falhas.push(e.message));
- const cabe=async nome=>{assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),`${nome} estoura a largura no celular`);};
+ const cabe=async nome=>{const fora=await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth?[]:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>window.innerWidth+1).slice(-4).map(e=>e.tagName+'.'+String(e.className).slice(0,80)+' '+Math.round(e.getBoundingClientRect().right)));assert(!fora.length,`${nome} estoura a largura no celular: ${fora.join(' | ')}`);};
  const foto=nome=>page.screenshot({path:path.join(saida,nome+'.png'),fullPage:true});
 
  // Lista de faturas
@@ -110,11 +110,23 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await page.waitForURL(u=>u.searchParams.get('unidade')==='us');
  await page.getByText('−7,447278 US').first().waitFor();
  await foto('painel-desktop');
+ // Funil até os divergentes, explicação no "i" e resumo do gráfico no mouse
+ const larguras=await page.locator('[data-etapa]').evaluateAll(l=>l.map(e=>e.getBoundingClientRect().width));
+ assert.equal(larguras.length,5,'etapas do funil: '+larguras.length);
+ for(let i=1;i<larguras.length;i++)assert(larguras[i]<larguras[i-1],'funil não estreita: '+larguras.join(', '));
+ await page.getByRole('button',{name:'O que é fora do contrato'}).hover();
+ await page.getByText('Serviços com código que não tem valor na tabela do contrato',{exact:false}).waitFor();
+ await page.getByRole('button',{name:'O que é divergentes'}).hover();
+ await page.getByText('Serviços em que a CEMIG pagou diferente do que o contrato prevê',{exact:false}).waitFor();
+ await page.locator('[data-grafico-fatura="9844"]').hover();
+ const balao=page.getByRole('tooltip');await balao.waitFor();
+ await balao.getByText('A menos · 106').waitFor();await balao.getByText('A mais · 172').waitFor();
+ assert.notEqual(await balao.getByText('A menos · 106').evaluate(e=>e.getBoundingClientRect().top),await balao.getByText('A mais · 172').evaluate(e=>e.getBoundingClientRect().top),'resumo do gráfico numa linha só');
  await page.goto(urlBase+'/faturamento/painel');
  assert.equal(await page.getByRole('button',{name:'3 meses'}).getAttribute('aria-pressed'),'true');
  estado.valorUs='nenhum';await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('neo-fat:valor-us')).forEach(k=>localStorage.removeItem(k)));
  await page.reload();await page.getByRole('heading',{name:'Painel do faturamento'}).waitFor();
- assert(await page.getByRole('button',{name:'R$',exact:true}).isDisabled(),'R$ sem valor da US');
+ await page.locator('button[title="Valor da US não encontrado"]').waitFor();assert(await page.getByRole('button',{name:'R$',exact:true}).isDisabled(),'R$ sem valor da US');
  await page.getByText('US',{exact:false}).first().waitFor();estado.valorUs='real';
 
  // Conferência sem ?fatura e sem cache: nenhuma consulta de todas as faturas; sem opção "todas"

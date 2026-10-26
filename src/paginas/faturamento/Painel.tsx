@@ -14,7 +14,7 @@ import { AvisoErro } from '@/components/faturamento/AvisoErro';
 import { atalhoPeriodo, rotuloPeriodo, type PeriodoFat } from '@/components/faturamento/SeletorPeriodo';
 import { CarregandoNeo } from '@/components/faturamento/CarregandoNeo';
 import { FunilConferencia } from '@/components/faturamento/FunilConferencia';
-import { GraficoFaturas } from '@/components/faturamento/GraficoFaturas';
+import { GraficoFaturas, itemGraficoFat } from '@/components/faturamento/GraficoFaturas';
 import { AjudaFat, RodapeFat } from '@/components/faturamento/AjudaFat';
 
 const numero = (n: number) => n.toLocaleString('pt-BR');
@@ -107,10 +107,11 @@ export default function Painel() {
 
         <div className="grid gap-3 lg:grid-cols-[1fr_1.5fr]">
           <section className={cartao}>
-            <FunilConferencia funil={t.funil} onEtapa={e => navegar(e === 'fora_contrato' ? conferencia({ visao: 'todos', situacao: 'FORA_CONTRATO' }) : conferencia({}))} />
+            <FunilConferencia totais={t} unidade={unidade} taxa={taxa}
+              onEtapa={e => navegar(conferencia(e === 'fora_contrato' ? { atalho: 'fora' } : e === 'a_mais' ? { atalho: 'a_mais' } : {}))} />
           </section>
           <section className={cartao}>
-            <GraficoFaturas itens={[...faturas].reverse().slice(-8).map(f => ({ fatura: f.fatura, pago: f.creditado, devido: f.devido, multas: f.multas }))}
+            <GraficoFaturas unidade={unidade} taxa={taxa} itens={[...faturas].reverse().slice(-8).map(f => itemGraficoFat(f, rotuloPeriodo({ de: f.inicio, ate: f.fim })))}
               destaque={escolhida?.fatura ?? faturas[0]?.fatura} />
           </section>
         </div>

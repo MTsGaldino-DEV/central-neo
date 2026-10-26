@@ -5,7 +5,8 @@ import { usFat, variacao } from '@/lib/faturamentoTexto';
 import { useDadosComCache } from '@/lib/useDadosComCache';
 import { tempoRelativo } from '@/lib/cacheTela';
 import { CarregandoNeo } from '@/components/faturamento/CarregandoNeo';
-import { GraficoFaturas } from '@/components/faturamento/GraficoFaturas';
+import { GraficoFaturas, itemGraficoFat } from '@/components/faturamento/GraficoFaturas';
+import { rotuloPeriodo } from '@/components/faturamento/SeletorPeriodo';
 import { MiniBarras } from '@/components/faturamento/MiniBarras';
 import { AjudaFat, RodapeFat } from '@/components/faturamento/AjudaFat';
 import { AvisoErro } from '@/components/faturamento/AvisoErro';
@@ -136,7 +137,7 @@ function ListaFaturas() {
             dica={`média de ${pct(soma('creditado') ? soma('multas') / soma('creditado') * 100 : 0)} do pago`} />
         </div>
         <section className="rounded-2xl border border-linha bg-white p-4">
-          <GraficoFaturas itens={antigas.slice(-8).map(f => ({ fatura: f.fatura, pago: f.creditado, devido: f.devido, multas: f.multas }))} destaque={atual.fatura} />
+          <GraficoFaturas unidade="us" taxa={null} itens={antigas.slice(-8).map(f => itemGraficoFat(f, rotuloPeriodo({ de: f.inicio, ate: f.fim })))} destaque={atual.fatura} />
         </section>
         <LinhaFatura f={atual} atual maximo={maximo} />
         {faturas.length > 1 && <section>
