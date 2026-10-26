@@ -1,19 +1,211 @@
-import { useEffect,useState } from 'react';
-import { useSearchParams,Link } from 'react-router-dom';
-import { linhasFat,conferirFat,exportarFat,SITUACOES_FAT,usFat,erroFat,type LinhaFat } from '@/lib/faturamento';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Download, Loader2 } from 'lucide-react';
+import { exportarNegociacaoFat, listarServicosFat, painelFat, type LadoFat, type LadoResumoFat, type ServicoFat } from '@/lib/faturamentoServicos';
+import { fraseServico, MOTIVOS_FAT, SITUACOES_SERVICO_FAT, usFat } from '@/lib/faturamentoTexto';
 import { TIPOS_TURMA_FAT } from '@/lib/faturamentoPlanilhas';
-export default function Conferencia(){
- const [p,setP]=useSearchParams();const [linhas,setLinhas]=useState<LinhaFat[]>([]),[total,setTotal]=useState(0),[pagina,setPagina]=useState(0);
- const [erro,setErro]=useState(''),[ocupado,setOcupado]=useState(false),[item,setItem]=useState<LinhaFat|null>(null),[obs,setObs]=useState(''),[versao,setVersao]=useState(0);
- useEffect(()=>{let ativo=true;setOcupado(true);setErro('');linhasFat(p,pagina).then(r=>{if(ativo){setLinhas(r.linhas);setTotal(r.total);}}).catch(e=>{if(ativo)setErro(erroFat(e));}).finally(()=>{if(ativo)setOcupado(false);});return()=>{ativo=false;};},[p,pagina,versao]);
- const observacaoDetalhe=item?.observacoes.replace('Tabela 12, notas 2/3: RC substituído pelo código de fechamento','').replace(/^;\s*|;\s*$/g,'').trim()??'';
- function filtrar(k:string,v:string){const n=new URLSearchParams(p);if(v)n.set(k,v);else n.delete(k);setPagina(0);setP(n,{replace:true});}
- async function salvar(){if(!item)return;setOcupado(true);try{await conferirFat(item,obs);setItem(null);setVersao(v=>v+1);}catch(e){setErro(erroFat(e));}finally{setOcupado(false);}}
- return <div className="p-4 lg:p-6 space-y-5"><div className="flex flex-wrap justify-between gap-3"><div><h2 className="text-xl font-extrabold">Conferência de faturamento</h2><p className="text-sm text-aco">Crédito e glosa comparados com CSC/CSI e COD · valores em US.</p><p className="text-xs text-aco mt-1">RC é pago por atendimento; as notas 2 e 3 da Tabela 12 podem transferir o cálculo para o código de fechamento.</p></div><Link to="/faturamento/importar" className="text-sinal">Importar fatura</Link></div>
- <div className="flex flex-wrap gap-2">{[['fatura','Fatura'],['tipo_serv','Tipo de serviço'],['codserv','Código'],['cidade','Cidade'],['q','Número do serviço']].map(([k,n])=><input key={k} aria-label={n} placeholder={n} value={p.get(k)??''} onChange={e=>filtrar(k,e.target.value)} className="border border-linha rounded-lg p-2 w-40 text-sm"/>)}<select aria-label="Situação" value={p.get('situacao')??''} onChange={e=>filtrar('situacao',e.target.value)} className="border rounded-lg p-2 text-sm"><option value="">Todas as situações</option>{SITUACOES_FAT.map(s=><option key={s}>{s}</option>)}</select><select aria-label="Tabela" value={p.get('tabela')??''} onChange={e=>filtrar('tabela',e.target.value)} className="border rounded-lg p-2"><option value="">Todas as tabelas</option><option value="11">11 · Código</option><option value="12">12 · RC</option></select><select aria-label="Equipe" value={p.get('tipo_turma')??''} onChange={e=>filtrar('tipo_turma',e.target.value)} className="border border-linha rounded-lg p-2 text-sm"><option value="">Todas as equipes</option>{Object.entries(TIPOS_TURMA_FAT).map(([k,n])=><option key={k} value={k}>{n}</option>)}</select><button disabled={ocupado} onClick={async()=>{setOcupado(true);try{await exportarFat(p);}catch(e){setErro(erroFat(e));}finally{setOcupado(false);}}} className="text-sinal text-sm">Exportar divergências</button></div>
- {erro&&<p role="alert" className="text-erro">{erro}</p>}{ocupado&&<p role="status">Carregando…</p>}
- <div className="bg-white border border-linha rounded-2xl overflow-auto"><table className="w-full text-sm whitespace-nowrap text-left"><thead className="bg-nevoa"><tr>{['Serviço','Equipe / frota','Tipo','Tabela','Código','Urbano','Rural','Fator que bateu','Devido','Creditado','Glosa','Diferença líquida','Situação'].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{linhas.map(l=><tr key={l.fatura+l.id} className="border-t border-linha hover:bg-nevoa"><td className="p-3 font-codigo"><button className="text-sinal underline" onClick={()=>{setItem(l);setObs(l.observacao_manual??'');}}>{l.numserv}</button></td><td className="p-3"><p className="font-semibold">{TIPOS_TURMA_FAT[l.tipo_turma??'']??'Não identificada'}</p><p className="text-xs text-aco font-codigo mt-1">{l.numvei?'Frota '+l.numvei:'Sem frota'}</p></td><td className="p-3">{l.tipo_serv}</td><td className="p-3">{l.tabela??'—'}{l.observacoes.includes('Tabela 12, notas 2/3')&&<span className="ml-1 rounded-full bg-sinal-fundo px-2 py-0.5 text-xs font-semibold text-sinal">Transposição</span>}</td><td className="p-3 font-codigo">{l.codserv}</td><td className="p-3">{l.urbano}</td><td className="p-3">{l.rural}</td><td className="p-3">{['OK','MOTO_PROVAVEL'].includes(l.situacao_calculo)?l.fator_aplicado+' · '+usFat(l.fator_aplicado==='CSC'?l.fator_csc:l.fator_cod):'Nenhum'}</td>{[l.devido_referencia,l.creditado,l.glosa,l.diferenca].map((n,i)=><td key={i} className={`p-3 font-codigo ${i===2&&l.glosa>0?'text-cobre font-bold':''}`}>{usFat(n)}</td>)}<td className="p-3">{l.situacao}</td></tr>)}</tbody></table>{!ocupado&&!linhas.length&&<p className="p-6">Nenhuma linha para os filtros selecionados.</p>}</div>
- <div className="flex gap-4 text-sm"><button disabled={!pagina||ocupado} onClick={()=>setPagina(pagina-1)}>Anterior</button><span>{total.toLocaleString('pt-BR')} linhas · página {pagina+1}</span><button disabled={(pagina+1)*50>=total||ocupado} onClick={()=>setPagina(pagina+1)}>Próxima</button></div>
- {item&&<div className="fixed inset-0 z-50 bg-black/40 flex justify-end"><section role="dialog" aria-modal="true" aria-label="Conferir linha" className="w-full max-w-xl bg-white p-6 overflow-auto space-y-4"><button onClick={()=>setItem(null)} className="text-sinal">Fechar</button><h3 className="text-xl font-bold">{item.numserv} · {item.codserv}</h3><p>{item.cidade} · {item.situacao_calculo}</p>{item.observacoes.includes('Tabela 12, notas 2/3')&&<div className="rounded-xl border border-sinal/20 bg-sinal-fundo p-4 text-sm"><p className="font-bold text-sinal">RC substituído pelo código</p><p className="mt-1">As notas 2 e 3 da Tabela 12 mandam usar o valor do código de fechamento quando ele é o único remunerável do atendimento.</p></div>}<div className="rounded-xl bg-sinal-fundo p-4"><p className="font-bold text-sinal">{TIPOS_TURMA_FAT[item.tipo_turma??'']??'Equipe não identificada'}</p><p className="text-sm mt-1">Frota: {item.numvei??'—'} · Turma: {item.ident_turma??'—'}</p><p className="text-xs text-aco mt-2">Origem: Serviço da Fatura Completa × US_Turma da Fatura Resumida.</p></div>{observacaoDetalhe&&<p>{observacaoDetalhe}</p>}<p>Fator unitário CSC: {usFat(item.fator_csc)} / COD: {usFat(item.fator_cod)}</p><p>Devido CSC: {usFat(item.devido_csc)} / COD: {usFat(item.devido_cod)}</p><p>Moto CSC: {usFat(item.moto_csc)} / COD: {usFat(item.moto_cod)}</p><p>{item.qtd_servico} {item.qtd_servico===1?'linha':'linhas'} neste serviço. Líquido: {usFat(item.liquido_servico)}. {item.tabela==='12'?'Devido por atendimento':'Soma devida'} CSC: {usFat(item.soma_csc)} / COD: {usFat(item.soma_cod)}.</p><h4 className="font-bold">Justificativa da glosa</h4><p className="whitespace-pre-line">{item.justificativa||'Sem justificativa informada.'}</p>{item.revisao_desatualizada&&<p className="text-cobre">Dados, equipe ou fatores alterados após a última conferência. Revise novamente.</p>}{item.conferido_em&&<p className="text-xs text-aco">Última conferência: {new Date(item.conferido_em).toLocaleString('pt-BR')} · {item.conferido_por}</p>}<label className="block">Observação<textarea value={obs} onChange={e=>setObs(e.target.value)} className="block border rounded-lg p-3 w-full"/></label><button disabled={ocupado||obs.trim().length<3} onClick={()=>void salvar()} className="bg-sinal text-white rounded-lg px-4 py-2 disabled:opacity-50">Marcar como conferido</button>{erro&&<p className="text-erro">{erro}</p>}</section></div>}
- </div>;
+import { erroFat } from '@/lib/faturamento';
+import { useDadosComCache } from '@/lib/useDadosComCache';
+import { CabecalhoFatura } from '@/components/faturamento/CabecalhoFatura';
+import { CarregandoNeo } from '@/components/faturamento/CarregandoNeo';
+import { AlternarFatura } from '@/components/faturamento/AlternarFatura';
+import { AjudaFat, RodapeFat } from '@/components/faturamento/AjudaFat';
+import { Pagination } from '@/components/Pagination';
+import { DetalheServico } from './DetalheServico';
+import { SeloSituacao } from './SeloSituacao';
+
+const POR_PAGINA = 50;
+const numero = (n: number) => n.toLocaleString('pt-BR');
+const equipe = (s: ServicoFat) => TIPOS_TURMA_FAT[s.tipo_turma ?? ''] ?? 'Equipe não identificada';
+const corDiferenca = (d: number | null) => (d ?? 0) < 0 ? 'text-erro' : (d ?? 0) > 0 ? 'text-pendente' : 'text-concluido';
+const comSinal = (d: number | null) => d == null ? '—' : `${d > 0 ? '+' : d < 0 ? '−' : ''}${usFat(Math.abs(d))}`;
+const motivosOrdenados = (l: LadoResumoFat) => Object.entries(l.por_motivo).sort((a, b) => b[1].us - a[1].us);
+
+export default function Conferencia() {
+  const [p, setP] = useSearchParams();
+  const painel = useDadosComCache('painel', painelFat, []);
+  const faturas = painel.dados ?? [];
+  const param = p.get('fatura');
+  const fatura = param === 'todas' ? null : param ?? faturas[0]?.fatura ?? null;
+  const totais = faturas.find(f => f.fatura === fatura);
+  const visao = p.get('visao') === 'todos' ? 'todos' : 'negociar';
+  const lado: Exclude<LadoFat, 'todos'> = p.get('lado') === 'a_mais' ? 'a_mais' : 'a_menos';
+  const motivo = p.get('motivo') ?? '';
+  const pagina = Math.max(Number(p.get('pagina')) || 1, 1);
+  const filtrosTodos = ['situacao', 'tipo_turma', 'codserv', 'cidade', 'q'] as const;
+  const filtros: Record<string, string> = Object.fromEntries(Object.entries(visao === 'negociar'
+    ? { fatura: fatura ?? '', lado, motivo }
+    : { fatura: fatura ?? '', lado: 'todos', ...Object.fromEntries(filtrosTodos.map(k => [k, p.get(k) ?? ''])) }).filter(([, v]) => v));
+  const chave = `servicos:${JSON.stringify(filtros)}:${visao === 'todos' ? pagina : 1}`;
+  const lista = useDadosComCache(chave, () => listarServicosFat(filtros, visao === 'todos' ? pagina - 1 : 0, POR_PAGINA), [chave]);
+  const [mais, setMais] = useState<ServicoFat[]>([]), [carregandoMais, setCarregandoMais] = useState(false);
+  const [aberto, setAberto] = useState<ServicoFat | null>(null);
+  const [exportando, setExportando] = useState(false), [erroAcao, setErroAcao] = useState('');
+  useEffect(() => { setMais([]); }, [chave]);
+
+  const mudar = (n: Record<string, string | null>, manterPagina = false) => {
+    const q = new URLSearchParams(p);
+    for (const [k, v] of Object.entries(n)) if (v) q.set(k, v); else q.delete(k);
+    if (!manterPagina) q.delete('pagina');
+    setP(q, { replace: true });
+  };
+  const recarregar = () => { lista.recarregar(); painel.recarregar(); };
+  async function carregarMais() {
+    setCarregandoMais(true); setErroAcao('');
+    try { const r = await listarServicosFat(filtros, (mais.length + POR_PAGINA) / POR_PAGINA, POR_PAGINA); setMais(m => [...m, ...r.servicos]); }
+    catch (e) { setErroAcao(erroFat(e)); } finally { setCarregandoMais(false); }
+  }
+  async function exportar() {
+    if (!fatura) return;
+    setExportando(true); setErroAcao('');
+    try { await exportarNegociacaoFat(fatura); } catch (e) { setErroAcao(erroFat(e)); } finally { setExportando(false); }
+  }
+
+  const r = lista.dados;
+  const servicos = [...(r?.servicos ?? []), ...mais];
+  const principal = r?.lados[lado], outro = r?.lados[lado === 'a_menos' ? 'a_mais' : 'a_menos'];
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-4 p-4 lg:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <AlternarFatura atual="conferencia" />
+        <AjudaFat tema="conferencia" />
+      </div>
+      <CabecalhoFatura rotulo="Conferência · valores em US" faturas={faturas.map(f => ({ id: f.fatura, inicio: f.inicio, fim: f.fim }))}
+        fatura={fatura} periodo={totais ? { de: totais.inicio, ate: totais.fim } : { de: '', ate: '' }}
+        salvoEm={lista.salvoEm} atualizando={lista.atualizando || painel.atualizando} onRecarregar={recarregar}
+        onFatura={id => mudar({ fatura: id ?? 'todas', motivo: null })}
+        onPeriodo={x => { const f = faturas.find(f => f.fim >= x.de && f.inicio <= x.ate); if (f) mudar({ fatura: f.fatura, motivo: null }); }}
+        acoes={<>
+          <button type="button" onClick={() => mudar(visao === 'todos' ? { visao: null, ...Object.fromEntries(filtrosTodos.map(k => [k, null])) } : { visao: 'todos' })}
+            className="rounded-xl border border-linha px-3 py-2 text-xs font-bold text-tinta hover:border-sinal hover:text-sinal">
+            {visao === 'todos' ? 'Voltar ao que foi pago errado' : 'Ver todos os serviços'}
+          </button>
+          <button type="button" onClick={() => void exportar()} disabled={!fatura || exportando} title={fatura ? undefined : 'Escolha uma fatura para exportar'}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-sinal px-3 py-2 text-xs font-bold text-white hover:bg-sinal-forte disabled:opacity-60">
+            {exportando ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Download className="size-4" aria-hidden="true" />}Exportar para negociação
+          </button>
+        </>} />
+
+      {(lista.erro || erroAcao) && <p role="alert" className="rounded-xl border border-erro/30 bg-erro-fundo px-4 py-3 text-sm text-erro">
+        {lista.erro && r ? 'Não foi possível atualizar; mostrando os últimos dados vistos. ' : ''}{erroAcao || lista.erro}
+        {lista.erro && <> <button type="button" onClick={recarregar} className="font-bold underline">Tentar de novo</button></>}
+      </p>}
+
+      {!r ? (!lista.erro && <CarregandoNeo variante="conferencia" />) : visao === 'negociar' && principal && outro ? (
+        <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
+          <section className={`rounded-2xl border-2 bg-white p-4 ${lado === 'a_menos' ? 'border-erro/60' : 'border-pendente/60'}`}>
+            <p className={`text-[11px] font-bold tracking-wide uppercase ${lado === 'a_menos' ? 'text-erro' : 'text-pendente'}`}>{lado === 'a_menos' ? 'A receber · pagou a menos' : 'Pagou a mais'}</p>
+            <p className={`font-codigo text-3xl font-extrabold ${lado === 'a_menos' ? 'text-erro' : 'text-pendente'}`}>{usFat(principal.us)} US</p>
+            <p className="text-xs text-aco">em {numero(principal.servicos)} serviços · sem os já conferidos</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <button type="button" onClick={() => mudar({ motivo: null })} aria-pressed={!motivo}
+                className={`rounded-full px-3 py-1 text-xs font-bold ${!motivo ? 'bg-tinta text-white' : 'bg-nevoa text-aco hover:text-tinta'}`}>Todos {numero(principal.servicos)}</button>
+              {motivosOrdenados(principal).map(([m, v]) => (
+                <button key={m} type="button" onClick={() => mudar({ motivo: m })} aria-pressed={motivo === m}
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${motivo === m ? 'bg-tinta text-white' : 'bg-nevoa text-aco hover:text-tinta'}`}>{MOTIVOS_FAT[m] ?? m} {numero(v.servicos)}</button>
+              ))}
+              {(totais?.funil.conferidos ?? 0) > 0 && <button type="button" onClick={() => mudar({ visao: 'todos', situacao: 'CONFERIDO' })}
+                className="rounded-full border border-sinal/40 px-3 py-1 text-xs font-bold text-sinal hover:bg-sinal-fundo">Conferidos ({numero(totais!.funil.conferidos)})</button>}
+            </div>
+            {!servicos.length ? (
+              <div className="py-10 text-center">
+                <p className="text-base font-bold text-tinta">{lado === 'a_menos' ? 'Nada pago a menos nesta fatura. 🎉' : 'Nada pago a mais nesta fatura.'}</p>
+                <button type="button" onClick={() => mudar({ visao: 'todos' })} className="mt-2 text-sm font-bold text-sinal hover:underline">ver todos os serviços</button>
+              </div>
+            ) : <>
+              <ul className="mt-3 divide-y divide-linha">
+                {servicos.map(s => (
+                  <li key={`${s.fatura}-${s.numserv}`}>
+                    <button type="button" onClick={() => setAberto(s)} className="w-full rounded-lg px-2 py-2.5 text-left hover:bg-nevoa focus-visible:outline-2 focus-visible:outline-sinal">
+                      <span className="flex flex-wrap items-baseline justify-between gap-x-3">
+                        <span className="text-xs text-aco"><b className="font-codigo text-sm text-tinta">{s.numserv}</b> · {s.codigo_principal ?? s.codigos[0]} · {equipe(s)} · {s.cidade ?? '—'}{!fatura && ` · fatura ${s.fatura}`}</span>
+                        <b className={`font-codigo text-sm ${corDiferenca(s.diferenca)}`}>{comSinal(s.diferenca)}</b>
+                      </span>
+                      <span className="mt-0.5 block text-xs text-tinta">{fraseServico(s)}</span>
+                      {s.revisao_desatualizada && <span className="mt-1 inline-block rounded bg-pendente-fundo px-1.5 text-[11px] text-pendente">conferência antiga: rever</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {servicos.length < r.total && <button type="button" onClick={() => void carregarMais()} disabled={carregandoMais}
+                className="mt-2 w-full rounded-xl border border-linha py-2 text-sm font-bold text-sinal hover:bg-sinal-fundo disabled:opacity-60">
+                {carregandoMais ? 'Carregando…' : `Carregar mais (${numero(r.total - servicos.length)} restantes)`}
+              </button>}
+            </>}
+          </section>
+          <aside className="h-fit rounded-2xl border border-linha bg-white p-4">
+            <p className={`text-[11px] font-bold tracking-wide uppercase ${lado === 'a_menos' ? 'text-pendente' : 'text-erro'}`}>{lado === 'a_menos' ? 'Pagou a mais' : 'Pagou a menos'}</p>
+            <p className="font-codigo text-xl font-extrabold text-tinta">{lado === 'a_menos' ? '+' : '−'}{usFat(outro.us)}</p>
+            <p className="text-xs text-aco">{numero(outro.servicos)} serviços</p>
+            <ul className="mt-3">
+              {motivosOrdenados(outro).map(([m, v]) => (
+                <li key={m}><button type="button" onClick={() => mudar({ lado: lado === 'a_menos' ? 'a_mais' : 'a_menos', motivo: m })}
+                  className="flex w-full justify-between gap-2 border-t border-linha py-2 text-left text-xs hover:text-sinal">
+                  <span>{MOTIVOS_FAT[m] ?? m} <small className="text-aco">{numero(v.servicos)}</small></span><b className="font-codigo">{usFat(v.us)}</b>
+                </button></li>
+              ))}
+            </ul>
+            <button type="button" onClick={() => mudar({ lado: lado === 'a_menos' ? 'a_mais' : null, motivo: null })} className="mt-2 text-xs font-bold text-sinal hover:underline">
+              {lado === 'a_menos' ? 'ver o que foi pago a mais →' : '← voltar ao que foi pago a menos'}
+            </button>
+            {lado === 'a_menos' && <p className="mt-3 text-xs text-aco">Pode vir a ser cobrado pela CEMIG depois.</p>}
+          </aside>
+        </div>
+      ) : <TodosServicos servicos={r.servicos} total={r.total} pagina={pagina} p={p} mudar={mudar} abrir={setAberto} variasFaturas={!fatura} />}
+
+      {aberto && <DetalheServico servico={aberto} aberto onFechar={() => setAberto(null)} onAlterado={recarregar} />}
+      <RodapeFat />
+    </div>
+  );
+}
+
+function TodosServicos({ servicos, total, pagina, p, mudar, abrir, variasFaturas }: {
+  servicos: ServicoFat[]; total: number; pagina: number; p: URLSearchParams; variasFaturas: boolean;
+  mudar: (n: Record<string, string | null>, manterPagina?: boolean) => void; abrir: (s: ServicoFat) => void;
+}) {
+  const [texto, setTexto] = useState({ codserv: p.get('codserv') ?? '', cidade: p.get('cidade') ?? '', q: p.get('q') ?? '' });
+  const aplicar = (e: FormEvent) => { e.preventDefault(); mudar(texto); };
+  const campo = 'mt-1 block w-full rounded-lg border border-linha bg-white px-2 py-1.5 text-sm focus:border-sinal focus:outline-none';
+  return (
+    <section className="rounded-2xl border border-linha bg-white">
+      <form onSubmit={aplicar} className="grid gap-2 border-b border-linha p-3 sm:grid-cols-3 lg:grid-cols-[repeat(5,1fr)_auto] lg:items-end">
+        <label className="text-xs font-bold text-aco">Situação
+          <select value={p.get('situacao') ?? ''} onChange={e => mudar({ situacao: e.target.value })} className={campo}>
+            <option value="">Todas</option>{Object.entries(SITUACOES_SERVICO_FAT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select></label>
+        <label className="text-xs font-bold text-aco">Equipe
+          <select value={p.get('tipo_turma') ?? ''} onChange={e => mudar({ tipo_turma: e.target.value })} className={campo}>
+            <option value="">Todas</option>{Object.entries(TIPOS_TURMA_FAT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select></label>
+        <label className="text-xs font-bold text-aco">Código<input value={texto.codserv} onChange={e => setTexto(t => ({ ...t, codserv: e.target.value }))} placeholder="ex.: 7.15" className={campo} /></label>
+        <label className="text-xs font-bold text-aco">Cidade<input value={texto.cidade} onChange={e => setTexto(t => ({ ...t, cidade: e.target.value }))} className={campo} /></label>
+        <label className="text-xs font-bold text-aco">Número do serviço<input value={texto.q} onChange={e => setTexto(t => ({ ...t, q: e.target.value }))} inputMode="numeric" className={campo} /></label>
+        <button type="submit" className="rounded-lg bg-sinal px-4 py-2 text-sm font-bold text-white hover:bg-sinal-forte">Filtrar</button>
+      </form>
+      {!servicos.length ? <p className="px-4 py-10 text-center text-sm text-aco">Nenhum serviço com esses filtros.</p> : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-left text-xs">
+            <thead className="text-[11px] text-aco uppercase"><tr>
+              <th className="px-3 py-2">Serviço</th><th className="px-2">Equipe / frota</th><th className="px-2">Códigos</th>
+              <th className="px-2 text-right">Deveria</th><th className="px-2 text-right">Pagou</th><th className="px-2 text-right">Diferença</th><th className="px-3">Situação</th>
+            </tr></thead>
+            <tbody>{servicos.map(s => (
+              <tr key={`${s.fatura}-${s.numserv}`} onClick={() => abrir(s)} className="cursor-pointer border-t border-linha hover:bg-nevoa">
+                <td className="px-3 py-2"><button type="button" onClick={e => { e.stopPropagation(); abrir(s); }} className="font-codigo font-bold text-tinta hover:text-sinal">{s.numserv}</button>{variasFaturas && <span className="block text-[11px] text-aco">fatura {s.fatura}</span>}</td>
+                <td className="px-2">{equipe(s)}<span className="block font-codigo text-[11px] text-aco">{s.numvei ?? '—'}</span></td>
+                <td className="px-2 font-codigo">{s.codigos.join(', ')}</td>
+                <td className="px-2 text-right font-codigo">{usFat(s.devido)}</td>
+                <td className="px-2 text-right font-codigo">{usFat(s.pago_comparado)}</td>
+                <td className={`px-2 text-right font-codigo font-bold ${corDiferenca(s.bate ? 0 : s.diferenca)}`}>{s.bate ? '—' : comSinal(s.diferenca)}</td>
+                <td className="px-3"><SeloSituacao situacao={s.situacao} /></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+      <Pagination page={pagina} totalPages={Math.ceil(total / POR_PAGINA)} totalItems={total} pageSize={POR_PAGINA} label="serviços"
+        onPageChange={n => mudar({ pagina: n > 1 ? String(n) : null }, true)} />
+    </section>
+  );
 }
