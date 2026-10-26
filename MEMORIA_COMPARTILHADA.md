@@ -1,6 +1,6 @@
 # Memória compartilhada — Central NEO
 
-Atualizada em 23/10/2026 pelo Codex. Este arquivo é o ponto de continuidade entre
+Atualizada em 26/10/2026 pelo Claude (redesenho do Faturamento). Este arquivo é o ponto de continuidade entre
 Codex e Claude neste repositório. Guarda decisões e estado de trabalho, não o
 histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
@@ -61,24 +61,54 @@ fica fora e pode deixar os cards zerados. Matheus pretende resolver com a sincro
 com o GDIS. Não ampliar a base desses cards sem solicitação. Relembrar quando essa
 integração for retomada.
 
-## Redesenho do Faturamento — em andamento, 26/10/2026
+## Última entrega: redesenho do Faturamento por serviço — 26/10/2026 (Claude)
 
-Matheus aprovou o desenho em `docs/superpowers/specs/2026-10-26-faturamento-ux-design.md`
-e o plano em `docs/superpowers/plans/2026-10-26-faturamento-ux.md` (12 tarefas,
-migrations 028–031). A execução vai ser direto na sessão do Claude, sem subagentes.
-Nenhuma tarefa foi implementada ainda.
+Desenho aprovado: `docs/superpowers/specs/2026-10-26-faturamento-ux-design.md`.
+Plano: `docs/superpowers/plans/2026-10-26-faturamento-ux.md` (12 tarefas, feitas
+direto na sessão). Commits `7700296`..último `docs(faturamento)` na `main`,
+**sem push** até Matheus conferir no navegador. Números e regras em
+`docs/faturamento-relatorio.md`, seção "Conferência por serviço".
 
-Decisões principais:
-- A Conferência passa a ser **por serviço** (21.910 na 9844).
-- Multas (glosas) ficam **fora** do saldo a receber.
-- Serviço conferido sai do saldo e da exportação, e existe um filtro "Conferidos".
-- Cada fatura tem seu próprio saldo.
-- A reimportação substitui a versão anterior, depois de confirmar com o número da fatura.
+Decisões em vigor:
+- A Conferência é **por serviço** (21.910 na 9844), na view `neo_fat_servicos`.
+  Compara o **crédito** (sem glosas) com o devido do serviço. RC paga uma vez por
+  atendimento (crédito pode vir dividido entre as linhas, como no 245530193).
+  O candidato CSC/COD/Moto é escolhido uma vez por serviço.
+- Multas (glosa negativa) e estorno ficam **fora** do saldo. Serviço glosado por
+  inteiro (crédito + multa = devido) **confere** (migration 029).
+- Serviço parcial compara só o crédito das linhas com fator (`pago_comparado`).
+- Serviço conferido sai do saldo e da exportação; revisão por serviço em
+  `neo_fat_conferencias_servico`. Revisões antigas por linha foram migradas como
+  desatualizadas (texto guardado, pedem nova conferência).
+- Totais por fatura em `neo_fat_totais`; `neo_fat_painel()` recalcula o que ficou
+  velho (reimportação, vínculos, revisão, contrato). Conferir recalcula na hora.
+- Rotas: `/faturamento` = lista de faturas; `/faturamento/resumo`,
+  `/faturamento/conferencia`, `/faturamento/documentacao` (fora da sidebar).
+  Links antigos `/faturamento?fatura=` vão para a Conferência.
+- Reimportação: hash SHA-256 dos dois arquivos; idênticos = "Nada mudou";
+  diferente = janela antes/depois e confirmação digitando o número da fatura.
+- Migrations **028–033** aplicadas no CENTRAL-NEO (028 serviço, 029 multa explica,
+  030 RPCs de lista, 031 totais, 032 RC como código principal, 033 hashes).
+- Nenhum `<input type="date">` no Faturamento; cabeçalho-filtro e janela modal
+  são o padrão das abas. Cache dos últimos dados em `localStorage` (`neo-fat:*`).
+
+Verificado em 26/10/2026: typecheck, build e os scripts `faturamento-planilhas`,
+`-texto`, `-servicos`, `-conferencia`, `faturamento-testar`, `-duas-planilhas` e
+`-ui` (Chrome com APIs simuladas, desktop e 390 px; capturas inspecionadas).
+Não verificado: deploy no Dokploy e uso com o login real.
+
+Pendências: Matheus conferir os exemplos no navegador; 5.62 responde por 158 dos
+172 serviços "pagos a mais" (exceção aberta); motivo `MOTO_INDEVIDO` não apareceu
+na 9844; 54 serviços de RC com multa e estorno ficam como "fator menor" e pedem
+análise manual. Regras abertas do relatório continuam sem mudança.
 
 Preferência de Matheus: planos e documentos só em `.md`, sem abrir no navegador
 (gasta tokens). O navegador fica só para mockups, quando pedidos.
 
-## Última entrega: Faturamento
+## Entrega anterior: Faturamento (23/10/2026)
+
+Histórico. As rotas e a Conferência por linha abaixo foram substituídas pelo
+redesenho de 26/10/2026 (seção anterior); as views por linha continuam no banco.
 
 **Revisão da entrega inicial em 23/10/2026:** Matheus reprovou o resultado por não atender ao pedido.
 Não tratar os quatro commits como escopo aprovado ou integralmente concluído.

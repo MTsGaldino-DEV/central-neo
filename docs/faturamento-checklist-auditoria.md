@@ -73,3 +73,25 @@ Esta seção atualiza os pontos corrigidos sem apagar o diagnóstico da entrega 
 As tabelas acima registram a auditoria **histórica** da entrega inicial e da primeira revisão. O estado atual do cálculo está no [relatório de Faturamento](faturamento-relatorio.md). Foram lidas todas as páginas disponíveis dos dois PDFs, inclusive as notas finais. As migrations 023–027, testadas com rollback antes da aplicação, corrigiram FATOR RURAL/MOTO por código, transposição de RC para um único código remunerável da lista das notas 2–3, remuneração de RC uma vez por atendimento e reabertura de revisões manuais antigas. A conferência mostra o motivo da transposição e o devido atribuído a uma linha para somar sem duplicidade. O teste visual em Chrome com APIs simuladas e os testes de integração passaram.
 
 Fotografia atual da 9844: **24.785 OK, 642 DIVERGENTE, 1.310 REVISAR_RC_MULTILINHA, 652 CODIGO_FORA_CONTRATO e 0 MOTO_PROVAVEL**, devido parcial **857,921936 US**. Permanecem abertas a NOTA 10 ausente, a ligação PSAP/apoio, o rural de Moto, glosas parciais, a verificação física da coluna Como lançar/notas 8 e a revisão de casos como 5.62. O deploy continua não verificado.
+
+## Redesenho por serviço e nova interface (26/10/2026)
+
+Esta seção cobre as lacunas de interface, Resumo e RC multilinha apontadas acima.
+
+| Requisito | Situação | Evidência |
+|---|---|---|
+| Conferência responde "quanto pagou a menos e a mais", por serviço | Atendido | `neo_fat_servicos` (028/029/032), `scripts/faturamento-servicos-testar.cjs` |
+| RC pago certo numa linha não fica "a revisar" | Atendido | 245530193 confere; `REVISAR_RC_MULTILINHA` não existe no modelo por serviço |
+| Totais por serviço fecham com as linhas | Atendido | crédito 917,112183, multas 21,226389, estorno 7,446161 |
+| Multas fora do saldo; conferido sai do saldo e da exportação | Atendido | Testes de lista, totais e conferência |
+| Lista de faturas com saldo por fatura e 3 cartões | Atendido | `Faturas.tsx`, teste de UI |
+| Resumo legível, filtro sem data nativa, legenda pequena | Atendido | Teste de UI: nenhum `input[type=date]`, legenda até 12 px |
+| Janela de detalhe (X, Cancelar, Esc) | Atendido | Teste de UI |
+| Exportação para negociação com todas as páginas | Atendido | Teste de UI com 1.500 serviços por lado |
+| Importação: substituição confirmada, arquivo idêntico e duplicidade | Atendido | Migration 033, teste de planilhas e de UI |
+| Valor Moto no contrato; rural oculto | Atendido | `faturamentoMoto.ts`, teste de texto, 6.01 "sem desconto" |
+| Documentação para leigos, fora da sidebar | Atendido | `/faturamento/documentacao`, teste de UI |
+| Tela abre com os últimos dados | Atendido | `cacheTela.ts` (cache bloqueado não quebra a tela) |
+| Celular 390 px sem rolagem horizontal | Atendido | Teste de UI em seis rotas |
+| Deploy no Dokploy e uso com login real | **Não verificado** | Teste de UI usa APIs simuladas |
+| Regras de negócio abertas (NOTA 10, PSAP, rural de Moto, 5.62) | **Sem mudança** | Ver perguntas no relatório |

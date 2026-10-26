@@ -2,9 +2,60 @@
 
 Atualizado em 23/10/2026. Os dois PDFs fornecidos foram lidos por inteiro: [Código de Serviço Unificado.pdf](../Comparação%20de%20fatura/Código%20de%20Serviço%20Unificado.pdf) (Tabela 11, 14 páginas) e [Nota de Serviço Unificado.pdf](../Comparação%20de%20fatura/Nota%20de%20Serviço%20Unificado.pdf) (Tabela 12, 2 páginas). As tabelas, descrições, coluna **Como lançar** e notas ao fim de cada PDF foram confrontadas com a fatura 9844. O texto da NOTA 8 termina cortado nos dois arquivos e a NOTA 10, citada em quatro códigos, não consta neles.
 
-## Entregue e como testar
+## Conferência por serviço (26/10/2026)
 
-- `/faturamento`: Conferência com filtro por fatura, situação, tabela, equipe e serviço; crédito, glosa, devido, fator, frota, turma e observações. RC transposto para Tabela 11 recebe um selo e uma explicação no detalhe. Em RC com várias linhas, o devido contratual é lançado **uma vez por atendimento** na primeira linha (ordem por `id`), apenas para totalização; o detalhe mostra o valor do atendimento.
+A tela passou a trabalhar **por serviço** (número do serviço), e não por linha. Rotas novas:
+
+- `/faturamento`: lista de faturas, com três cartões (pago, pago a menos, multas), comparação entre faturas e o saldo a receber de cada fatura.
+- `/faturamento/resumo`: manchete da diferença, funil, grupos e ajustes.
+- `/faturamento/conferencia`: o que a CEMIG pagou a menos no centro, o que pagou a mais ao lado, com motivo e frase por serviço, mais a exportação para negociação.
+- `/faturamento/documentacao`: explicação curta para leigos.
+
+Os links antigos `/faturamento?fatura=…` levam à Conferência. Migrations **028–033** testadas com `--testar` e aplicadas.
+
+**Regra por serviço.** Soma o **crédito** de todas as linhas (sem glosas) e compara com o devido do serviço:
+
+- **por código**: a soma dos códigos;
+- **por RC**: um RC por atendimento;
+- **transposição**: a das notas 2 e 3 da Tabela 12 continua igual.
+
+O candidato CSC/COD/Moto é escolhido **uma vez por serviço**. Multas (glosa negativa) e estorno ficam **fora** do saldo, e um serviço glosado por inteiro (crédito + multa = devido) **confere**. Num serviço parcial, que tem códigos sem fator, compara-se só o crédito das linhas com fator. Serviço conferido à mão sai do saldo e da exportação.
+
+| Fatura 9844 por serviço | Serviços | US |
+|---|---:|---:|
+| Confere (inclui 78 RCs glosados por inteiro, 6,573259 US em multa) | 21.544 | — |
+| **Pagou a menos (saldo a receber)** | **106** | **7,447278** |
+| · RC não pago | 34 | 3,998762 |
+| · Fator menor que o contrato | 68 | 2,282716 |
+| · Outra diferença (código sem crédito) | 4 | 1,165800 |
+| Pagou a mais (fator maior que o contrato) | 172 | 17,001786 |
+| Código fora do contrato | 88 | — |
+
+- **Totais.** Crédito, multas e estorno fecham com as linhas: **917,112183**, **21,226389** e **7,446161 US**, em 27.389 linhas e 21.910 serviços.
+- **Devido.** O devido por serviço é **858,174976 US**, contra 857,921936 antes (+0,253040). A diferença vem do RC por serviço e do candidato escolhido por serviço.
+- **Serviços parciais:** 564.
+- **Linhas idênticas na planilha:** 0.
+- **5.62:** responde por **158 dos 172** serviços pagos a mais (16,674143 US). Se houver a exceção da pergunta 6, esses serviços não são cobrança da CEMIG.
+- **Desconto de Moto indevido:** não apareceu na 9844.
+- **54 RCs com multa e estorno ao mesmo tempo** ficam como "fator menor" e pedem análise manual (pergunta 5).
+
+**Revisões e tempos.** As revisões antigas, por linha, foram copiadas para o serviço como desatualizadas: o texto fica guardado e o serviço pede nova conferência. Tempos medidos:
+
+- agregação completa: 2,4 s;
+- primeira página da Conferência: 2,7 s;
+- painel com totais guardados: 52 ms.
+
+Exemplos em `/faturamento/conferencia?fatura=9844` (aba "Ver todos os serviços" e busca pelo número):
+
+- **245530193** (RC07) confere: crédito 0,043010 + 0,041669 = um RC.
+- **242861522** (NSSR) paga 7.15 e 7.10.
+- **245531435** usa Moto com fator 1 no 6.01.
+- **246450669** transpõe RC07 → 8.82.
+- **245881140** (RC08) confere pelo COD, com a multa e o estorno à parte.
+
+## Entrega anterior (23/10/2026)
+
+- `/faturamento` (hoje `/faturamento/conferencia`): Conferência com filtro por fatura, situação, tabela, equipe e serviço; crédito, glosa, devido, fator, frota, turma e observações. RC transposto para Tabela 11 recebe um selo e uma explicação no detalhe. Em RC com várias linhas, o devido contratual é lançado **uma vez por atendimento** na primeira linha (ordem por `id`), apenas para totalização; o detalhe mostra o valor do atendimento.
 - `/faturamento/importar`: exige **Fatura Resumida** e **Fatura Completa**. Cruza `US_Servico.numserv → Serviço.numserv → Serviço.veiculo → US_Turma.numvei`, com `ident_turma` para desempate. Importação e vínculos são publicados juntos.
 - `/faturamento/tabelas`: Tabelas 11/12, fatores originais preservados, correções administrativas com motivo e histórico. `/faturamento/resumo`: totais, comparação e agrupamentos; o devido agora conta cada RC somente uma vez.
 - Migrations **023–027** testadas com `node scripts/migrar.cjs --testar` e aplicadas no banco CENTRAL-NEO. A 026 limita o aviso de transposição aos RCs publicados na Tabela 12; a 027 reabre conferências manuais antigas quando a regra/devido calculado mudou. Nenhuma migration manual pendente. Não houve alteração do Fechamento nem do TraceOne.
