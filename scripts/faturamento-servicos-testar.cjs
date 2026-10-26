@@ -44,6 +44,17 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal((await s(alvo)).situacao,'A_MENOS');
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_conferir_servico('9844',${alvo},'ab')`),/observação/);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_conferir_servico('9844','nao-existe','observação válida')`),/não encontrado/);
+    // desempenho: a lista lê o cálculo guardado por serviço, idêntico à view de cálculo
+    await t`select neo_fat_recalcular('9844')`;
+    assert.equal((await t`select neo_fat_recalcular('9844') d`)[0].d,false);          // já em dia: não refaz
+    const [cmp]=await t`select
+      (select jsonb_agg(to_jsonb(x) order by x.numserv) from (select numserv,situacao,situacao_calculo,motivo,diferenca,devido,codigo_principal,pago_comparado,multas,contexto from neo_fat_servicos where fatura='9844') x)
+      =(select jsonb_agg(to_jsonb(x) order by x.numserv) from (select numserv,situacao,situacao_calculo,motivo,diferenca,devido,codigo_principal,pago_comparado,multas,contexto from neo_fat_servicos_lista where fatura='9844') x) igual`;
+    assert.equal(cmp.igual,true);
+    inicio=Date.now();
+    await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado:'a_menos'})},0,50)`;
+    const rapida=Date.now()-inicio;console.log('Lista com cálculo guardado:',rapida,'ms');
+    assert.ok(rapida<1500,`lista levou ${rapida} ms`);
     // listagem paginada por lado
     inicio=Date.now();
     const [r]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado:'a_menos'})},0,50) d`;
