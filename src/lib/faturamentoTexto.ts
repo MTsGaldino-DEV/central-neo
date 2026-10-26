@@ -33,7 +33,7 @@ export function fraseServico(s: ServicoTextoFat): string {
       break;
     case 'A_MENOS':
       frase = s.motivo === 'MOTO_INDEVIDO' ? `${deveria}: aplicaram o desconto de Moto 0,7 numa equipe ${TIPOS_TURMA_FAT[s.tipo_turma ?? ''] ?? 'sem tipo identificado'}.`
-        : s.motivo === 'RC_NAO_PAGO' ? `${cod} deveria ser pago uma vez (${d}), mas ${s.qtd_linhas > 1 ? `nenhuma das ${s.qtd_linhas} linhas` : 'a linha'} do atendimento recebeu crédito.`
+        : s.motivo === 'RC_NAO_PAGO' ? `${cod} deveria ser pago uma vez (${d}), mas ${s.qtd_linhas > 1 ? `nenhuma das ${s.qtd_linhas} linhas do atendimento recebeu` : 'a linha do atendimento não recebeu'} crédito.`
         : s.motivo === 'FATOR_MENOR' ? `${deveria}: valor abaixo do contrato.`
         : `${deveria}.`;
       break;

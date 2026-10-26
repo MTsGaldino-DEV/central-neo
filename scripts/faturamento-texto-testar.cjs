@@ -7,6 +7,8 @@ assert.equal(fraseServico({...base,motivo:'MOTO_INDEVIDO'}),
  'Deveria pagar 0,023400 (5.14, fator normal) e pagou 0,016400: aplicaram o desconto de Moto 0,7 numa equipe Multifuncional.');
 assert.equal(fraseServico({...base,motivo:'RC_NAO_PAGO',codigo_principal:'RC07',rc_por_atendimento:true,qtd_linhas:2,creditado:0,devido:0.0912}),
  'RC07 deveria ser pago uma vez (0,091200), mas nenhuma das 2 linhas do atendimento recebeu crédito.');
+assert.equal(fraseServico({...base,motivo:'RC_NAO_PAGO',codigo_principal:'RC08',rc_por_atendimento:true,qtd_linhas:1,creditado:0,devido:0.139901}),
+ 'RC08 deveria ser pago uma vez (0,139901), mas a linha do atendimento não recebeu crédito.');
 assert.equal(fraseServico({...base,situacao_calculo:'OK',motivo:null,creditado:0.0234}),'Pago conforme o contrato.');
 assert.equal(fraseServico({...base,situacao_calculo:'OK',motivo:null,creditado:0,multas:0.0234}),
  'Glosado: a multa de 0,023400 cobre o valor devido. Multas ficam fora do saldo.');
