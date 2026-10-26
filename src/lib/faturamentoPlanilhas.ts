@@ -143,11 +143,14 @@ export async function hashArquivo(buffer: ArrayBuffer | Uint8Array): Promise<str
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Grupos de linhas idênticas em todos os campos (o mesmo numserv com códigos diferentes é legítimo). */
+// Identificador técnico único por linha (lerFatura recusa repetidos): fica fora da comparação.
+const ID_LINHA = 'idapropriacaotemposervico';
+
+/** Grupos de linhas idênticas em todos os campos de conteúdo (o mesmo numserv com códigos diferentes é legítimo). */
 export function linhasDuplicadas(linhas: RegistroFat[]): RegistroFat[][] {
   const grupos = new Map<string, RegistroFat[]>();
   for (const l of linhas) {
-    const chave = JSON.stringify(Object.keys(l).sort().map(k => [k, l[k]]));
+    const chave = JSON.stringify(Object.keys(l).filter(k => k !== ID_LINHA).sort().map(k => [k, l[k]]));
     grupos.set(chave, [...(grupos.get(chave) ?? []), l]);
   }
   return [...grupos.values()].filter(g => g.length > 1);

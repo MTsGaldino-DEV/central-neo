@@ -11,8 +11,24 @@ export function lerCache<T>(chave: string, armazenamento?: Pick<Storage,'getItem
   } catch { return null; }
 }
 
-export function gravarCache<T>(chave: string, dados: T, armazenamento?: Pick<Storage,'setItem'>): void {
-  try { (armazenamento ?? globalThis.localStorage).setItem(PREFIXO + chave, JSON.stringify({ dados, salvoEm: Date.now() })); } catch { /* sem cache */ }
+// O localStorage também guarda a sessão de login: o cache do Faturamento fica limitado.
+const MAXIMO = 20;
+
+export function gravarCache<T>(chave: string, dados: T, armazenamento?: Pick<Storage,'setItem'> & Partial<Pick<Storage,'getItem'|'removeItem'|'key'|'length'>>): void {
+  try {
+    const arm = armazenamento ?? globalThis.localStorage;
+    arm.setItem(PREFIXO + chave, JSON.stringify({ dados, salvoEm: Date.now() }));
+    if (!arm.key || !arm.removeItem || !arm.getItem || arm.length == null) return;
+    const nossas: { k: string; em: number }[] = [];
+    for (let i = 0; i < arm.length; i++) {
+      const k = arm.key(i);
+      if (!k?.startsWith(PREFIXO)) continue;
+      let em = 0;
+      try { em = JSON.parse(arm.getItem(k) ?? '{}').salvoEm ?? 0; } catch { /* entrada ruim sai primeiro */ }
+      nossas.push({ k, em: k === PREFIXO + chave ? Infinity : em });
+    }
+    nossas.sort((a, b) => a.em - b.em).slice(0, Math.max(nossas.length - MAXIMO, 0)).forEach(({ k }) => arm.removeItem!(k));
+  } catch { /* sem cache */ }
 }
 
 export function tempoRelativo(ms: number, agora = Date.now()): string {

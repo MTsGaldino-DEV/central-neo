@@ -26,18 +26,20 @@ export default function Conferencia() {
   const painel = useDadosComCache('painel', painelFat, []);
   const faturas = painel.dados ?? [];
   const param = p.get('fatura');
-  const fatura = param === 'todas' ? null : param ?? faturas[0]?.fatura ?? null;
+  // Uma fatura por vez: somar todas na hora estoura o tempo limite quando houver várias.
+  const fatura = param && param !== 'todas' ? param : faturas[0]?.fatura ?? null;
+  const pronto = (!!param && param !== 'todas') || painel.dados !== null;
   const totais = faturas.find(f => f.fatura === fatura);
   const visao = p.get('visao') === 'todos' ? 'todos' : 'negociar';
   const lado: Exclude<LadoFat, 'todos'> = p.get('lado') === 'a_mais' ? 'a_mais' : 'a_menos';
   const motivo = p.get('motivo') ?? '';
   const pagina = Math.max(Number(p.get('pagina')) || 1, 1);
-  const filtrosTodos = ['situacao', 'tipo_turma', 'codserv', 'cidade', 'q'] as const;
+  const filtrosTodos = ['situacao', 'tipo_turma', 'codserv', 'codigo_principal', 'cidade', 'q'] as const;
   const filtros: Record<string, string> = Object.fromEntries(Object.entries(visao === 'negociar'
     ? { fatura: fatura ?? '', lado, motivo }
     : { fatura: fatura ?? '', lado: 'todos', ...Object.fromEntries(filtrosTodos.map(k => [k, p.get(k) ?? ''])) }).filter(([, v]) => v));
   const chave = `servicos:${JSON.stringify(filtros)}:${visao === 'todos' ? pagina : 1}`;
-  const lista = useDadosComCache(chave, () => listarServicosFat(filtros, visao === 'todos' ? pagina - 1 : 0, POR_PAGINA), [chave]);
+  const lista = useDadosComCache(chave, () => listarServicosFat(filtros, visao === 'todos' ? pagina - 1 : 0, POR_PAGINA), [chave], pronto);
   const [mais, setMais] = useState<ServicoFat[]>([]), [carregandoMais, setCarregandoMais] = useState(false);
   const [aberto, setAberto] = useState<ServicoFat | null>(null);
   const [exportando, setExportando] = useState(false), [erroAcao, setErroAcao] = useState('');
@@ -74,7 +76,7 @@ export default function Conferencia() {
       <CabecalhoFatura rotulo="Conferência · valores em US" faturas={faturas.map(f => ({ id: f.fatura, inicio: f.inicio, fim: f.fim }))}
         fatura={fatura} periodo={totais ? { de: totais.inicio, ate: totais.fim } : { de: '', ate: '' }}
         salvoEm={lista.salvoEm} atualizando={lista.atualizando || painel.atualizando} onRecarregar={recarregar}
-        onFatura={id => mudar({ fatura: id ?? 'todas', motivo: null })}
+        permitirTodas={false} onFatura={id => mudar({ fatura: id, motivo: null })}
         onPeriodo={x => { const f = faturas.find(f => f.fim >= x.de && f.inicio <= x.ate); if (f) mudar({ fatura: f.fatura, motivo: null }); }}
         acoes={<>
           <button type="button" onClick={() => mudar(visao === 'todos' ? { visao: null, ...Object.fromEntries(filtrosTodos.map(k => [k, null])) } : { visao: 'todos' })}

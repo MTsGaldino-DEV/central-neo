@@ -126,7 +126,7 @@ export default function Resumo() {
         <div className="grid gap-3 md:grid-cols-3">
           <Grupo titulo="Por tipo de equipe" itens={t.grupos.tipo_turma} rotulo={v => v ? TIPOS_TURMA_FAT[v] ?? v : 'Sem equipe'}
             link={v => conferencia({ visao: 'todos', ...(v ? { tipo_turma: v } : {}) })} />
-          <Grupo titulo="Por código" itens={t.grupos.codserv} rotulo={v => v ?? '—'} link={v => conferencia({ visao: 'todos', ...(v ? { codserv: v } : {}) })} />
+          <Grupo titulo="Por código" itens={t.grupos.codserv} rotulo={v => v ?? '—'} link={v => conferencia({ visao: 'todos', ...(v ? { codigo_principal: v } : {}) })} />
           <Grupo titulo="Por cidade" itens={t.grupos.cidade} rotulo={v => v ?? 'Sem cidade'} link={v => conferencia({ visao: 'todos', ...(v ? { cidade: v } : {}) })} />
         </div>
 

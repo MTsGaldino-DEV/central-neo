@@ -35,8 +35,11 @@ export interface FaturaFat { id:string; arquivo:string; arquivo_completo:string|
 export async function faturasFat():Promise<FaturaFat[]> {
   const {data,error}=await supabase.from('neo_fat_faturas').select('*').order('fim',{ascending:false});if(error)throw error;return data??[];
 }
-export async function importarFat(l:LeituraFat,arquivo:string,completa:LeituraCompletaFat,arquivoCompleto:string,progresso:(s:string,percentual:number)=>void,hashes?:{resumida:string;completa:string}){
+export async function importarFat(l:LeituraFat,arquivo:string,completa:LeituraCompletaFat,arquivoCompleto:string,progresso:(s:string,percentual:number)=>void,hashes?:{resumida:string;completa:string},substituir=false){
   cruzarFaturas(l,completa);
+  // Substituir uma fatura existente só com confirmação explícita de quem importa.
+  const {data:ja,error:erroJa}=await supabase.from('neo_fat_faturas').select('id').eq('id',l.fatura);if(erroJa)throw erroJa;
+  if(ja?.length&&!substituir)throw Error(`A fatura ${l.fatura} já existe. Revise o antes e o depois e confirme a substituição.`);
   const abas:Record<string,RegistroFat[]>={...l.abas,Servico:completa.vinculos.map(v=>({...v,idapropriacao:completa.fatura}))};
   const contagens=Object.fromEntries(Object.entries(abas).map(([a,linhas])=>[a,linhas.length]));
   const total=Object.values(contagens).reduce((a,b)=>a+b,0);let enviados=0;

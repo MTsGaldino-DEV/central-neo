@@ -30,6 +30,8 @@ console.log('OK: 21.910 serviços reais, quatro equipes, período, faturas incom
   assert.notEqual(await hashArquivo(Buffer.concat([buf,Buffer.from([0])])),h1);
   assert.deepEqual(linhasDuplicadas([{a:1,b:2},{b:2,a:1},{a:1,b:3}]).map(g=>g.length),[2]);
   assert.deepEqual(linhasDuplicadas([{numserv:'1',codserv:'7.15'},{numserv:'1',codserv:'7.10'}]),[]);
+  // o id técnico da linha é único por construção: duplicidade compara o resto
+  assert.deepEqual(linhasDuplicadas([{idapropriacaotemposervico:1,numserv:'1',codserv:'7.15',ustotal:0.1},{idapropriacaotemposervico:2,numserv:'1',codserv:'7.15',ustotal:0.1}]).map(g=>g.length),[2]);
   const r=resumoImportacao(resumida,completa);
   assert.equal(r.linhas,27389);assert.equal(r.servicos,21910);assert.equal(r.creditado.toFixed(6),'917.112183');assert.equal(r.multas.toFixed(6),'21.226389');
   console.log('Duplicadas na 9844:',linhasDuplicadas(resumida.abas.US_Servico).length,'grupos');

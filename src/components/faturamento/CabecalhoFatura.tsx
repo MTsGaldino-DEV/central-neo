@@ -6,10 +6,12 @@ import { rotuloPeriodo, SeletorPeriodo, useFecharFora, type PeriodoFat } from '.
 const parte = 'border-b-2 border-dashed border-sinal text-sinal hover:text-sinal-forte focus-visible:outline-2 focus-visible:outline-sinal';
 
 /** Título-filtro das telas de Faturamento: "Fatura 9844 ▾ · jul – set / 2026 ▾". */
-export function CabecalhoFatura({ faturas, fatura, periodo, onFatura, onPeriodo, salvoEm, atualizando, onRecarregar, acoes, rotulo }: {
+export function CabecalhoFatura({ faturas, fatura, periodo, onFatura, onPeriodo, salvoEm, atualizando, onRecarregar, acoes, rotulo, permitirTodas = true }: {
   faturas: { id: string; inicio: string; fim: string }[]; fatura: string | null; periodo: PeriodoFat;
   onFatura: (id: string | null) => void; onPeriodo: (p: PeriodoFat) => void;
   salvoEm: number | null; atualizando: boolean; onRecarregar: () => void; acoes?: ReactNode; rotulo: string;
+  /** false onde somar todas as faturas pesa demais (Conferência). */
+  permitirTodas?: boolean;
 }) {
   const [aberto, setAberto] = useState<'fatura' | 'periodo' | null>(null);
   const caixaFatura = useRef<HTMLDivElement>(null), caixaPeriodo = useRef<HTMLDivElement>(null);
@@ -29,7 +31,7 @@ export function CabecalhoFatura({ faturas, fatura, periodo, onFatura, onPeriodo,
               onClick={() => setAberto(a => a === 'fatura' ? null : 'fatura')}>{fatura ?? 'todas'} ▾</button>
             {aberto === 'fatura' && (
               <ul role="listbox" aria-label="Escolher fatura" className="absolute left-0 z-30 mt-2 max-h-72 w-56 overflow-auto rounded-xl border border-linha bg-white p-1 text-sm font-semibold shadow-lg">
-                {[{ id: null as string | null, texto: 'Todas as faturas', sub: 'soma do período' }, ...faturas.map(f => ({ id: f.id as string | null, texto: `Fatura ${f.id}`, sub: rotuloPeriodo({ de: f.inicio, ate: f.fim }) }))].map(o => (
+                {[...(permitirTodas ? [{ id: null as string | null, texto: 'Todas as faturas', sub: 'soma do período' }] : []), ...faturas.map(f => ({ id: f.id as string | null, texto: `Fatura ${f.id}`, sub: rotuloPeriodo({ de: f.inicio, ate: f.fim }) }))].map(o => (
                   <li key={o.id ?? 'todas'} role="option" aria-selected={o.id === fatura}>
                     <button type="button" onClick={() => { onFatura(o.id); setAberto(null); }}
                       className={`flex w-full items-baseline justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-sinal-fundo ${o.id === fatura ? 'text-sinal' : 'text-tinta'}`}>

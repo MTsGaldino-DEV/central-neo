@@ -123,6 +123,34 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     const [hf]=await t`select hash_resumida,hash_completa from neo_fat_faturas where id='9844'`;
     assert.deepEqual([hf.hash_resumida,hf.hash_completa],['aaa','bbb']);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_registrar_hashes('nao-existe','a','b')`),/não encontrada/);
+    // revisão final: totais guardam a impressão das entradas. Uma revisão gravada por outra
+    // transação "antes" do recálculo (corrida) ainda deixa a fatura desatualizada.
+    const [b4]=await t`select neo_fat_atualizar_totais('9844') d`;
+    const alvo4=(await t`select numserv,-diferenca d from neo_fat_servicos where fatura='9844' and situacao='A_MENOS' order by numserv limit 1`)[0];
+    await t`reset role`;
+    await t`insert into neo_fat_conferencias_servico(fatura,numserv,observacao,contexto,data)
+      select fatura,numserv,'corrida',contexto,now()-interval '1 hour' from neo_fat_servicos where fatura='9844' and numserv=${alvo4.numserv}`;
+    await t`set local role authenticated`;
+    assert.ok((await t`select neo_fat_faturas_desatualizadas() d`)[0].d.includes('9844'));
+    await t`select neo_fat_atualizar_totais('9844')`;
+    assert.ok(!(await t`select neo_fat_faturas_desatualizadas() d`)[0].d.includes('9844'));
+    const p5=(await t`select neo_fat_painel() d`)[0].d.find(x=>x.fatura==='9844');
+    assert.equal(p5.desatualizado,false);
+    assert.equal((Number(b4.d.saldo_a_receber)-Number(p5.saldo_a_receber)).toFixed(6),Number(alvo4.d).toFixed(6));
+    await t`reset role`;await t`delete from neo_fat_conferencias_servico where fatura='9844' and numserv=${alvo4.numserv}`;await t`set local role authenticated`;
+    assert.ok((await t`select neo_fat_faturas_desatualizadas() d`)[0].d.includes('9844'));   // remoção também conta
+    await t`select neo_fat_atualizar_totais('9844')`;
+    // revisão final: o grupo "Por código" leva aos mesmos serviços, inclusive RC
+    const gRc=p5.grupos.codserv.find(x=>x.valor==='RC07');
+    const [rcp]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',codigo_principal:'RC07'})},0,50) d`;
+    assert.equal(rcp.d.total,gRc.servicos);
+    const g715=p5.grupos.codserv.find(x=>x.valor==='7.15');
+    assert.equal((await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',codigo_principal:'7.15'})},0,50) d`)[0].d.total,g715.servicos);
+    assert.ok((await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',codserv:'RC07'})},0,50) d`)[0].d.total>0);
+    // revisão final: um ajuste com valor mal formatado não derruba os totais
+    await t`reset role`;await t`insert into neo_fat_anexos(fatura,aba,dados) values('9844','Debito_Credito','{"valor":"abc","tipoajusteapropriacao":"D"}')`;await t`set local role authenticated`;
+    const [ruim]=await t`select neo_fat_atualizar_totais('9844') d`;
+    assert.equal(Number(ruim.d.ajustes.debito).toFixed(6),'64.963712');
     // relatório para o Matheus (não é asserção)
     const [dev]=await t`select sum(devido) d,count(*) filter(where parcial)::int parciais from neo_fat_servicos where fatura='9844'`;
     console.log('Devido por serviço:',Number(dev.d).toFixed(6),'· antes 857.921936 · parciais',dev.parciais);
@@ -140,6 +168,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_painel()`),/Sem acesso/);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_atualizar_totais('9844')`),/Sem acesso/);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_registrar_hashes('9844','a','b')`),/Sem acesso/);
+    await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_faturas_desatualizadas()`),/Sem acesso/);
   });
   console.log('OK: serviços fecham com as linhas, exemplos, revisão por serviço e acesso restrito.');
 }catch(e){console.error(e.message);process.exitCode=1;}finally{await sql.end();}})();

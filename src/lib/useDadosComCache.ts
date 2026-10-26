@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { gravarCache, lerCache } from './cacheTela';
 import { erroFat } from './faturamento';
 
-/** Mostra o cache na hora, busca de novo e guarda o resultado. Em erro, mantém o que já havia. */
-export function useDadosComCache<T>(chave: string, carregar: () => Promise<T>, deps: unknown[]) {
+/** Mostra o cache na hora, busca de novo e guarda o resultado. Em erro, mantém o que já havia. `ativo=false` adia a busca. */
+export function useDadosComCache<T>(chave: string, carregar: () => Promise<T>, deps: unknown[], ativo = true) {
   const [estado, setEstado] = useState<{ chave: string; dados: T | null; salvoEm: number | null }>(() => {
     const c = lerCache<T>(chave);
     return { chave, dados: c?.dados ?? null, salvoEm: c?.salvoEm ?? null };
@@ -14,6 +14,7 @@ export function useDadosComCache<T>(chave: string, carregar: () => Promise<T>, d
 
   useEffect(() => {
     let vivo = true;
+    if (!ativo) return;
     setEstado(e => {
       if (e.chave === chave) return e;
       const c = lerCache<T>(chave);
@@ -27,7 +28,7 @@ export function useDadosComCache<T>(chave: string, carregar: () => Promise<T>, d
     return () => { vivo = false; };
     // carregar muda a cada render; quem chama declara as dependências reais em deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chave, versao, ...deps]);
+  }, [chave, versao, ativo, ...deps]);
 
   const atual = estado.chave === chave ? estado : { dados: null, salvoEm: null };
   return { dados: atual.dados, erro, atualizando, salvoEm: atual.salvoEm, recarregar: () => setVersao(v => v + 1) };

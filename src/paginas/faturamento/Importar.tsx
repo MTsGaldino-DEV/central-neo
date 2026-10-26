@@ -19,7 +19,10 @@ export default function Importar() {
   const [erro, setErro] = useState(''), [mensagem, setMensagem] = useState('');
   const [percentual, setPercentual] = useState(0), [concluida, setConcluida] = useState(false);
   const ocupado = !!lendo || enviando;
-  useEffect(() => { faturasFat().then(setFaturas).catch(e => setErro(erroFat(e))); }, []);
+  // Sem a lista de faturas não dá para saber se a importação substitui uma existente: bloqueia até carregar.
+  const [faturasOk, setFaturasOk] = useState(false), [erroFaturas, setErroFaturas] = useState('');
+  const carregarFaturas = () => { setErroFaturas(''); faturasFat().then(l => { setFaturas(l); setFaturasOk(true); }).catch(e => { setFaturasOk(false); setErroFaturas(erroFat(e)); }); };
+  useEffect(carregarFaturas, []);
   const previa = useMemo(() => {
     if (!resumida || !completa) return null;
     try { return { dados: cruzarFaturas(resumida.dados, completa.dados), erro: '' }; }
@@ -45,11 +48,21 @@ export default function Importar() {
       else setCompleta({ arquivo: f, dados: lerFaturaCompleta(buffer), hash });
     } catch (e) { setErro(erroFat(e)); } finally { setLendo(''); }
   }
-  async function importar() {
+  // Confere de novo no servidor: outra pessoa pode ter importado a mesma fatura depois que a tela abriu.
+  async function iniciar() {
+    if (!resumida) return;
+    if (existente) { setConfirmar(true); return; }
+    try {
+      const lista = await faturasFat(); setFaturas(lista);
+      if (lista.some(f => f.id === resumida.dados.fatura)) { setConfirmar(true); return; }
+    } catch (e) { setFaturasOk(false); setErroFaturas(erroFat(e)); return; }
+    await importar(false);
+  }
+  async function importar(substituir: boolean) {
     if (!resumida || !completa || !cruzamento || ocupado || identico) return;
     setConfirmar(false); setEnviando(true); setErro(''); setMensagem('Preparando a importação…'); setPercentual(0);
     try {
-      await importarFat(resumida.dados, resumida.arquivo.name, completa.dados, completa.arquivo.name, (s, p) => { setMensagem(s); setPercentual(p); }, { resumida: resumida.hash, completa: completa.hash });
+      await importarFat(resumida.dados, resumida.arquivo.name, completa.dados, completa.arquivo.name, (s, p) => { setMensagem(s); setPercentual(p); }, { resumida: resumida.hash, completa: completa.hash }, substituir);
       setConcluida(true); faturasFat().then(setFaturas).catch(() => {});
     } catch (e) { setErro(erroFat(e)); setMensagem('Não foi possível confirmar a conclusão. Você pode tentar novamente; a mesma fatura não será duplicada.'); }
     finally { setEnviando(false); }
@@ -66,6 +79,7 @@ export default function Importar() {
     <ol className="flex flex-wrap gap-x-6 gap-y-3 text-sm border-b border-linha pb-5" aria-label="Etapas da importação">
       {['Selecionar arquivos', 'Revisar cruzamento', 'Conferir fatura'].map((s, i) => <li key={s} className={'flex items-center gap-2 ' + ((concluida ? 2 : cruzamento ? 1 : 0) >= i ? 'text-sinal font-bold' : 'text-aco')}><span className={'size-6 rounded-full flex items-center justify-center text-xs ' + ((concluida ? 2 : cruzamento ? 1 : 0) >= i ? 'bg-sinal text-white' : 'bg-linha')}>{concluida || (cruzamento && i === 0) ? <Check size={14}/> : i + 1}</span>{s}</li>)}
     </ol>
+    {erroFaturas && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-pendente/20 bg-pendente-fundo p-4 text-sm text-pendente"><AlertTriangle size={19} className="shrink-0"/>Não foi possível conferir as faturas já importadas ({erroFaturas}). A importação fica bloqueada até conferir. <button type="button" onClick={carregarFaturas} className="font-bold underline">Tentar de novo</button></div>}
     {(erro || previa?.erro) && <div role="alert" className="flex items-start gap-3 rounded-xl border border-erro/15 bg-erro-fundo p-4 text-sm text-erro"><AlertTriangle size={19} className="shrink-0"/>{erro || previa?.erro}</div>}
     <div className="grid md:grid-cols-2 gap-5">
       <AreaArquivo titulo="Fatura Resumida" subtitulo="Valores e turmas da fatura" numero="01" dica="Planilha Resumo_Fat, com US_Servico e US_Turma." arquivo={resumida?.arquivo} detalhe={resumida ? numero(resumida.dados.abas.US_Servico.length) + ' linhas de faturamento' : ''} ocupado={ocupado} lendo={lendo === 'resumida'} onArquivo={f => void ler(f, 'resumida')} onLimpar={() => limpar('resumida')}/>
@@ -83,9 +97,9 @@ export default function Importar() {
         {existente && !identico && !concluida && <p className="text-sm text-aco border-t border-linha pt-4">A fatura {resumida.dados.fatura} já existe. Antes de gravar, você vai revisar o antes e o depois e confirmar digitando o número da fatura.</p>}
       </div>
       <div className="bg-nevoa/60 border-t border-linha p-5 lg:px-6">
-        {concluida ? <div role="status" className="flex flex-wrap justify-between items-center gap-4"><div className="flex gap-3 text-concluido items-center"><CheckCircle2 size={24}/><div><p className="font-bold">Fatura importada e equipes vinculadas</p><p className="text-sm mt-1">Os valores já estão disponíveis para conferência.</p></div></div><Link to={'/faturamento/resumo?fatura=' + resumida.dados.fatura} className="bg-sinal text-white rounded-xl px-5 py-3 text-sm font-bold inline-flex items-center gap-2">Conferir fatura <ArrowRight size={16}/></Link></div> : <div className="space-y-3"><div className="flex flex-wrap justify-between items-center gap-4"><p className="text-xs text-aco max-w-lg">Os valores e os vínculos são publicados juntos, após a validação de todos os registros.</p><button disabled={ocupado || identico} onClick={() => existente ? setConfirmar(true) : void importar()} className="bg-sinal hover:bg-sinal-forte text-white rounded-xl px-5 py-3 font-bold text-sm flex items-center gap-2 disabled:opacity-50">{enviando ? <Loader2 size={17} className="animate-spin"/> : <UploadCloud size={17}/>} {enviando ? 'Importando…' : identico ? 'Nada mudou' : existente ? 'Revisar e substituir…' : 'Importar fatura e equipes'}</button></div>{mensagem && <div role="status" className="text-sm text-aco">{mensagem}{enviando && <div role="progressbar" aria-label="Progresso da importação" aria-valuenow={percentual} aria-valuemin={0} aria-valuemax={100} className="h-1.5 mt-3 bg-linha rounded-full overflow-hidden"><div className="bg-sinal h-full transition-all" style={{ width: percentual + '%' }}/></div>}</div>}</div>}
+        {concluida ? <div role="status" className="flex flex-wrap justify-between items-center gap-4"><div className="flex gap-3 text-concluido items-center"><CheckCircle2 size={24}/><div><p className="font-bold">Fatura importada e equipes vinculadas</p><p className="text-sm mt-1">Os valores já estão disponíveis para conferência.</p></div></div><Link to={'/faturamento/resumo?fatura=' + resumida.dados.fatura} className="bg-sinal text-white rounded-xl px-5 py-3 text-sm font-bold inline-flex items-center gap-2">Conferir fatura <ArrowRight size={16}/></Link></div> : <div className="space-y-3"><div className="flex flex-wrap justify-between items-center gap-4"><p className="text-xs text-aco max-w-lg">Os valores e os vínculos são publicados juntos, após a validação de todos os registros.</p><button disabled={ocupado || identico || !faturasOk} onClick={() => void iniciar()} className="bg-sinal hover:bg-sinal-forte text-white rounded-xl px-5 py-3 font-bold text-sm flex items-center gap-2 disabled:opacity-50">{enviando ? <Loader2 size={17} className="animate-spin"/> : <UploadCloud size={17}/>} {enviando ? 'Importando…' : identico ? 'Nada mudou' : existente ? 'Revisar e substituir…' : 'Importar fatura e equipes'}</button></div>{mensagem && <div role="status" className="text-sm text-aco">{mensagem}{enviando && <div role="progressbar" aria-label="Progresso da importação" aria-valuenow={percentual} aria-valuemin={0} aria-valuemax={100} className="h-1.5 mt-3 bg-linha rounded-full overflow-hidden"><div className="bg-sinal h-full transition-all" style={{ width: percentual + '%' }}/></div>}</div>}</div>}
       </div>
-      {confirmar && anterior && <ConfirmarSubstituicao fatura={anterior.id} depois={resumoImportacao(resumida.dados, completa.dados)} onFechar={() => setConfirmar(false)} onConfirmar={() => void importar()} />}
+      {confirmar && anterior && <ConfirmarSubstituicao fatura={anterior.id} depois={resumoImportacao(resumida.dados, completa.dados)} onFechar={() => setConfirmar(false)} onConfirmar={() => void importar(true)} />}
     </section> : <section className="rounded-2xl bg-sinal-fundo/60 border border-sinal/10 p-5 flex items-start gap-3"><Link2 size={21} className="text-sinal shrink-0 mt-0.5"/><div><h3 className="font-bold text-sm text-sinal">O cruzamento acontece aqui</h3><p className="text-sm text-aco leading-relaxed mt-1">O número do serviço liga as duas planilhas. O veículo da aba Serviço encontra a frota em US_Turma e identifica Multifuncional, Moto, Umpla ou Quarteto. Não é preciso copiar abas no Excel.</p></div></section>}
   </div>;
 }

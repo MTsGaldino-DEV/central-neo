@@ -27,7 +27,7 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
      throw new Error('rollback');
    });
  }catch(e){if(e.message!=='rollback')throw e;}finally{await sql.end();}
- const estado={painel:'real',lista:'real',hashes:'nenhum'},chamadasLista=[],lotes=[],falhas=[];let finalizou=false,registrou=null;
+ const estado={painel:'real',lista:'real',hashes:'nenhum',faturas:'existe',desatualizadas:[]},chamadasLista=[],totaisPedidos=[],lotes=[],falhas=[];let finalizou=false,iniciou=false,registrou=null;
  const browser=await chromium.launch({channel:'chrome',headless:true});let page;
  try{
  const context=await browser.newContext({viewport:{width:1440,height:1100},acceptDownloads:true});
@@ -43,21 +43,24 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
    const url=new URL(route.request().url()),recurso=url.pathname.split('/').pop(),dados=()=>route.request().postDataJSON();
    let corpo=[];
    if(url.hostname!==api.hostname)throw Error('A tela tentou acessar outro projeto Supabase.');
+   if(recurso==='neo_fat_faturas'&&estado.faturas==='falha')return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({message:'falha simulada'})});
    if(recurso==='user')corpo=usuario;
    else if(recurso==='neo_acessos')corpo={user_id:id,papel:'ADMIN',modulos:['faturamento'],ativo:true};
    else if(recurso==='colaboradores')corpo={id,nome:'Revisão da interface'};
+   else if(recurso==='neo_fat_faturas'&&estado.faturas==='vazio')corpo=[];
    else if(recurso==='neo_fat_faturas')corpo=[{id:'9844',arquivo:'resumo.xlsx',inicio:'2026-09-02',fim:'2026-10-01',importado_em:'2026-10-22T12:00:00Z',
      hash_resumida:estado.hashes==='iguais'?hash(arqResumida):'antigo',hash_completa:estado.hashes==='iguais'?hash(arqCompleta):'antigo'}];
    else if(recurso==='neo_fat_painel')corpo=estado.painel==='vazio'?[]:real.painel;
-   else if(recurso==='neo_fat_servicos_listar'){const f=dados();chamadasLista.push({lado:f.p_filtros.lado,offset:f.p_offset,modo:estado.lista});corpo=listar(f);}
+   else if(recurso==='neo_fat_faturas_desatualizadas')corpo=estado.desatualizadas;
+   else if(recurso==='neo_fat_servicos_listar'){const f=dados();chamadasLista.push({lado:f.p_filtros.lado,offset:f.p_offset,modo:estado.lista,fatura:f.p_filtros.fatura});corpo=listar(f);}
    else if(recurso==='neo_fat_servico_linhas')corpo=real.linhas;
    else if(['neo_fat_conferir_servico','neo_fat_desconferir_servico'].includes(recurso))corpo=null;
    else if(recurso==='neo_fat_iniciar_completa'){
-     const p=dados();assert.equal(p.p_fatura,'9844');assert.equal(p.p_contagens.Servico,21910);assert.equal(p.p_inicio,'2026-09-02');assert.equal(p.p_fim,'2026-10-01');corpo=id;
+     iniciou=true;const p=dados();assert.equal(p.p_fatura,'9844');assert.equal(p.p_contagens.Servico,21910);assert.equal(p.p_inicio,'2026-09-02');assert.equal(p.p_fim,'2026-10-01');corpo=id;
    }else if(recurso==='neo_fat_enviar_lote'){lotes.push(dados());corpo=null;}
    else if(recurso==='neo_fat_finalizar_completa'){finalizou=true;corpo=null;}
    else if(recurso==='neo_fat_registrar_hashes'){registrou=dados();corpo=null;}
-   else if(recurso==='neo_fat_atualizar_totais')corpo=real.painel[0];
+   else if(recurso==='neo_fat_atualizar_totais'){totaisPedidos.push(dados().p_fatura);corpo=real.painel[0];}
    else if(recurso==='neo_fat_contrato')corpo=real.contrato;
    else if(recurso==='neo_fat_config')corpo={moto_urbano:0.7};
    else if(recurso==='neo_fat_contrato_historico')corpo=[];
@@ -69,10 +72,12 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  const foto=nome=>page.screenshot({path:path.join(saida,nome+'.png'),fullPage:true});
 
  // Lista de faturas
+ estado.desatualizadas=['9844'];
  await page.goto(urlBase+'/faturamento');
  await page.getByRole('heading',{name:'Faturas da CEMIG'}).waitFor();
  await page.getByText('Atual',{exact:true}).waitFor();
  for(const r of ['Pago pela CEMIG','Pago a menos · soma dos saldos','Multas aplicadas'])assert.equal(await page.getByText(r,{exact:false}).count()>0,true,r);
+ await page.getByText('atualizado agora').waitFor();assert(totaisPedidos.length>0&&totaisPedidos.every(x=>x==='9844'),'recálculo: '+totaisPedidos);   // StrictMode do dev monta duas vezesestado.desatualizadas=[];
  await foto('lista-desktop');
  estado.painel='vazio';await page.reload();
  await page.getByText('Nenhuma fatura importada ainda.').waitFor();estado.painel='real';
@@ -90,6 +95,15 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await page.getByRole('group',{name:'Atalhos de período'}).waitFor();await page.keyboard.press('Escape');
  await foto('resumo-desktop');
 
+ // Conferência sem ?fatura e sem cache: nenhuma consulta de todas as faturas; sem opção "todas"
+ await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('neo-fat:')).forEach(k=>localStorage.removeItem(k)));
+ chamadasLista.length=0;
+ await page.goto(urlBase+'/faturamento/conferencia');
+ await page.getByText('A receber · pagou a menos').waitFor();
+ assert(chamadasLista.length>0&&chamadasLista.every(c=>c.fatura==='9844'),'consulta sem fatura: '+JSON.stringify(chamadasLista));
+ await page.getByRole('button',{name:/9844 ▾/}).click();
+ assert.equal(await page.getByRole('option',{name:/Todas as faturas/}).count(),0);
+ await page.keyboard.press('Escape');
  // Conferência: janela fecha por Esc, Cancelar e X
  await page.goto(urlBase+'/faturamento/conferencia?fatura=9844');
  await page.getByText('A receber · pagou a menos').waitFor();
@@ -137,16 +151,24 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await page.setViewportSize({width:1440,height:1100});
 
  // Importação: fatura existente pede confirmação digitando o número; idêntica avisa "nada mudou"
- estado.hashes='antigos';
+ estado.hashes='antigos';estado.faturas='falha';
  await page.goto(urlBase+'/faturamento/importar');
  await page.getByRole('heading',{name:'Uma fatura. As duas origens.'}).waitFor();
+ const semLista=page.getByText('Não foi possível conferir as faturas já importadas',{exact:false});
+ await semLista.waitFor();
  await page.getByLabel('Fatura Resumida',{exact:true}).setInputFiles(arqResumida);
  await page.getByText('27.389 linhas de faturamento',{exact:false}).waitFor({timeout:30000});
  await page.waitForFunction(()=>!document.querySelector('input[aria-label="Fatura Completa"]').disabled);
  await page.getByLabel('Fatura Completa',{exact:true}).setInputFiles(arqCompleta);
  await page.getByText('Todos os serviços têm uma equipe identificada.').waitFor({timeout:45000});
- await page.getByRole('button',{name:'Revisar e substituir…'}).click();
+ assert(await semLista.isVisible(),'aviso da lista de faturas sumiu');
+ assert(await page.getByRole('button',{name:'Importar fatura e equipes'}).isDisabled(),'importa sem conferir as faturas existentes');
+ estado.faturas='vazio';await page.getByRole('button',{name:'Tentar de novo'}).click();
+ await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent.includes('Importar fatura e equipes')&&!b.disabled));
+ estado.faturas='existe';   // outra pessoa importou a 9844 depois que a tela abriu
+ await page.getByRole('button',{name:'Importar fatura e equipes'}).click();
  const janela=page.getByRole('dialog');await janela.getByText('Digite o número da fatura para confirmar').waitFor();
+ assert(!iniciou,'começou a importar sem confirmar a substituição');
  const substituir=janela.getByRole('button',{name:'Substituir fatura'});
  assert(await substituir.isDisabled());await janela.getByRole('textbox').fill('984');assert(await substituir.isDisabled());
  await janela.getByRole('textbox').fill('9844');assert(await substituir.isEnabled());

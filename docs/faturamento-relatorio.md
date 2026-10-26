@@ -11,7 +11,7 @@ A tela passou a trabalhar **por serviço** (número do serviço), e não por lin
 - `/faturamento/conferencia`: o que a CEMIG pagou a menos no centro, o que pagou a mais ao lado, com motivo e frase por serviço, mais a exportação para negociação.
 - `/faturamento/documentacao`: explicação curta para leigos.
 
-Os links antigos `/faturamento?fatura=…` levam à Conferência. Migrations **028–033** testadas com `--testar` e aplicadas.
+Os links antigos `/faturamento?fatura=…` levam à Conferência. Migrations **028–034** testadas com `--testar` e aplicadas. A 034 traz as correções da revisão final: os totais ficam desatualizados quando algo mudou, mesmo com duas pessoas conferindo juntas; o recálculo é feito fatura a fatura; o grupo "Por código" leva aos serviços certos, inclusive de RC; e um ajuste mal formatado não derruba os totais.
 
 **Regra por serviço.** Soma o **crédito** de todas as linhas (sem glosas) e compara com o devido do serviço:
 

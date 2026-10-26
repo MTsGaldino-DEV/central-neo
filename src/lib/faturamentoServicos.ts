@@ -49,7 +49,14 @@ export async function desconferirServicoFat(fatura: string, numserv: string): Pr
   const { error } = await supabase.rpc('neo_fat_desconferir_servico', { p_fatura: fatura, p_numserv: numserv });
   if (error) throw error;
 }
+/** Recalcula fatura a fatura o que ficou desatualizado (cada chamada cabe no tempo limite) e lê o painel. */
 export async function painelFat(): Promise<TotaisFat[]> {
+  const { data: velhas, error: erroVelhas } = await supabase.rpc('neo_fat_faturas_desatualizadas');
+  if (erroVelhas) throw erroVelhas;
+  for (const fatura of (velhas ?? []) as string[]) {
+    const { error } = await supabase.rpc('neo_fat_atualizar_totais', { p_fatura: fatura });
+    if (error) throw error;
+  }
   const { data, error } = await supabase.rpc('neo_fat_painel');
   if (error) throw error;
   return data ?? [];

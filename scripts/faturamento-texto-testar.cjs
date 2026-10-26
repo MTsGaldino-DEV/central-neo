@@ -46,6 +46,13 @@ assert.equal(lerCache('painel'),null);assert.doesNotThrow(()=>gravarCache('paine
 assert.equal(tempoRelativo(0,30_000),'agora');assert.equal(tempoRelativo(0,120_000),'há 2 min');
 assert.equal(tempoRelativo(0,3*3600_000),'há 3 h');assert.equal(tempoRelativo(0,2*86400_000),'há 2 dias');
 assert.equal(tempoRelativo(0,86400_000),'há 1 dia');
+// cache com limite: não enche o localStorage (que guarda também a sessão de login)
+const loja=new Map(),armLoja={getItem:k=>loja.get(k)??null,setItem:(k,v)=>loja.set(k,v),removeItem:k=>loja.delete(k),key:i=>[...loja.keys()][i]??null,get length(){return loja.size;}};
+loja.set('sb-auth-token','sessao');
+for(let i=0;i<40;i++)gravarCache('servicos:'+i,{i},armLoja);
+const chavesFat=[...loja.keys()].filter(k=>k.startsWith('neo-fat:'));
+assert.ok(chavesFat.length<=20,`cache com ${chavesFat.length} chaves`);
+assert.ok(loja.has('neo-fat:servicos:39'));assert.equal(loja.get('sb-auth-token'),'sessao');
 console.log('OK: textos, soma de totais e cache.');
 // período do cabeçalho (sem input de data nativo)
 require.extensions['.tsx']=(m,f)=>m._compile(ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,f);

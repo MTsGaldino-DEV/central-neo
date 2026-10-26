@@ -80,15 +80,24 @@ Decisões em vigor:
 - Serviço conferido sai do saldo e da exportação; revisão por serviço em
   `neo_fat_conferencias_servico`. Revisões antigas por linha foram migradas como
   desatualizadas (texto guardado, pedem nova conferência).
-- Totais por fatura em `neo_fat_totais`; `neo_fat_painel()` recalcula o que ficou
-  velho (reimportação, vínculos, revisão, contrato). Conferir recalcula na hora.
+- Totais por fatura em `neo_fat_totais`, com a "impressão" das entradas (034):
+  reimportação, revisões, vínculos, contrato, configuração ou transposição diferentes
+  = desatualizado. O app chama `neo_fat_faturas_desatualizadas()` e recalcula fatura
+  a fatura (`neo_fat_atualizar_totais`) antes do painel, para caber no tempo limite.
+  Conferir recalcula na hora. A Conferência trabalha uma fatura por vez (sem "todas").
 - Rotas: `/faturamento` = lista de faturas; `/faturamento/resumo`,
   `/faturamento/conferencia`, `/faturamento/documentacao` (fora da sidebar).
   Links antigos `/faturamento?fatura=` vão para a Conferência.
 - Reimportação: hash SHA-256 dos dois arquivos; idênticos = "Nada mudou";
   diferente = janela antes/depois e confirmação digitando o número da fatura.
-- Migrations **028–033** aplicadas no CENTRAL-NEO (028 serviço, 029 multa explica,
-  030 RPCs de lista, 031 totais, 032 RC como código principal, 033 hashes).
+- Migrations **028–034** aplicadas no CENTRAL-NEO (028 serviço, 029 multa explica,
+  030 RPCs de lista, 031 totais, 032 RC como código principal, 033 hashes,
+  034 correções da revisão final: impressão dos totais, filtro por código principal,
+  ajuste mal formatado não derruba os totais).
+- Importação bloqueada se a lista de faturas não carregar; antes de gravar, confere de
+  novo no servidor e `importarFat` recusa substituir sem confirmação. Duplicidade
+  compara o conteúdo sem o id técnico `idapropriacaotemposervico`. Cache limitado a
+  20 chaves `neo-fat:*`.
 - Nenhum `<input type="date">` no Faturamento; cabeçalho-filtro e janela modal
   são o padrão das abas. Cache dos últimos dados em `localStorage` (`neo-fat:*`).
 
