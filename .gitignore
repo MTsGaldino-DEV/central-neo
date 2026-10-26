@@ -26,3 +26,6 @@ Thumbs.db
 
 # Mockups do brainstorming (superpowers) — locais, não versionar.
 /.superpowers/
+
+# Migrations e funções do Supabase ficam só na máquina local (pedido do Matheus, 26/10/2026).
+/supabase/
