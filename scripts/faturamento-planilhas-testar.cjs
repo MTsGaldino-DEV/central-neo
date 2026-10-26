@@ -22,3 +22,16 @@ assert.equal(lerFaturaCompleta(arquivo([{numserv:1,veiculo:7},{numserv:1,veiculo
 assert.throws(()=>lerFaturaCompleta(arquivo([{numserv:1,frota:7}])),/veiculo/);
 assert.throws(()=>lerFaturaCompleta(arquivo([{numserv:null,veiculo:7}])),/numserv/);
 console.log('OK: 21.910 serviços reais, quatro equipes, período, faturas incompatíveis, frota ambígua, turma/veículo incompatíveis e duplicidades.');
+// importação segura: hash do arquivo, linhas idênticas e resumo antes/depois
+(async()=>{
+  const {hashArquivo,linhasDuplicadas,resumoImportacao}=require('../src/lib/faturamentoPlanilhas.ts');
+  const buf=fs.readFileSync(path.join(dir,nomes.find(n=>n.startsWith('Resumo_Fat_9844'))));
+  const h1=await hashArquivo(buf),h2=await hashArquivo(buf);assert.equal(h1,h2);assert.match(h1,/^[0-9a-f]{64}$/);
+  assert.notEqual(await hashArquivo(Buffer.concat([buf,Buffer.from([0])])),h1);
+  assert.deepEqual(linhasDuplicadas([{a:1,b:2},{b:2,a:1},{a:1,b:3}]).map(g=>g.length),[2]);
+  assert.deepEqual(linhasDuplicadas([{numserv:'1',codserv:'7.15'},{numserv:'1',codserv:'7.10'}]),[]);
+  const r=resumoImportacao(resumida,completa);
+  assert.equal(r.linhas,27389);assert.equal(r.servicos,21910);assert.equal(r.creditado.toFixed(6),'917.112183');assert.equal(r.multas.toFixed(6),'21.226389');
+  console.log('Duplicadas na 9844:',linhasDuplicadas(resumida.abas.US_Servico).length,'grupos');
+  console.log('OK: hash, duplicidade e resumo da importação.');
+})().catch(e=>{console.error(e.message);process.exitCode=1;});

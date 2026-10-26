@@ -26,11 +26,11 @@ export async function historicoFat(c: ContratoFat): Promise<HistoricoFat[]> {
 export { usFat } from './faturamentoTexto';
 export const erroFat = (e: unknown) => e instanceof Error ? e.message : (e as {message?:string})?.message ?? 'Não foi possível concluir a operação.';
 
-export interface FaturaFat { id:string; arquivo:string; arquivo_completo:string|null; inicio:string; fim:string; importado_em:string }
+export interface FaturaFat { id:string; arquivo:string; arquivo_completo:string|null; inicio:string; fim:string; importado_em:string; hash_resumida:string|null; hash_completa:string|null }
 export async function faturasFat():Promise<FaturaFat[]> {
   const {data,error}=await supabase.from('neo_fat_faturas').select('*').order('fim',{ascending:false});if(error)throw error;return data??[];
 }
-export async function importarFat(l:LeituraFat,arquivo:string,completa:LeituraCompletaFat,arquivoCompleto:string,progresso:(s:string,percentual:number)=>void){
+export async function importarFat(l:LeituraFat,arquivo:string,completa:LeituraCompletaFat,arquivoCompleto:string,progresso:(s:string,percentual:number)=>void,hashes?:{resumida:string;completa:string}){
   cruzarFaturas(l,completa);
   const abas:Record<string,RegistroFat[]>={...l.abas,Servico:completa.vinculos.map(v=>({...v,idapropriacao:completa.fatura}))};
   const contagens=Object.fromEntries(Object.entries(abas).map(([a,linhas])=>[a,linhas.length]));
@@ -42,6 +42,8 @@ export async function importarFat(l:LeituraFat,arquivo:string,completa:LeituraCo
     enviados+=lote.length;progresso(`Enviando ${aba==='Servico'?'vínculos das equipes':aba}…`,Math.round(enviados/total*95));
   }
   progresso('Concluindo a fatura e o cruzamento das equipes…',97);const {error:falha}=await supabase.rpc('neo_fat_finalizar_completa',{p_importacao:id});if(falha)throw falha;
+  if(hashes){const {error:e}=await supabase.rpc('neo_fat_registrar_hashes',{p_fatura:l.fatura,p_hash_resumida:hashes.resumida,p_hash_completa:hashes.completa});if(e)throw e;}
+  progresso('Recalculando os totais da fatura…',99);const {error:totais}=await supabase.rpc('neo_fat_atualizar_totais',{p_fatura:l.fatura});if(totais)throw totais;
   progresso('Importação concluída.',100);
 }
 export async function importarVinculosFat(fatura:string,linhas:RegistroFat[]){

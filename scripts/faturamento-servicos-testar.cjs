@@ -118,6 +118,11 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     await t`select neo_fat_desconferir_servico('9844',${alvo2.numserv})`;
     const [p3]=await totais(t,'dados');
     assert.equal(Number(p3.dados.saldo_a_receber).toFixed(6),Number(f.saldo_a_receber).toFixed(6));
+    // hashes da importação: guardados na fatura para detectar arquivo idêntico
+    await t`select neo_fat_registrar_hashes('9844','aaa','bbb')`;
+    const [hf]=await t`select hash_resumida,hash_completa from neo_fat_faturas where id='9844'`;
+    assert.deepEqual([hf.hash_resumida,hf.hash_completa],['aaa','bbb']);
+    await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_registrar_hashes('nao-existe','a','b')`),/não encontrada/);
     // relatório para o Matheus (não é asserção)
     const [dev]=await t`select sum(devido) d,count(*) filter(where parcial)::int parciais from neo_fat_servicos where fatura='9844'`;
     console.log('Devido por serviço:',Number(dev.d).toFixed(6),'· antes 857.921936 · parciais',dev.parciais);
@@ -134,6 +139,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_servico_linhas('9844','245530193')`),/Sem acesso/);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_painel()`),/Sem acesso/);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_atualizar_totais('9844')`),/Sem acesso/);
+    await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_registrar_hashes('9844','a','b')`),/Sem acesso/);
   });
   console.log('OK: serviços fecham com as linhas, exemplos, revisão por serviço e acesso restrito.');
 }catch(e){console.error(e.message);process.exitCode=1;}finally{await sql.end();}})();

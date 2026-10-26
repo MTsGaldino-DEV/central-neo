@@ -136,3 +136,30 @@ export function cruzarFaturas(resumida: LeituraFat, completa: LeituraCompletaFat
   }
   return resultado;
 }
+
+/** SHA-256 do arquivo: o mesmo conteúdo sempre dá o mesmo hash (detecta reimportação idêntica). */
+export async function hashArquivo(buffer: ArrayBuffer | Uint8Array): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', buffer as BufferSource);
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Grupos de linhas idênticas em todos os campos (o mesmo numserv com códigos diferentes é legítimo). */
+export function linhasDuplicadas(linhas: RegistroFat[]): RegistroFat[][] {
+  const grupos = new Map<string, RegistroFat[]>();
+  for (const l of linhas) {
+    const chave = JSON.stringify(Object.keys(l).sort().map(k => [k, l[k]]));
+    grupos.set(chave, [...(grupos.get(chave) ?? []), l]);
+  }
+  return [...grupos.values()].filter(g => g.length > 1);
+}
+
+/** Números da planilha para o "depois" da confirmação de substituição. */
+export function resumoImportacao(l: LeituraFat, _c: LeituraCompletaFat): { linhas: number; servicos: number; creditado: number; multas: number } {
+  const servico = l.abas.US_Servico;
+  return {
+    linhas: servico.length,
+    servicos: new Set(servico.map(s => String(s.numserv))).size,
+    creditado: l.creditado,
+    multas: servico.reduce((s, r) => s + Math.max(-(Number(r.usglosa) || 0), 0), 0),
+  };
+}
