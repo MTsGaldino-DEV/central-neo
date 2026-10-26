@@ -45,3 +45,15 @@ assert.equal(tempoRelativo(0,30_000),'agora');assert.equal(tempoRelativo(0,120_0
 assert.equal(tempoRelativo(0,3*3600_000),'há 3 h');assert.equal(tempoRelativo(0,2*86400_000),'há 2 dias');
 assert.equal(tempoRelativo(0,86400_000),'há 1 dia');
 console.log('OK: textos, soma de totais e cache.');
+// período do cabeçalho (sem input de data nativo)
+require.extensions['.tsx']=(m,f)=>m._compile(ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,f);
+const {rotuloPeriodo,atalhoPeriodo}=require('../src/components/faturamento/SeletorPeriodo.tsx');
+assert.equal(rotuloPeriodo({de:'2026-07-01',ate:'2026-09-30'}),'jul – set / 2026');
+assert.equal(rotuloPeriodo({de:'2026-09-01',ate:'2026-09-30'}),'set / 2026');
+assert.equal(rotuloPeriodo({de:'2025-11-01',ate:'2026-01-31'}),'nov/2025 – jan/2026');
+assert.equal(rotuloPeriodo({de:'',ate:''}),'todo o período');
+assert.deepEqual(atalhoPeriodo('3m','2026-10-01'),{de:'2026-08-01',ate:'2026-10-31'});
+assert.deepEqual(atalhoPeriodo('mes','2026-02-10'),{de:'2026-02-01',ate:'2026-02-28'});
+assert.deepEqual(atalhoPeriodo('6m','2026-03-15'),{de:'2025-10-01',ate:'2026-03-31'});
+assert.deepEqual(atalhoPeriodo('ano','2026-03-15'),{de:'2026-01-01',ate:'2026-12-31'});
+console.log('OK: período do cabeçalho.');
