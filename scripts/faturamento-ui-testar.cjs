@@ -55,12 +55,13 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
    else if(recurso==='neo_fat_faturas'&&estado.faturas==='vazio')corpo=[];
    else if(recurso==='neo_fat_faturas')corpo=[{id:'9844',arquivo:'resumo.xlsx',inicio:'2026-09-02',fim:'2026-10-01',importado_em:'2026-10-22T12:00:00Z',
      hash_resumida:estado.hashes==='iguais'?hash(arqResumida):'antigo',hash_completa:estado.hashes==='iguais'?hash(arqCompleta):'antigo'}];
+   else if(recurso==='neo_fat_painel'&&estado.painel==='falha')return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({message:'falha simulada'})});
    else if(recurso==='neo_fat_painel')corpo=estado.painel==='vazio'?[]:real.painel;
    else if(recurso==='neo_fat_faturas_desatualizadas')corpo=estado.desatualizadas;
    else if(recurso==='neo_fat_servicos_listar'){const f=dados();chamadasLista.push({lado:f.p_filtros.lado,offset:f.p_offset,modo:estado.lista,fatura:f.p_filtros.fatura,filtros:f.p_filtros});corpo=listar(f);}
    else if(recurso==='neo_fat_servico_linhas')corpo=real.linhas;
    else if(recurso==='neo_fat_valor_us')corpo=estado.valorUs==='nenhum'?null:real.valorUs;
-   else if(recurso==='neo_fat_servicos_valores'){const f=dados();chamadasValores.push(f);corpo=[{valor:'ALPERCATA',n:2},{valor:'COLUNA',n:1}];}
+   else if(recurso==='neo_fat_servicos_valores'){const f=dados();chamadasValores.push(f);corpo=estado.valores==='muitos'?Array.from({length:200},(_,i)=>({valor:'V'+i,n:200-i})):[{valor:'ALPERCATA',n:2},{valor:'COLUNA',n:1}];}
    else if(recurso==='neo_fat_servico_manutencao')corpo=real.manutencao[dados().p_numserv]??{existe:false,itens:[]};
    else if(recurso==='neo_fat_servico_historico')corpo=real.historico;
    else if(recurso==='neo_doc_avaliar'){avaliacoes.push(dados());corpo=null;}
@@ -156,6 +157,12 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await page.getByRole('button',{name:/^Fatura 9844/}).click();
  assert.equal(await page.getByRole('option',{name:/Todas as faturas/}).count(),0);
  await page.keyboard.press('Escape');
+ // Sem painel (falha ou nenhuma fatura) a Conferência não fica carregando para sempre
+ await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('neo-fat:')).forEach(k=>localStorage.removeItem(k)));
+ estado.painel='falha';await page.goto(urlBase+'/faturamento/conferencia');
+ await page.getByRole('alert').filter({hasText:'Algo deu errado'}).waitFor();
+ estado.painel='vazio';await page.reload();await page.getByText('Nenhuma fatura importada ainda.').waitFor();
+ estado.painel='real';
  // Lista em colunas com filtro estilo Excel
  await page.goto(urlBase+'/faturamento/conferencia?fatura=9844');
  await page.getByRole('columnheader',{name:/Motivo/}).waitFor();
@@ -173,6 +180,13 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await page.waitForFunction(()=>true);
  assert(chamadasListaF().some(f=>JSON.stringify(f.cidades)==='["ALPERCATA"]'),'filtro de cidade não enviado');
  await page.getByRole('button',{name:'Remover filtro Cidade'}).click();
+ // Coluna com 200 valores ou mais: sem desmarcar "de todos" (sumiria quem não está na lista)
+ estado.valores='muitos';await page.getByRole('button',{name:'Filtrar Frota'}).click();
+ const menuFrota=page.getByRole('dialog',{name:'Filtro de Frota'});await menuFrota.getByText('Mostrando os 200 mais comuns',{exact:false}).waitFor();
+ assert.equal(await menuFrota.getByRole('checkbox',{name:/^V0/}).isChecked(),false,'valores já marcados com lista cortada');
+ await menuFrota.getByRole('checkbox',{name:/^V0/}).check();chamadasLista.length=0;await menuFrota.getByRole('button',{name:'OK'}).click();
+ await page.waitForURL(u=>u.searchParams.getAll('frotas').join()==='V0');
+ await page.getByRole('button',{name:'Remover filtro Frota'}).click();await page.waitForURL(u=>!u.searchParams.has('frotas'));estado.valores='poucos';
  await page.waitForURL(u=>!u.searchParams.has('cidades'));
  chamadasLista.length=0;await page.getByRole('button',{name:/Contém 1.NS/}).click();
  await page.waitForURL(u=>u.searchParams.get('tem_1ns')==='sim');

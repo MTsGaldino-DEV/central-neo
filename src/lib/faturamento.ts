@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { traduzirErro } from './erros';
+import { ErroNeo, traduzirErro } from './erros';
 import { ABAS_FAT, cruzarFaturas, type LeituraCompletaFat, type LeituraFat, type RegistroFat } from './faturamentoPlanilhas';
 
 export interface ContratoFat {
@@ -40,7 +40,7 @@ export async function importarFat(l:LeituraFat,arquivo:string,completa:LeituraCo
   cruzarFaturas(l,completa);
   // Substituir uma fatura existente só com confirmação explícita de quem importa.
   const {data:ja,error:erroJa}=await supabase.from('neo_fat_faturas').select('id').eq('id',l.fatura);if(erroJa)throw erroJa;
-  if(ja?.length&&!substituir)throw Error(`A fatura ${l.fatura} já existe. Revise o antes e o depois e confirme a substituição.`);
+  if(ja?.length&&!substituir)throw new ErroNeo(`A fatura ${l.fatura} já existe. Revise o antes e o depois e confirme a substituição.`);
   const abas:Record<string,RegistroFat[]>={...l.abas,Servico:completa.vinculos.map(v=>({...v,idapropriacao:completa.fatura}))};
   const contagens=Object.fromEntries(Object.entries(abas).map(([a,linhas])=>[a,linhas.length]));
   const total=Object.values(contagens).reduce((a,b)=>a+b,0);let enviados=0;

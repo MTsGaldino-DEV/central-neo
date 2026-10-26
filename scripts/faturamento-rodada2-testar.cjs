@@ -30,6 +30,9 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     r=await listar({lado:'a_menos',tem_1ns:'sim',cidades:['ALPERCATA','COLUNA']});
     assert.deepEqual(r.servicos.map(s=>s.numserv),['246101137']);
 
+    // revisão final: a soma do cabeçalho segue a lista filtrada (motivo incluso)
+    r=await listar({lado:'a_menos',motivos:['RC_NAO_PAGO']});
+    assert.equal(r.total,34);assert.equal(Number(r.soma).toFixed(6),'-3.998762');
     let v=await valores({lado:'a_menos'},'motivo');
     assert.equal(v.find(x=>x.valor==='RC_NAO_PAGO').n,34);
     v=await valores({lado:'a_menos',motivos:['RC_NAO_PAGO']},'motivo');

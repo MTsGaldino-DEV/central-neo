@@ -1,4 +1,11 @@
 import * as XLSX from 'xlsx';
+import { ErroNeo } from './erros';
+
+/** Abre o .xlsx; arquivo corrompido ou com senha vira uma frase em português. */
+function lerPlanilha(buffer: ArrayBuffer | Uint8Array, op: XLSX.ParsingOptions): XLSX.WorkBook {
+  try { return XLSX.read(buffer, op); }
+  catch { throw new ErroNeo('Não foi possível abrir a planilha. Confira se é o arquivo .xlsx da CEMIG e se não está protegido por senha.'); }
+}
 
 export const ABAS_FAT = ['US_Servico','US_Turma','Evento_Glosa','Glosa','Debito_Credito'] as const;
 export type AbaFat = typeof ABAS_FAT[number];
@@ -10,34 +17,34 @@ function registros(ws:XLSX.WorkSheet): RegistroFat[] {
   return XLSX.utils.sheet_to_json<RegistroFat>(ws,{defval:null}).map(r=>Object.fromEntries(Object.entries(r).map(([k,v])=>[k.trim().toLowerCase(),typeof v==='string'?v.trim():v])));
 }
 function exigir(r:RegistroFat,campos:string[],aba:string,linha:number) {
-  for(const c of campos) if(r[c]===null||r[c]===undefined||r[c]==='') throw Error(`${aba}, linha ${linha}: falta ${c}.`);
+  for(const c of campos) if(r[c]===null||r[c]===undefined||r[c]==='') throw new ErroNeo(`${aba}, linha ${linha}: falta ${c}.`);
 }
 export function lerFatura(buffer:ArrayBuffer|Uint8Array):LeituraFat {
-  const wb=XLSX.read(buffer,{type:'array'});
+  const wb=lerPlanilha(buffer,{type:'array'});
   const abas={} as LeituraFat['abas'];let fatura='';const ids=new Set<string>();
   for(const aba of ABAS_FAT){
-    if(!wb.Sheets[aba])throw Error(`Aba ${aba} não encontrada. Selecione a Fatura Resumida.`);
+    if(!wb.Sheets[aba])throw new ErroNeo(`Aba ${aba} não encontrada. Selecione a Fatura Resumida.`);
     abas[aba]=registros(wb.Sheets[aba]);
     for(const [i,r] of abas[aba].entries()){
       exigir(r,['idapropriacao'],aba,i+2);const id=texto(r.idapropriacao);
-      if(!fatura)fatura=id;if(id!==fatura)throw Error('A planilha contém mais de uma fatura.');
+      if(!fatura)fatura=id;if(id!==fatura)throw new ErroNeo('A planilha contém mais de uma fatura.');
       for(const k of ['idapropriacao','idapropriacaotemposervico','numserv','codserv','numvei','ident_turma']) if(r[k]!=null)r[k]=texto(r[k]);
       if(aba==='US_Servico'){
         exigir(r,['idapropriacaotemposervico','numserv','tipo_serv','codserv','cidade',...NUMEROS],aba,i+2);
-        const chave=texto(r.idapropriacaotemposervico);if(ids.has(chave))throw Error(`Identificador duplicado: ${chave}.`);ids.add(chave);
-        for(const k of NUMEROS){const v=r[k];const n=typeof v==='number'?v:Number(texto(v).replace(',','.'));if(!Number.isFinite(n))throw Error(`Linha ${i+2}: ${k} inválido.`);r[k]=n;}
-        if(NUMEROS.slice(0,5).some(k=>Number(r[k])<0))throw Error(`Linha ${i+2}: quantidade negativa.`);
+        const chave=texto(r.idapropriacaotemposervico);if(ids.has(chave))throw new ErroNeo(`Identificador duplicado: ${chave}.`);ids.add(chave);
+        for(const k of NUMEROS){const v=r[k];const n=typeof v==='number'?v:Number(texto(v).replace(',','.'));if(!Number.isFinite(n))throw new ErroNeo(`Linha ${i+2}: ${k} inválido.`);r[k]=n;}
+        if(NUMEROS.slice(0,5).some(k=>Number(r[k])<0))throw new ErroNeo(`Linha ${i+2}: quantidade negativa.`);
       }
     }
   }
-  if(!abas.US_Servico.length)throw Error('A fatura não tem serviços.');
+  if(!abas.US_Servico.length)throw new ErroNeo('A fatura não tem serviços.');
   const soma=(k:string)=>abas.US_Servico.reduce((v,r)=>v+Math.round(Number(r[k])*1e6),0)/1e6;
   return {fatura,abas,creditado:soma('ustotal'),glosa:soma('usglosa')};
 }
 export function lerVinculos(buffer:ArrayBuffer):RegistroFat[]{
-  const wb=XLSX.read(buffer,{type:'array'});const lista=registros(wb.Sheets[wb.SheetNames[0]]);const ids=new Set<string>();
-  if(!lista.length)throw Error('Planilha vazia.');
-  return lista.map((r,i)=>{exigir(r,['numserv'],'Vínculos',i+2);if(!texto(r.numvei)&&!texto(r.ident_turma))throw Error(`Linha ${i+2}: informe numvei ou ident_turma.`);const numserv=texto(r.numserv);if(ids.has(numserv))throw Error(`Serviço duplicado: ${numserv}.`);ids.add(numserv);return{numserv,numvei:texto(r.numvei)||null,ident_turma:texto(r.ident_turma)||null};});
+  const wb=lerPlanilha(buffer,{type:'array'});const lista=registros(wb.Sheets[wb.SheetNames[0]]);const ids=new Set<string>();
+  if(!lista.length)throw new ErroNeo('Planilha vazia.');
+  return lista.map((r,i)=>{exigir(r,['numserv'],'Vínculos',i+2);if(!texto(r.numvei)&&!texto(r.ident_turma))throw new ErroNeo(`Linha ${i+2}: informe numvei ou ident_turma.`);const numserv=texto(r.numserv);if(ids.has(numserv))throw new ErroNeo(`Serviço duplicado: ${numserv}.`);ids.add(numserv);return{numserv,numvei:texto(r.numvei)||null,ident_turma:texto(r.ident_turma)||null};});
 }
 
 export interface VinculoServicoFat {
@@ -66,26 +73,26 @@ function dataDaPlanilha(valor: unknown): string {
   const br = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
   if (br) return `${br[3]}-${br[2]}-${br[1]}`;
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  throw Error('Período não encontrado na aba Apropriação da Fatura Completa.');
+  throw new ErroNeo('Período não encontrado na aba Apropriação da Fatura Completa.');
 }
 
 /** Lê somente as abas necessárias, sem carregar endereços/equipes em outras abas. */
 export function lerFaturaCompleta(buffer: ArrayBuffer | Uint8Array): LeituraCompletaFat {
-  const wb = XLSX.read(buffer, { type: 'array', sheets: ['Serviço', 'Servico', 'Apropriação', 'Apropriacao'] });
+  const wb = lerPlanilha(buffer, { type: 'array', sheets: ['Serviço', 'Servico', 'Apropriação', 'Apropriacao'] });
   const ws = wb.Sheets['Serviço'] ?? wb.Sheets.Servico;
   const aprop = wb.Sheets['Apropriação'] ?? wb.Sheets.Apropriacao;
-  if (!ws || !aprop) throw Error('Selecione a Fatura Completa com as abas Serviço e Apropriação.');
+  if (!ws || !aprop) throw new ErroNeo('Selecione a Fatura Completa com as abas Serviço e Apropriação.');
   const cabecalho = registros(aprop);
-  if (cabecalho.length !== 1) throw Error('A Fatura Completa deve conter uma única apropriação.');
+  if (cabecalho.length !== 1) throw new ErroNeo('A Fatura Completa deve conter uma única apropriação.');
   exigir(cabecalho[0], ['idapropriacao', 'data_inicio', 'data_termino'], 'Apropriação', 2);
   const fatura = texto(cabecalho[0].idapropriacao);
   const inicio = dataDaPlanilha(cabecalho[0].data_inicio);
   const fim = dataDaPlanilha(cabecalho[0].data_termino);
-  if (inicio > fim) throw Error('Período inválido na Fatura Completa.');
+  if (inicio > fim) throw new ErroNeo('Período inválido na Fatura Completa.');
   const unicos = new Map<string, VinculoServicoFat>();
   for (const [i, r] of registros(ws).entries()) {
     exigir(r, ['numserv'], 'Serviço', i + 2);
-    if (!('veiculo' in r)) throw Error('Coluna veiculo não encontrada na aba Serviço.');
+    if (!('veiculo' in r)) throw new ErroNeo('Coluna veiculo não encontrada na aba Serviço.');
     const vinculo = {
       numserv: texto(r.numserv),
       numvei: texto(r.veiculo) || null,
@@ -93,11 +100,11 @@ export function lerFaturaCompleta(buffer: ArrayBuffer | Uint8Array): LeituraComp
     };
     const anterior = unicos.get(vinculo.numserv);
     if (anterior && (anterior.numvei !== vinculo.numvei || anterior.ident_turma !== vinculo.ident_turma)) {
-      throw Error(`O serviço ${vinculo.numserv} tem vínculos diferentes na Fatura Completa. Revise a origem.`);
+      throw new ErroNeo(`O serviço ${vinculo.numserv} tem vínculos diferentes na Fatura Completa. Revise a origem.`);
     }
     unicos.set(vinculo.numserv, vinculo);
   }
-  if (!unicos.size) throw Error('A aba Serviço da Fatura Completa está vazia.');
+  if (!unicos.size) throw new ErroNeo('A aba Serviço da Fatura Completa está vazia.');
   return { fatura, inicio, fim, vinculos: [...unicos.values()] };
 }
 
@@ -111,7 +118,7 @@ export interface CruzamentoFat {
 /** Veículo identifica a frota; ident_turma desempata seu tipo no atendimento. */
 export function cruzarFaturas(resumida: LeituraFat, completa: LeituraCompletaFat): CruzamentoFat {
   if (resumida.fatura !== completa.fatura) {
-    throw Error(`Os arquivos são de faturas diferentes: ${resumida.fatura} e ${completa.fatura}.`);
+    throw new ErroNeo(`Os arquivos são de faturas diferentes: ${resumida.fatura} e ${completa.fatura}.`);
   }
   const vinculos = new Map(completa.vinculos.map(v => [v.numserv, v]));
   const porVeiculo = new Map<string, RegistroFat[]>();

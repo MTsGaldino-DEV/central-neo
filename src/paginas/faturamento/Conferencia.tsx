@@ -66,7 +66,8 @@ export default function Conferencia() {
     todos: totais?.servicos, a_menos: totais?.a_menos.servicos, a_mais: totais?.a_mais.servicos,
     fora: totais?.fora_contrato, confere: totais?.funil.valor_confere, conferidos: totais?.funil.conferidos,
   };
-  const ladoTotal = e.atalho === 'a_menos' ? r && -r.lados.a_menos.us : e.atalho === 'a_mais' ? r?.lados.a_mais.us : null;
+  // Soma da diferença dos serviços filtrados (038); sem ela, cai no total do lado.
+  const somaFiltrada = r ? r.soma ?? (e.atalho === 'a_menos' ? -r.lados.a_menos.us : e.atalho === 'a_mais' ? r.lados.a_mais.us : null) : null;
   const etiquetas = [
     ...COLUNAS_CONFERENCIA.flatMap(c => {
       const sel = c.lista && e.listas[c.lista.chave];
@@ -140,17 +141,20 @@ export default function Conferencia() {
       )}
 
       {lista.falha && <AvisoErro erro={lista.falha} onTentar={recarregar} contexto={r ? 'Mostrando os últimos dados vistos.' : undefined} />}
+      {!fatura && painel.falha && <AvisoErro erro={painel.falha} onTentar={recarregar} />}
       {erroAcao && <AvisoErro erro={erroAcao} />}
 
       <section className="rounded-2xl border border-linha bg-white">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-linha px-4 py-2.5 text-xs text-aco">
-          <span>{r ? <><b className="text-tinta">{numero(r.total)}</b> serviços{ladoTotal != null && <> · diferença <b className={`font-codigo ${e.atalho === 'a_menos' ? 'text-erro' : 'text-concluido'}`}>{valorFat(ladoTotal, unidade, taxa, true)}</b></>}</> : 'Carregando…'}</span>
+          <span>{r ? <><b className="text-tinta">{numero(r.total)}</b> serviços{somaFiltrada != null && <> · diferença <b className={`font-codigo ${somaFiltrada < 0 ? 'text-erro' : somaFiltrada > 0 ? 'text-concluido' : 'text-aco'}`}>{valorFat(somaFiltrada, unidade, taxa, true)}</b></>}</> : 'Carregando…'}</span>
           <button type="button" onClick={recarregar} disabled={lista.atualizando} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-nevoa disabled:opacity-70">
             {lista.atualizando ? 'atualizando…' : lista.salvoEm ? `atualizado ${tempoRelativo(lista.salvoEm)}` : 'atualizar'}
             <RotateCw className={`size-3.5 ${lista.atualizando ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />
           </button>
         </div>
-        {!r && !lista.falha ? <CarregandoNeo variante="conferencia" /> : (
+        {!fatura && painel.dados && !faturas.length ? <p className="px-4 py-10 text-center text-sm text-aco">Nenhuma fatura importada ainda.</p>
+          : !fatura && painel.falha ? <p className="px-4 py-10 text-center text-sm text-aco">Sem a lista de faturas não dá para abrir a Conferência.</p>
+          : !r && !lista.falha ? <CarregandoNeo variante="conferencia" /> : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1080px] border-separate border-spacing-0 text-left text-xs">
               <thead><tr>

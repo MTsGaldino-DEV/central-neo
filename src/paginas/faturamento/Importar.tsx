@@ -5,7 +5,7 @@ import { lerFatura, lerFaturaCompleta, cruzarFaturas, hashArquivo, linhasDuplica
 import { painelFat, type TotaisFat } from '@/lib/faturamentoServicos';
 import { JanelaModal } from '@/components/faturamento/JanelaModal';
 import { AjudaFat } from '@/components/faturamento/AjudaFat';
-import { traduzirErro, type ErroAmigavel } from '@/lib/erros';
+import { ErroNeo, traduzirErro, type ErroAmigavel } from '@/lib/erros';
 import { AvisoErro } from '@/components/faturamento/AvisoErro';
 import { importarFat, faturasFat, usFat, type FaturaFat } from '@/lib/faturamento';
 
@@ -41,7 +41,7 @@ export default function Importar() {
     setLendo(tipo); setErro(null); setConcluida(false); setMensagem(''); setPercentual(0);
     if (tipo === 'resumida') setResumida(null); else setCompleta(null);
     try {
-      if (!/\.xlsx$/i.test(f.name)) throw Error('Selecione uma planilha Excel no formato .xlsx.');
+      if (!/\.xlsx$/i.test(f.name)) throw new ErroNeo('Selecione uma planilha Excel no formato .xlsx.');
       // Deixa o navegador desenhar o estado de leitura antes de processar o Excel.
       await new Promise(resolve => setTimeout(resolve, 40));
       const buffer = await f.arrayBuffer();

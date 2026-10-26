@@ -21,4 +21,14 @@ assert.deepEqual(estadoDaUrl(volta),e);assert.equal(volta.get('unidade'),'us');
 assert.deepEqual(urlDoEstado(estadoDaUrl(u('fatura=9844')),u('')).toString(),'fatura=9844');
 assert.equal(COLUNAS_CONFERENCIA.length,12);
 assert.deepEqual(COLUNAS_CONFERENCIA.map(c=>c.rotulo),['Situação','Nº serviço','Tipo serv.','Códigos','Frota','Tipo frota','Cidade','Pago','Devido','Diferença','Multa','Motivo']);
+// revisão final: links antigos da rodada 1 e número digitado com ponto
+assert.deepEqual(filtrosDoEstado(estadoDaUrl(u('fatura=1&lado=a_mais&motivo=FATOR_MAIOR'))),{fatura:'1',lado:'a_mais',motivos:['FATOR_MAIOR']});
+assert.deepEqual(filtrosDoEstado(estadoDaUrl(u('fatura=1&visao=todos&situacao=FORA_CONTRATO'))),{fatura:'1',lado:'todos',situacoes:['FORA_CONTRATO']});
+assert.deepEqual(filtrosDoEstado(estadoDaUrl(u('fatura=1&visao=todos&cidade=COLUNA&codserv=1.21&tipo_turma=M'))),{fatura:'1',lado:'todos',cidades:['COLUNA'],codigos:['1.21'],tipos_turma:['M']});
+assert.deepEqual(filtrosDoEstado(estadoDaUrl(u('fatura=1&visao=todos&situacao=CONFERIDO'))),{fatura:'1',lado:'todos',situacoes:['CONFERIDO'],conferidos:'somente'});
+assert.equal(urlDoEstado(estadoDaUrl(u('fatura=1&lado=a_mais&visao=todos')),u('')).has('lado'),false,'chaves antigas saem da URL');
+assert.equal(estadoDaUrl(u('fatura=1&pagina=1.01')).pagina,1);
+const {lerNumeroBr}=require('../src/lib/filtrosConferencia.ts');
+assert.equal(lerNumeroBr('0.5'),0.5);assert.equal(lerNumeroBr('0,5'),0.5);assert.equal(lerNumeroBr('1.234,56'),1234.56);
+assert.equal(lerNumeroBr('-0,3288'),-0.3288);assert.equal(lerNumeroBr(''),undefined);assert.equal(lerNumeroBr('abc'),undefined);
 console.log('OK: filtros da Conferência na URL.');

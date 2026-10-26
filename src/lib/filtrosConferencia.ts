@@ -50,11 +50,29 @@ export interface EstadoConferencia {
   pagina: number;
 }
 
+/** Número digitado no filtro: aceita "0,5", "1.234,56" e também "0.5". */
+export function lerNumeroBr(s: string): number | undefined {
+  const t = s.trim();
+  if (!t) return undefined;
+  const n = Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+// Chaves da Conferência da rodada 1 (links salvos e o redirecionamento de /faturamento?situacao=).
+const ANTIGAS = ['lado', 'visao', 'motivo', 'situacao', 'cidade', 'codserv', 'tipo_turma', 'tipo_serv'];
+const SITUACAO_ATALHO: Record<string, AtalhoConferencia> = { FORA_CONTRATO: 'fora', CONFERIDO: 'conferidos', OK: 'confere' };
+
 export function estadoDaUrl(p: URLSearchParams): EstadoConferencia {
   const atalho = p.get('atalho') as AtalhoConferencia | null;
-  const e: EstadoConferencia = { fatura: p.get('fatura') || null, atalho: atalho && ATALHOS_CONFERENCIA.includes(atalho) ? atalho : 'a_menos',
-    listas: {}, botoes: {}, faixas: {}, q: p.get('q')?.trim() || null, principal: p.get('codigo_principal')?.trim() || null, ordem: null, pagina: Math.max(Number(p.get('pagina')) || 1, 1) };
+  const situacaoAntiga = p.get('situacao');
+  const atalhoAntigo: AtalhoConferencia = situacaoAntiga && SITUACAO_ATALHO[situacaoAntiga] ? SITUACAO_ATALHO[situacaoAntiga]
+    : p.get('lado') === 'a_mais' ? 'a_mais' : p.get('visao') === 'todos' || situacaoAntiga ? 'todos' : 'a_menos';
+  const e: EstadoConferencia = { fatura: p.get('fatura') || null, atalho: atalho && ATALHOS_CONFERENCIA.includes(atalho) ? atalho : atalhoAntigo,
+    listas: {}, botoes: {}, faixas: {}, q: p.get('q')?.trim() || null, principal: p.get('codigo_principal')?.trim() || null, ordem: null, pagina: Math.max(Math.floor(Number(p.get('pagina'))) || 1, 1) };
   for (const k of LISTAS) { const v = p.getAll(k).filter(Boolean); if (v.length) e.listas[k] = v; }
+  const antiga = (de: string, para: ChaveListaFat) => { const v = p.get(de)?.trim(); if (v && !e.listas[para]) e.listas[para] = [v]; };
+  if (situacaoAntiga && !SITUACAO_ATALHO[situacaoAntiga]) antiga('situacao', 'situacoes');
+  antiga('motivo', 'motivos'); antiga('cidade', 'cidades'); antiga('codserv', 'codigos'); antiga('tipo_turma', 'tipos_turma'); antiga('tipo_serv', 'tipos_serv');
   for (const k of BOTOES) { const v = p.get(k); if (v === 'sim' || v === 'nao') e.botoes[k] = v; }
   for (const f of FAIXAS) for (const lim of ['min', 'max'] as const) {
     const bruto = p.get(`${f}_${lim}`), n = bruto == null || bruto === '' ? NaN : Number(bruto);
@@ -67,7 +85,7 @@ export function estadoDaUrl(p: URLSearchParams): EstadoConferencia {
 
 export function urlDoEstado(e: EstadoConferencia, base: URLSearchParams): URLSearchParams {
   const q = new URLSearchParams(base);
-  for (const k of ['fatura', 'atalho', 'q', 'codigo_principal', 'ordem', 'pagina', ...LISTAS, ...BOTOES, ...FAIXAS.flatMap(f => [`${f}_min`, `${f}_max`])]) q.delete(k);
+  for (const k of [...ANTIGAS, 'fatura', 'atalho', 'q', 'codigo_principal', 'ordem', 'pagina', ...LISTAS, ...BOTOES, ...FAIXAS.flatMap(f => [`${f}_min`, `${f}_max`])]) q.delete(k);
   if (e.fatura) q.set('fatura', e.fatura);
   if (e.atalho !== 'a_menos') q.set('atalho', e.atalho);
   for (const [k, v] of Object.entries(e.listas)) for (const x of v ?? []) q.append(k, x);

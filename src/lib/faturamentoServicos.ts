@@ -39,7 +39,7 @@ export type ColunaFiltroFat = 'situacao'|'tipo_serv'|'codigos'|'numvei'|'tipo_tu
 export interface ItemManutencaoFat { codigo:string|null; operacao:string|null; atividade:string|null; descricao:string|null; quantidade:number; valor:number }
 export interface EventoFat { tipo:'IMPORTADA'|'CONFERIDO'|'DESCONFERIDO'; observacao:string|null; usuario_nome:string|null; data:string }
 
-export async function listarServicosFat(filtros: FiltrosListaFat, pagina: number, limite = 50): Promise<{total:number; servicos:ServicoFat[]; lados:LadosFat}> {
+export async function listarServicosFat(filtros: FiltrosListaFat, pagina: number, limite = 50): Promise<{total:number; soma?:number; servicos:ServicoFat[]; lados:LadosFat}> {
   const { data, error } = await supabase.rpc('neo_fat_servicos_listar', { p_filtros: filtros, p_offset: pagina * limite, p_limite: limite });
   if (error) throw error;
   return data;

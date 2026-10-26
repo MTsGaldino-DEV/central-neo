@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, Loader2, Search } from 'lucide-react';
 import { valoresColunaFat, type FiltrosListaFat } from '@/lib/faturamentoServicos';
-import type { ColunaConferencia } from '@/lib/filtrosConferencia';
+import { lerNumeroBr, type ColunaConferencia } from '@/lib/filtrosConferencia';
 import type { UnidadeFat } from '@/lib/faturamentoTexto';
 import { traduzirErro, type ErroAmigavel } from '@/lib/erros';
 import { useFecharFora } from './SeletorPeriodo';
@@ -85,15 +85,18 @@ function Lista({ coluna, filtrosBase, selecionados, rotuloValor, onAplicar, onCa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaveFiltros, busca, coluna.lista?.coluna, coluna.rotulo]);
   const lista = valores ?? [];
-  const marcado = (v: string) => !marcados || marcados.has(v);
-  const todos = lista.length > 0 && lista.every(x => marcado(x.valor));
+  // Lista cortada (200 valores): desmarcar "de todos" esconderia quem não aparece; então marca-se só o que quer ver.
+  const truncado = !busca && lista.length >= 200;
+  const marcado = (v: string) => marcados ? marcados.has(v) : !truncado;
+  const todos = truncado ? !marcados : lista.length > 0 && lista.every(x => marcado(x.valor));
   const alternar = (v: string) => setMarcados(m => {
-    const n = new Set(m ?? lista.map(x => x.valor));
+    const n = new Set(m ?? (truncado ? [] : lista.map(x => x.valor)));
     if (n.has(v)) n.delete(v); else n.add(v);
     return n;
   });
   const aplicar = () => {
-    if (!marcados) { onAplicar(null); return; }
+    if (!marcados || (truncado && !marcados.size)) { onAplicar(null); return; }
+    if (truncado) { onAplicar([...marcados]); return; }
     const escolhidos = busca ? lista.map(x => x.valor).filter(v => marcados.has(v)) : [...marcados];
     onAplicar(!busca && lista.length && lista.every(x => marcados.has(x.valor)) ? null : escolhidos);
   };
@@ -109,6 +112,7 @@ function Lista({ coluna, filtrosBase, selecionados, rotuloValor, onAplicar, onCa
         <p className="flex items-center gap-2 px-2 py-3 text-aco"><Loader2 className="size-3.5 animate-spin" aria-hidden="true" />Buscando valores…</p>
       ) : (
         <div className="mt-1.5 max-h-56 overflow-auto">
+          {truncado && <p className="px-2 pb-1 text-[11px] font-medium text-aco">Mostrando os 200 mais comuns. Marque os que quer ver ou pesquise.</p>}
           <label className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-nevoa">
             <input type="checkbox" checked={todos} onChange={() => setMarcados(todos ? new Set() : null)} className="accent-sinal" />(Selecionar tudo)
           </label>
@@ -135,7 +139,7 @@ function Faixa({ faixa, fator, unidade, onAplicar, onCancelar }: {
   const [modo, setModo] = useState<Modo>(inicial);
   const mostrar = (n?: number) => n == null ? '' : String(+(n * fator).toFixed(fator === 1 ? 6 : 2)).replace('.', ',');
   const [a, setA] = useState(mostrar(modo === 'menor' ? faixa?.max : faixa?.min)), [b, setB] = useState(mostrar(faixa?.max));
-  const ler = (s: string) => { const n = Number(s.replace(/\./g, '').replace(',', '.')); return s.trim() && Number.isFinite(n) ? n / fator : undefined; };
+  const ler = (s: string) => { const n = lerNumeroBr(s); return n == null ? undefined : n / fator; };
   const campo = 'w-full rounded-lg border border-linha px-2 py-1.5 font-codigo text-xs focus:border-sinal focus:outline-none';
   const sufixo = unidade === 'reais' ? 'em R$' : 'em US';
   return (

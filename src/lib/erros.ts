@@ -9,6 +9,11 @@ export interface ErroAmigavel {
   tecnico: string;
 }
 
+/** Mensagem escrita pelo próprio sistema, em português, que já diz o que fazer. */
+export class ErroNeo extends Error {
+  constructor(mensagem: string) { super(mensagem); this.name = 'ErroNeo'; }
+}
+
 const GENERICA = 'Algo deu errado. Tente de novo; se repetir, avise o administrador.';
 const campo = (e: unknown, k: string) => (e && typeof e === 'object' && k in e ? String((e as Record<string, unknown>)[k] ?? '') : '');
 
@@ -16,7 +21,6 @@ const campo = (e: unknown, k: string) => (e && typeof e === 'object' && k in e ?
 export function traduzirErro(e: unknown, onde?: string): ErroAmigavel {
   const codigo = campo(e, 'code') || null;
   const msg = e instanceof Error ? e.message : campo(e, 'message') || (typeof e === 'string' ? e : '');
-  const nome = e instanceof Error ? e.name : '';
   let r: Pick<ErroAmigavel, 'mensagem' | 'oQueHouve' | 'acao'>;
   if (codigo === '57014' || /statement timeout/i.test(msg))
     r = { mensagem: 'Não foi possível carregar os dados. Aguarde alguns segundos e tente de novo.',
@@ -25,8 +29,9 @@ export function traduzirErro(e: unknown, onde?: string): ErroAmigavel {
     r = { mensagem: 'Você não tem permissão para isso. Peça a um administrador.', oQueHouve: msg || 'Acesso negado pelo banco de dados.', acao: 'avisar' };
   else if (/Failed to fetch|NetworkError|fetch failed|Load failed/i.test(msg))
     r = { mensagem: 'Sem conexão com o servidor. Verifique a internet e tente de novo.', oQueHouve: 'O navegador não conseguiu falar com o servidor.', acao: 'tentar' };
-  else if ((codigo === 'P0001' || (!codigo && e instanceof Error && nome !== 'TypeError')) && msg)
+  else if ((codigo === 'P0001' || e instanceof ErroNeo || (e instanceof Error && e.name === 'ErroNeo')) && msg)
     // Mensagens escritas pelo próprio sistema (planilha, fatura já existe, regras do banco): já dizem o que fazer.
+    // Um Error qualquer (biblioteca, navegador) cai na frase genérica; o texto dele fica no detalhe técnico.
     r = { mensagem: msg, oQueHouve: msg, acao: 'corrigir' };
   else r = { mensagem: GENERICA, oQueHouve: msg || 'Erro sem descrição.', acao: 'tentar' };
   const local = typeof location !== 'undefined' ? `${location.pathname}${location.search}` : '';
