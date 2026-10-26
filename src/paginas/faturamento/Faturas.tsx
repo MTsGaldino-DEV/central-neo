@@ -110,7 +110,7 @@ function ListaFaturas() {
           {atualizando ? 'atualizando…' : salvoEm ? `atualizado ${tempoRelativo(salvoEm)}` : 'atualizar'}
           <RotateCw className={`size-3.5 ${atualizando ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />
         </button>
-        <AjudaFat tema="inicio" />
+        <AjudaFat pagina="faturas" />
         <Link to="/faturamento/importar" className="inline-flex items-center gap-1.5 rounded-xl bg-sinal px-4 py-2 text-sm font-bold text-white hover:bg-sinal-forte">
           <Plus className="size-4" aria-hidden="true" />Importar nova fatura
         </Link>

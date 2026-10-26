@@ -87,7 +87,7 @@ export default function Conferencia() {
     <div className="mx-auto max-w-[1400px] space-y-3 p-4 lg:p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2"><h1 className="text-xl font-extrabold text-tinta sm:text-2xl">Conferência</h1><AjudaFat tema="conferencia" /></div>
+          <div className="flex items-center gap-2"><h1 className="text-xl font-extrabold text-tinta sm:text-2xl">Conferência</h1><AjudaFat pagina="conferencia" /></div>
           <p className="text-sm text-aco">{fatura ? `Fatura ${fatura}` : 'Nenhuma fatura'}{totais ? ` · ${rotuloPeriodo({ de: totais.inicio, ate: totais.fim })}` : ''}
             {taxa ? ` · 1 US = ${taxa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}</p>
         </div>

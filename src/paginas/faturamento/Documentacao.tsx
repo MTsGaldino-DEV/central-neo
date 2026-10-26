@@ -1,150 +1,168 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Calculator, Link2, Scale, Search, Upload, Wallet } from 'lucide-react';
-
-interface Tema { id: string; pergunta: string; resposta: string; exemplo?: ReactNode; detalhes?: ReactNode }
-
-const linha = 'flex justify-between gap-3 border-t border-linha py-1.5 font-codigo text-xs';
-const caixa = 'rounded-xl border border-linha bg-nevoa/60 p-3';
-const titulo = 'mb-1 text-[11px] font-bold tracking-wide text-aco uppercase';
-
-const TEMAS: Tema[] = [
-  { id: 'planilhas', pergunta: 'Por que preciso importar duas planilhas?',
-    resposta: 'A Fatura Resumida traz quanto a CEMIG pagou; a Fatura Completa diz qual equipe fez cada serviço. Sem as duas, não dá para saber se o desconto de Moto estava certo.',
-    exemplo: <div className={caixa}><p className={titulo}>Fatura 9844</p>
-      <div className={linha}><span>Linhas da Resumida (uma por código)</span><b>27.389</b></div>
-      <div className={linha}><span>Serviços (números únicos)</span><b>21.910</b></div></div>,
-    detalhes: <p>Um serviço com dois códigos ocupa duas linhas. Por isso 27.389 linhas viram 21.910 serviços, e a conferência é feita por serviço. O número do serviço liga as duas planilhas: o veículo da Completa encontra a frota na aba US_Turma da Resumida.</p> },
-  { id: 'rc-codigo', pergunta: 'Por que o RC é pago uma vez só, e o código é pago em cada linha?',
-    resposta: 'No pagamento por código, cada linha vale o seu código. No pagamento por RC (RC07, RC08…), vale um RC por atendimento, não importa quantas linhas ele tenha.',
-    exemplo: <div className="grid gap-2 sm:grid-cols-2">
-      <div className={caixa}><p className={titulo}>Por código · NSSR</p>
-        <div className={linha}><span>242861522 · 7.15</span><span className="text-concluido">paga 7.15 ✓</span></div>
-        <div className={linha}><span>242861522 · 7.10</span><span className="text-concluido">paga 7.10 ✓</span></div></div>
-      <div className={caixa}><p className={titulo}>Por RC · RC07</p>
-        <div className={linha}><span>245530193 · 5.14</span><span>0,043010</span></div>
-        <div className={linha}><span>245530193 · 7.42</span><span>0,041669</span></div>
-        <div className={linha}><span>soma = 1 RC07</span><span className="text-concluido">0,084679 ✓</span></div></div>
-    </div>,
-    detalhes: <p>No RC, os códigos de fechamento (5.14, 7.42…) só mostram o trabalho feito. A CEMIG pode dividir o valor do RC entre as linhas; o que importa é a soma do serviço. Pelas notas 2 e 3 da Tabela 12, alguns RCs são trocados pelo código de fechamento (por exemplo RC07 → 8.82) e aí valem como código.</p> },
-  { id: 'moto', pergunta: 'O que é o fator Moto (0,7, 1 ou 0)?',
-    resposta: 'Equipe Moto recebe 70% do valor (fator 0,7) na maioria dos códigos. Alguns códigos pagam o valor cheio (fator 1) e outros não pagam Moto (fator 0).',
-    exemplo: <div className={caixa}>
-      <div className={linha}><span>5.14 · fator 0,7</span><span>0,094983 × 0,7 = 0,066488</span></div>
-      <div className={linha}><span>6.01 · fator 1 (sem desconto)</span><span>0,001065</span></div>
-      <div className={linha}><span>9.82 · fator 0</span><span>não paga Moto</span></div></div>,
-    detalhes: <p>A coluna "Valor Moto" da Tabela do contrato já mostra a conta pronta. Quando a CEMIG aplica o desconto de Moto numa equipe que não é Moto, o serviço aparece como "Desconto de Moto indevido".</p> },
-  { id: 'saldo', pergunta: 'O que quer dizer "saldo a receber" e "pagou a mais"?',
-    resposta: 'Saldo a receber é quanto a CEMIG pagou abaixo do contrato, somando os serviços ainda não conferidos. Pagou a mais é o contrário e pode ser cobrado pela CEMIG depois.',
-    exemplo: <div className={caixa}>
-      <div className={linha}><span>Deveria pagar</span><span>0,023400</span></div>
-      <div className={linha}><span>Pagou</span><span>0,016400</span></div>
-      <div className={linha}><span>Entra no saldo a receber</span><b className="text-erro">0,007000</b></div></div>,
-    detalhes: <ul className="list-disc space-y-1 pl-5">
-      <li><b>Multas (glosas)</b> não entram no saldo: aparecem só no cartão de Multas. Multa injusta é contestada à parte, com o detalhe do serviço.</li>
-      <li>Um serviço glosado por inteiro (crédito + multa = devido) confere.</li>
-      <li>Serviço <b>conferido</b> sai do saldo e da exportação. Use o filtro "Conferidos" para revê-los.</li>
-      <li>Código sem fator no contrato fica fora dos dois lados.</li>
-    </ul> },
-  { id: 'funil', pergunta: 'O que significa cada etapa e cor do funil?',
-    resposta: 'O funil mostra quantos serviços passaram em cada checagem. O número ao lado de cada barra é quanto caiu ali; clique nele para ver esses serviços.',
-    exemplo: <div className={caixa}>
-      <div className={linha}><span>Importados</span><span>todos os serviços</span></div>
-      <div className={linha}><span>Equipe identificada</span><span className="text-revisao">sem equipe</span></div>
-      <div className={linha}><span>Código no contrato</span><span className="text-pendente">fora do contrato</span></div>
-      <div className={linha}><span>Valor confere</span><span className="text-erro">com diferença</span></div></div>,
-    detalhes: <p>Verde = confere sem ninguém mexer. Vermelho = pagou a menos ou a mais. Laranja = código que o contrato não tem. Roxo = serviço sem equipe na Fatura Completa.</p> },
-  { id: 'conferencia', pergunta: 'Como uso a tela de Conferência?',
-    resposta: 'No centro fica o que a CEMIG pagou a menos, com o motivo de cada serviço; ao lado, o que pagou a mais. Clique num serviço para ver tudo e marcar como conferido.',
-    detalhes: <ul className="list-disc space-y-1 pl-5">
-      <li>Os chips filtram por motivo: Moto indevido, RC não pago, fator menor…</li>
-      <li>"Exportar para negociação" baixa um Excel com uma aba para cada lado, pronto para mandar à CEMIG.</li>
-      <li>Para conferir, escreva uma observação e clique em "Marcar como conferido". Se os dados mudarem numa reimportação, ele volta a pedir conferência.</li>
-      <li>A janela fecha pelo X, por "Cancelar" ou pela tecla Esc.</li>
-    </ul> },
-  { id: 'importar', pergunta: 'Como importo ou reimporto uma fatura com segurança?',
-    resposta: 'Anexe as duas planilhas e confira a prévia. Se a fatura já existe, o sistema mostra o antes e o depois e pede que você digite o número da fatura para substituir.',
-    detalhes: <ul className="list-disc space-y-1 pl-5">
-      <li>Arquivos idênticos aos já importados: o sistema avisa "Nada mudou" e não reimporta.</li>
-      <li>Resumida e Completa de faturas diferentes: a importação é bloqueada.</li>
-      <li>Linhas idênticas em todos os campos aparecem como aviso antes de importar. O mesmo serviço com códigos diferentes é normal.</li>
-      <li>A gravação é tudo ou nada: se falhar no meio, a versão anterior continua valendo.</li>
-    </ul> },
-  { id: 'contrato', pergunta: 'O que são as Tabelas 11 e 12 do contrato?',
-    resposta: 'A Tabela 11 tem o valor de cada código de fechamento; a Tabela 12 tem o valor de cada RC (atendimento). O sistema usa essas tabelas para calcular quanto deveria ser pago.',
-    detalhes: <p>Cada código tem dois valores: CSC/CSI e COD. O sistema escolhe, por serviço, o que bate com o pagamento; se nenhum bate, usa CSC como referência. Só o administrador corrige um fator, e toda correção fica no histórico.</p> },
-  { id: 'glossario', pergunta: 'O que é US, glosa, CSC, COD…? (glossário)',
-    resposta: 'As palavras que aparecem nas telas, em uma linha cada.',
-    exemplo: <dl className="grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[110px_1fr]">
-      {[['US', 'Unidade de Serviço: a "moeda" do contrato com a CEMIG.'], ['Glosa', 'Desconto aplicado pela CEMIG (multa). Glosa positiva é estorno: valor devolvido.'],
-        ['Estorno', 'Glosa positiva: a CEMIG devolveu um valor descontado antes.'], ['CSC / CSI', 'Valor do código para o centro de serviço (referência principal).'],
-        ['COD', 'Valor alternativo do mesmo código no contrato.'], ['RC', 'Código de atendimento (RC07, RC08…), pago uma vez por atendimento.'],
-        ['Tabela 11 / 12', 'Tabela 11: códigos de fechamento. Tabela 12: RCs.'], ['Frota', 'Número do veículo que fez o serviço.'],
-        ['Turma', 'Equipe do veículo: Multifuncional, Moto, Umpla ou Quarteto.']].map(([t, d]) => <div key={t} className="contents"><dt className="font-codigo font-bold">{t}</dt><dd className="text-aco">{d}</dd></div>)}
-    </dl> },
-];
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { ChevronDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { avaliarDocFat } from '@/lib/faturamentoServicos';
+import { traduzirErro, type ErroAmigavel } from '@/lib/erros';
+import { AvisoErro } from '@/components/faturamento/AvisoErro';
+import { PAGINAS_DOC, TEMA_ANTIGO, textoDoBloco, type BlocoDoc, type PaginaDoc } from './documentacaoPaginas';
 
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+/** **negrito** → <b>; o resto é texto. */
+const marcar = (t: string): ReactNode => t.split(/(\*\*[^*]+\*\*)/g).map((p, i) => p.startsWith('**') && p.endsWith('**') ? <b key={i} className="font-bold text-tinta">{p.slice(2, -2)}</b> : <Fragment key={i}>{p}</Fragment>);
 
-/** Como funciona o Faturamento: perguntas com resposta curta e exemplo. Fora da sidebar. */
+function Bloco({ b }: { b: BlocoDoc }) {
+  if (b.tipo === 'texto') return <p className="text-[15px] leading-relaxed text-tinta/90">{marcar(b.texto)}</p>;
+  if (b.tipo === 'lista') return <ul className="list-disc space-y-1.5 pl-5 text-[15px] leading-relaxed text-tinta/90">{b.itens.map((x, i) => <li key={i}>{marcar(x)}</li>)}</ul>;
+  if (b.tipo === 'nota' || b.tipo === 'importante') return (
+    <div className={`rounded-r-xl border-l-4 px-4 py-3 text-sm leading-relaxed ${b.tipo === 'nota' ? 'border-sinal bg-sinal-fundo' : 'border-pendente-marca bg-pendente-fundo'}`}>
+      <p className="mb-0.5 text-[11px] font-extrabold tracking-wide uppercase">{b.tipo === 'nota' ? 'Nota' : 'Importante'}</p>{marcar(b.texto)}
+    </div>
+  );
+  if (b.tipo === 'tabela') return (
+    <div className="overflow-x-auto rounded-xl border border-linha">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-nevoa text-xs text-aco"><tr>{b.cabecalho.map(c => <th key={c} className="px-3 py-2 font-bold">{c}</th>)}</tr></thead>
+        <tbody>{b.linhas.map((l, i) => <tr key={i} className="border-t border-linha align-top">{l.map((c, j) => <td key={j} className={`px-3 py-2 ${j === 0 ? 'font-semibold whitespace-nowrap' : 'text-tinta/90'}`}>{marcar(c)}</td>)}</tr>)}</tbody>
+      </table>
+    </div>
+  );
+  if (b.tipo !== 'exemplo') return null;
+  return (
+    <div className="rounded-xl bg-noite px-4 py-3 font-codigo text-xs leading-relaxed text-linha">
+      <p className="mb-1.5 font-sans text-[11px] font-extrabold tracking-wide text-sinal-claro uppercase">{b.titulo}</p>
+      {b.linhas.map(([a, v], i) => <div key={i} className="flex justify-between gap-4 border-t border-white/5 py-1 first:border-0"><span>{a}</span><span className="text-white">{v}</span></div>)}
+    </div>
+  );
+}
+
+/** Documentação do Faturamento: uma página por aba, no layout dos guias do Mercado Livre. */
 export default function Documentacao() {
+  const { pagina: id } = useParams();
   const { hash } = useLocation();
+  const navegar = useNavigate();
+  const antigo = !id && hash ? TEMA_ANTIGO[hash.slice(1)] : undefined;
+  const pagina = PAGINAS_DOC.find(p => p.id === id);
   const [busca, setBusca] = useState('');
-  const [abertos, setAbertos] = useState<Set<string>>(() => new Set(hash ? [hash.slice(1)] : []));
-  const visiveis = useMemo(() => {
+  const [visivel, setVisivel] = useState<string | null>(null);
+  const [avaliou, setAvaliou] = useState<string | null>(null), [erro, setErro] = useState<ErroAmigavel | null>(null);
+
+  const resultados = useMemo(() => {
     const q = normalizar(busca.trim());
-    return q ? TEMAS.filter(t => normalizar(`${t.pergunta} ${t.resposta}`).includes(q)) : TEMAS;
+    if (q.length < 2) return [];
+    return PAGINAS_DOC.flatMap(p => p.secoes.filter(s => normalizar(`${p.titulo} ${s.titulo} ${s.blocos.map(textoDoBloco).join(' ')}`).includes(q)).map(s => ({ p, s }))).slice(0, 8);
   }, [busca]);
 
   useEffect(() => {
-    const id = hash.slice(1);
-    if (!id) return;
-    setAbertos(a => new Set([...a, id]));
-    requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  }, [hash]);
+    if (!pagina) return;
+    setAvaliou(null); setErro(null); setVisivel(pagina.secoes[0]?.id ?? null);
+    const alvo = hash.slice(1);
+    if (alvo) requestAnimationFrame(() => document.getElementById(alvo)?.scrollIntoView({ block: 'start' }));
+    else window.scrollTo?.(0, 0);
+    if (typeof IntersectionObserver === 'undefined') return;
+    const obs = new IntersectionObserver(es => { const e = es.find(x => x.isIntersecting); if (e) setVisivel(e.target.id); }, { rootMargin: '0px 0px -70% 0px' });
+    pagina.secoes.forEach(s => { const el = document.getElementById(s.id); if (el) obs.observe(el); });
+    return () => obs.disconnect();
+  }, [pagina, hash]);
 
-  const passos = [[Upload, 'Importa as 2 planilhas da CEMIG'], [Link2, 'Liga cada serviço à equipe'], [Calculator, 'Calcula quanto deveria ser pago'], [Scale, 'Compara com o que foi pago'], [Wallet, 'Mostra o saldo a receber']] as const;
+  if (antigo) return <Navigate to={`/faturamento/documentacao/${antigo[0]}${antigo[1] ? `#${antigo[1]}` : ''}`} replace />;
+  if (!pagina) return <Navigate to="/faturamento/documentacao/visao-geral" replace />;
+
+  const indice = PAGINAS_DOC.indexOf(pagina);
+  const anterior = PAGINAS_DOC[indice - 1], proxima = PAGINAS_DOC[indice + 1];
+  async function avaliar(util: boolean) {
+    setErro(null);
+    try { await avaliarDocFat(pagina!.id, util); setAvaliou(pagina!.id); }
+    catch (e) { setErro(traduzirErro(e, 'Documentação › avaliar a página')); }
+  }
+  const grupos = ['Faturamento', 'Referência'] as const;
+
   return (
-    <div className="mx-auto max-w-3xl space-y-4 p-4 lg:p-6">
-      <Link to="/faturamento" className="inline-flex items-center gap-1.5 text-sm font-semibold text-sinal"><ArrowLeft className="size-4" aria-hidden="true" />Voltar às faturas</Link>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><p className="text-[11px] font-bold tracking-wide text-aco uppercase">Central NEO · Faturamento</p><h1 className="text-2xl font-extrabold text-tinta">Como funciona</h1></div>
-        <label className="relative w-full sm:w-72"><span className="sr-only">Buscar dúvida</span>
+    <div className="min-h-full bg-white">
+      <div className="flex flex-wrap items-center gap-3 border-b border-linha px-4 py-3 lg:px-6">
+        <Link to="/faturamento/documentacao/visao-geral" className="text-sm font-extrabold text-tinta">Documentação</Link>
+        <span className="text-xs text-aco">Faturamento</span>
+        <div className="relative ml-auto w-full sm:w-80">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-aco-claro" aria-hidden="true" />
-          <input type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar dúvida…"
-            className="w-full rounded-xl border border-linha bg-white py-2 pr-3 pl-9 text-sm focus:border-sinal focus:outline-none" /></label>
+          <input type="search" role="searchbox" aria-label="Buscar na documentação" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar na documentação"
+            className="w-full rounded-xl border border-linha bg-white py-2 pr-3 pl-9 text-sm focus:border-sinal focus:outline-none" />
+          {busca.trim().length >= 2 && (
+            <ul role="listbox" aria-label="Resultados da busca" className="absolute right-0 left-0 z-30 mt-1 max-h-80 overflow-auto rounded-xl border border-linha bg-white p-1 shadow-lg">
+              {resultados.map(({ p, s }) => (
+                <li key={`${p.id}-${s.id}`} role="option" aria-selected={false}>
+                  <button type="button" onClick={() => { setBusca(''); navegar(`/faturamento/documentacao/${p.id}#${s.id}`); }}
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-sinal-fundo">
+                    <span className="font-bold text-tinta">{s.titulo}</span><span className="block text-xs text-aco">{p.titulo}</span>
+                  </button>
+                </li>
+              ))}
+              {!resultados.length && <li className="px-3 py-2 text-sm text-aco">Nada encontrado para "{busca}".</li>}
+            </ul>
+          )}
+        </div>
       </div>
 
-      <section id="inicio" className="scroll-mt-4 rounded-2xl bg-noite p-5 text-white">
-        <h2 className="text-[11px] font-bold tracking-wide text-sinal-claro uppercase">Em 1 minuto</h2>
-        <ol className="mt-3 grid grid-cols-2 gap-3 sm:flex sm:items-start sm:gap-1">
-          {passos.map(([Icone, texto], i) => (
-            <li key={texto} className="flex items-start gap-1 sm:flex-1">
-              <div className="flex flex-1 flex-col items-center gap-1.5 text-center text-xs text-linha">
-                <span className="grid size-10 place-items-center rounded-full bg-white/10 text-sinal-claro"><Icone className="size-5" aria-hidden="true" /></span>{texto}
-              </div>
-              {i < passos.length - 1 && <ArrowRight className="mt-3 hidden size-4 shrink-0 text-aco-claro sm:block" aria-hidden="true" />}
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {!visiveis.length && <p className="rounded-2xl border border-dashed border-linha bg-white p-6 text-center text-sm text-aco">Nada encontrado para "{busca}". Tente outra palavra, como "Moto" ou "saldo".</p>}
-      <div className="space-y-2">
-        {visiveis.map(t => (
-          <details key={t.id} id={t.id} open={!!busca || abertos.has(t.id)} className="group scroll-mt-4 rounded-2xl border border-linha bg-white"
-            onToggle={e => { const aberto = (e.currentTarget as HTMLDetailsElement).open; setAbertos(a => { const n = new Set(a); if (aberto) n.add(t.id); else n.delete(t.id); return n; }); }}>
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-tinta [&::-webkit-details-marker]:hidden">
-              {t.pergunta}<span className="text-aco transition-transform group-open:rotate-90" aria-hidden="true">›</span>
-            </summary>
-            <div className="space-y-3 px-4 pb-4 text-sm">
-              <p className="text-tinta">{t.resposta}</p>
-              {t.exemplo}
-              {t.detalhes && <details className="text-aco"><summary className="cursor-pointer text-xs font-bold text-sinal">ver detalhes</summary><div className="mt-2 text-sm">{t.detalhes}</div></details>}
+      <div className="mx-auto grid max-w-[1200px] lg:grid-cols-[220px_minmax(0,1fr)_190px]">
+        <nav aria-label="Páginas da documentação" className="hidden border-r border-linha bg-nevoa/40 px-2.5 py-5 text-sm lg:block">
+          {grupos.map(g => (
+            <div key={g} className="mb-3">
+              <p className="px-2.5 pb-1 text-[10.5px] font-extrabold tracking-wider text-aco-claro uppercase">{g}</p>
+              {PAGINAS_DOC.filter(p => p.grupo === g).map(p => (
+                <div key={p.id}>
+                  <Link to={`/faturamento/documentacao/${p.id}`} aria-current={p.id === pagina.id ? 'page' : undefined}
+                    className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 ${p.id === pagina.id ? 'bg-sinal-fundo font-extrabold text-sinal-forte shadow-[inset_3px_0_0_var(--color-sinal)]' : 'text-tinta/80 hover:bg-white'}`}>
+                    {p.titulo}{p.id === pagina.id && <ChevronDown className="size-3.5" aria-hidden="true" />}
+                  </Link>
+                  {p.id === pagina.id && p.secoes.map(s => <a key={s.id} href={`#${s.id}`} className="block py-1 pr-2 pl-6 text-xs text-aco hover:text-sinal">{s.titulo}</a>)}
+                </div>
+              ))}
             </div>
-          </details>
-        ))}
+          ))}
+        </nav>
+
+        <main className="min-w-0 px-4 py-6 sm:px-8 lg:px-10">
+          <label className="mb-4 block lg:hidden"><span className="sr-only">Escolher página</span>
+            <select value={pagina.id} onChange={e => navegar(`/faturamento/documentacao/${e.target.value}`)} className="w-full rounded-xl border border-linha bg-white px-3 py-2 text-sm font-bold">
+              {PAGINAS_DOC.map(p => <option key={p.id} value={p.id}>{p.grupo} · {p.titulo}</option>)}
+            </select></label>
+          <nav aria-label="Trilha" className="mb-2 flex flex-wrap items-center gap-1 text-xs text-aco">
+            <Link to="/faturamento/documentacao/visao-geral" className="hover:text-sinal">Documentação</Link><ChevronRight className="size-3" aria-hidden="true" />
+            <span>{pagina.grupo}</span><ChevronRight className="size-3" aria-hidden="true" /><span className="font-bold text-sinal">{pagina.titulo}</span>
+          </nav>
+          <h1 className="text-3xl font-extrabold text-tinta">{pagina.titulo}</h1>
+          <p className="mt-1 text-xs text-aco-claro">Última atualização em {pagina.atualizada}</p>
+          <p className="mt-4 text-[15px] leading-relaxed text-tinta/90">{pagina.resumo}</p>
+          {pagina.secoes.map(s => (
+            <section key={s.id} id={s.id} className="mt-8 scroll-mt-4 space-y-3">
+              <h2 className="text-lg font-extrabold text-tinta">{s.titulo}</h2>
+              {s.blocos.map((b, i) => <Bloco key={i} b={b} />)}
+            </section>
+          ))}
+
+          <div className="mt-10 flex flex-wrap items-center gap-2 border-t border-linha pt-5 text-sm text-aco">
+            {avaliou === pagina.id ? <p className="font-semibold text-concluido">Obrigado!</p> : <>
+              Esta página foi útil?
+              <button type="button" onClick={() => void avaliar(true)} className="rounded-lg border border-linha px-3 py-1 font-bold text-tinta hover:border-sinal">Sim</button>
+              <button type="button" onClick={() => void avaliar(false)} className="rounded-lg border border-linha px-3 py-1 font-bold text-tinta hover:border-sinal">Não</button>
+            </>}
+          </div>
+          {erro && <div className="mt-2"><AvisoErro erro={erro} compacto /></div>}
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {anterior ? <Link to={`/faturamento/documentacao/${anterior.id}`} className="rounded-xl border border-linha px-4 py-3 hover:border-sinal">
+              <span className="flex items-center gap-1 text-[11px] text-aco-claro"><ChevronLeft className="size-3" aria-hidden="true" />Anterior</span><span className="font-bold text-tinta">{anterior.titulo}</span></Link> : <span />}
+            {proxima && <Link to={`/faturamento/documentacao/${proxima.id}`} className="rounded-xl border border-linha px-4 py-3 text-right hover:border-sinal">
+              <span className="flex items-center justify-end gap-1 text-[11px] text-aco-claro">Próxima<ChevronRight className="size-3" aria-hidden="true" /></span><span className="font-bold text-tinta">{proxima.titulo}</span></Link>}
+          </div>
+        </main>
+
+        <aside className="hidden border-l border-linha px-4 py-6 text-[13px] lg:block">
+          <nav aria-label="Nesta página" className="sticky top-4">
+            <p className="mb-2 text-[10.5px] font-extrabold tracking-wider text-aco-claro uppercase">Nesta página</p>
+            {pagina.secoes.map(s => <a key={s.id} href={`#${s.id}`} className={`block border-l-2 py-1 pl-3 ${visivel === s.id ? 'border-sinal font-bold text-sinal' : 'border-linha text-aco hover:text-tinta'}`}>{s.titulo}</a>)}
+          </nav>
+        </aside>
       </div>
     </div>
   );
 }
+
+export type { PaginaDoc };

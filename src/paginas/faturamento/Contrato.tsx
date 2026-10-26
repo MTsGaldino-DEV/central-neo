@@ -32,7 +32,7 @@ export default function Contrato() {
   return <div className="p-4 lg:p-6 space-y-5 max-w-7xl mx-auto">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div><h2 className="text-xl font-extrabold">Tabelas do contrato</h2><p className="text-sm text-aco">Tabela 11 · códigos de fechamento / Tabela 12 · atendimentos RC. Valores em US.</p></div>
-      <Link to="/faturamento/documentacao#contrato" className="inline-flex items-center gap-1.5 rounded-xl border border-linha bg-white px-3 py-2 text-sm font-bold text-sinal hover:border-sinal"><BookOpen className="size-4" aria-hidden="true"/>Documentação</Link>
+      <Link to="/faturamento/documentacao/tabelas" className="inline-flex items-center gap-1.5 rounded-xl border border-linha bg-white px-3 py-2 text-sm font-bold text-sinal hover:border-sinal"><BookOpen className="size-4" aria-hidden="true"/>Documentação</Link>
     </div>
     <p className="p-4 rounded-xl bg-sinal-fundo text-sinal text-sm">Os fatores publicados no contrato independem do valor pago na fatura. CSC/CSI e COD são comparados na Conferência. O Valor Moto já vem calculado: fator {fatorTexto(motoUrbano)} na maioria dos códigos, 1 nos que pagam sem desconto e 0 nos que não pagam Moto.</p>
     {erro && !item && <AvisoErro erro={erro} onTentar={()=>void carregar()}/>}

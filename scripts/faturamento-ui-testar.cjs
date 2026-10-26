@@ -230,14 +230,27 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  assert(colContrato.indexOf('Valor Moto')>=0&&colContrato.indexOf('Valor Moto')<colContrato.indexOf('Fator Moto'),'Valor Moto deve vir antes de Fator Moto: '+colContrato);
  await foto('contrato-moto');
 
- // Documentação abre no tema pelo link
+ // Documentação: uma página por aba, no layout dos guias do Mercado Livre
  await page.goto(urlBase+'/faturamento/documentacao#rc-codigo');
+ await page.waitForURL(u=>u.pathname==='/faturamento/documentacao/regras'&&u.hash==='#rc-codigo');
  await page.locator('#rc-codigo').getByText('245530193 · 5.14').waitFor();
- assert(await page.locator('#rc-codigo').getByText('245530193 · 5.14').isVisible());
+ await page.goto(urlBase+'/faturamento/documentacao/painel');
+ const trilha=page.getByRole('navigation',{name:'Trilha'});await trilha.getByText('Painel').waitFor();await trilha.getByText('Faturamento').waitFor();
+ await page.getByRole('navigation',{name:'Nesta página'}).getByRole('link',{name:'Os dois cards'}).waitFor();
+ await page.getByText('Esta página foi útil?').waitFor();
+ avaliacoes.length=0;await page.getByRole('button',{name:'Sim',exact:true}).click();await page.getByText('Obrigado!').waitFor();
+ assert.deepEqual(avaliacoes,[{p_pagina:'painel',p_util:true}]);
+ await page.getByRole('link',{name:/Próxima/}).click();await page.waitForURL(u=>u.pathname==='/faturamento/documentacao/conferencia');
+ await page.getByRole('searchbox',{name:'Buscar na documentação'}).fill('1.NS');
+ await page.getByRole('listbox',{name:'Resultados da busca'}).getByText('Conferência',{exact:false}).first().waitFor();
+ await foto('documentacao');
+ await page.goto(urlBase+'/faturamento/conferencia?fatura=9844');
+ await page.getByRole('link',{name:'Ajuda: como funciona esta tela'}).click();
+ await page.waitForURL(u=>u.pathname==='/faturamento/documentacao/conferencia');
 
  // Celular: nenhuma rota estoura a largura
  await page.setViewportSize({width:390,height:844});
- for(const rota of ['/faturamento','/faturamento/painel?fatura=9844','/faturamento/conferencia?fatura=9844','/faturamento/tabelas','/faturamento/documentacao','/faturamento/importar']){
+ for(const rota of ['/faturamento','/faturamento/painel?fatura=9844','/faturamento/conferencia?fatura=9844','/faturamento/tabelas','/faturamento/documentacao/painel','/faturamento/importar']){
    await page.goto(urlBase+rota);await page.waitForLoadState('networkidle');await page.waitForTimeout(300);await cabe(rota);
    await foto('celular-'+(rota.split('/')[2]?.split('?')[0]||'lista'));
  }

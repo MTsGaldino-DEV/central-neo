@@ -137,6 +137,7 @@ export default function App() {
           <Route path="painel" element={<PainelFat />} />
           <Route path="resumo" element={<ParaPainel />} />
           <Route path="documentacao" element={<DocumentacaoFat />} />
+          <Route path="documentacao/:pagina" element={<DocumentacaoFat />} />
         </Route>
         <Route path="acessos" element={<ExigeAdminNeo><Acessos /></ExigeAdminNeo>} />
         <Route path="colaboradores" element={<ExigeAdminNeo><Colaboradores /></ExigeAdminNeo>} />
