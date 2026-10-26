@@ -21,13 +21,17 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
      const [admin]=await t`select user_id from neo_acessos where papel='ADMIN' and ativo limit 1`;
      await t`select set_config('request.jwt.claim.sub',${admin.user_id},true)`;
      real.contrato=await t`select * from neo_fat_contrato`;
+     await t`select neo_fat_atualizar_totais('9844')`;
      real.painel=(await t`select neo_fat_painel() d`)[0].d;
+     real.valorUs=(await t`select neo_fat_valor_us() d`)[0].d;
+     real.manutencao={};for(const n of ['246101137','245579601'])real.manutencao[n]=(await t`select neo_fat_servico_manutencao(${n}) d`)[0].d;
+     real.historico=(await t`select neo_fat_servico_historico('9844','246101137') d`)[0].d;
      for(const lado of ['a_menos','a_mais','todos'])real[lado]=(await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado})},0,50) d`)[0].d;
      real.linhas=(await t`select neo_fat_servico_linhas('9844',${real.a_menos.servicos[0].numserv}) d`)[0].d;
      throw new Error('rollback');
    });
  }catch(e){if(e.message!=='rollback')throw e;}finally{await sql.end();}
- const estado={painel:'real',lista:'real',hashes:'nenhum',faturas:'existe',desatualizadas:[]},chamadasLista=[],totaisPedidos=[],lotes=[],falhas=[];let finalizou=false,iniciou=false,registrou=null;
+ const estado={painel:'real',lista:'real',hashes:'nenhum',faturas:'existe',desatualizadas:[],valorUs:'real'},chamadasLista=[],chamadasValores=[],avaliacoes=[],totaisPedidos=[],lotes=[],falhas=[];let finalizou=false,iniciou=false,registrou=null;
  const browser=await chromium.launch({channel:'chrome',headless:true});let page;
  try{
  const context=await browser.newContext({viewport:{width:1440,height:1100},acceptDownloads:true});
@@ -54,6 +58,11 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
    else if(recurso==='neo_fat_faturas_desatualizadas')corpo=estado.desatualizadas;
    else if(recurso==='neo_fat_servicos_listar'){const f=dados();chamadasLista.push({lado:f.p_filtros.lado,offset:f.p_offset,modo:estado.lista,fatura:f.p_filtros.fatura});corpo=listar(f);}
    else if(recurso==='neo_fat_servico_linhas')corpo=real.linhas;
+   else if(recurso==='neo_fat_valor_us')corpo=estado.valorUs==='nenhum'?null:real.valorUs;
+   else if(recurso==='neo_fat_servicos_valores'){const f=dados();chamadasValores.push(f);corpo=[{valor:'ALPERCATA',n:2},{valor:'COLUNA',n:1}];}
+   else if(recurso==='neo_fat_servico_manutencao')corpo=real.manutencao[dados().p_numserv]??{existe:false,itens:[]};
+   else if(recurso==='neo_fat_servico_historico')corpo=real.historico;
+   else if(recurso==='neo_doc_avaliar'){avaliacoes.push(dados());corpo=null;}
    else if(['neo_fat_conferir_servico','neo_fat_desconferir_servico'].includes(recurso))corpo=null;
    else if(recurso==='neo_fat_iniciar_completa'){
      iniciou=true;const p=dados();assert.equal(p.p_fatura,'9844');assert.equal(p.p_contagens.Servico,21910);assert.equal(p.p_inicio,'2026-09-02');assert.equal(p.p_fim,'2026-10-01');corpo=id;
@@ -85,15 +94,28 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await page.goto(urlBase+'/faturamento?fatura=9844');
  await page.waitForURL(u=>u.pathname==='/faturamento/conferencia'&&u.search==='?fatura=9844');
 
- // Resumo: sem input de data nativo e legenda pequena
+ // Painel (antigo Resumo): dois cards, pílulas de período e R$ | US
  await page.goto(urlBase+'/faturamento/resumo?fatura=9844');
- await page.getByText('Diferença · pago − devido').waitFor();
+ await page.waitForURL(u=>u.pathname==='/faturamento/painel'&&u.searchParams.get('fatura')==='9844');
+ await page.getByRole('heading',{name:'Painel do faturamento'}).waitFor();
+ assert.equal(await page.getByRole('navigation',{name:'Detalhe da fatura'}).count(),0,'ainda tem o botão Resumo | Conferência');
+ assert.equal(await page.getByText('Diferença · pago − devido').count(),0);
  assert.equal(await page.locator('input[type=date]').count(),0);
- const fonte=await page.getByText('Pago',{exact:true}).first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize));
- assert(fonte<=12,`legenda com ${fonte}px`);
- await page.getByRole('button',{name:/jul|ago|set|out/}).first().click();
- await page.getByRole('group',{name:'Atalhos de período'}).waitFor();await page.keyboard.press('Escape');
- await foto('resumo-desktop');
+ await page.getByText('Pagou a menos',{exact:true}).first().waitFor();
+ await page.getByText('Pagou a mais',{exact:true}).first().waitFor();
+ await page.getByText('−R$ 22.076,19').first().waitFor();
+ await page.getByText('1 US = R$ 2.964,33').first().waitFor();
+ await page.getByText('são 5.62 pago como RC inteiro',{exact:false}).first().waitFor();
+ await page.getByRole('button',{name:'US',exact:true}).click();
+ await page.waitForURL(u=>u.searchParams.get('unidade')==='us');
+ await page.getByText('−7,447278 US').first().waitFor();
+ await foto('painel-desktop');
+ await page.goto(urlBase+'/faturamento/painel');
+ assert.equal(await page.getByRole('button',{name:'3 meses'}).getAttribute('aria-pressed'),'true');
+ estado.valorUs='nenhum';await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('neo-fat:valor-us')).forEach(k=>localStorage.removeItem(k)));
+ await page.reload();await page.getByRole('heading',{name:'Painel do faturamento'}).waitFor();
+ assert(await page.getByRole('button',{name:'R$',exact:true}).isDisabled(),'R$ sem valor da US');
+ await page.getByText('US',{exact:false}).first().waitFor();estado.valorUs='real';
 
  // Conferência sem ?fatura e sem cache: nenhuma consulta de todas as faturas; sem opção "todas"
  await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('neo-fat:')).forEach(k=>localStorage.removeItem(k)));
@@ -141,7 +163,7 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
 
  // Celular: nenhuma rota estoura a largura
  await page.setViewportSize({width:390,height:844});
- for(const rota of ['/faturamento','/faturamento/resumo?fatura=9844','/faturamento/conferencia?fatura=9844','/faturamento/tabelas','/faturamento/documentacao','/faturamento/importar']){
+ for(const rota of ['/faturamento','/faturamento/painel?fatura=9844','/faturamento/conferencia?fatura=9844','/faturamento/tabelas','/faturamento/documentacao','/faturamento/importar']){
    await page.goto(urlBase+rota);await page.waitForLoadState('networkidle');await page.waitForTimeout(300);await cabe(rota);
    await foto('celular-'+(rota.split('/')[2]?.split('?')[0]||'lista'));
  }
@@ -154,7 +176,7 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  estado.hashes='antigos';estado.faturas='falha';
  await page.goto(urlBase+'/faturamento/importar');
  await page.getByRole('heading',{name:'Uma fatura. As duas origens.'}).waitFor();
- const semLista=page.getByText('Não foi possível conferir as faturas já importadas',{exact:false});
+ const semLista=page.getByText('A importação fica bloqueada até conferir as faturas já importadas.',{exact:false});
  await semLista.waitFor();
  await page.getByLabel('Fatura Resumida',{exact:true}).setInputFiles(arqResumida);
  await page.getByText('27.389 linhas de faturamento',{exact:false}).waitFor({timeout:30000});
@@ -189,6 +211,6 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await page.getByLabel('Fatura Completa',{exact:true}).setInputFiles(arqResumida);
  await page.getByRole('alert').filter({hasText:'Selecione a Fatura Completa'}).waitFor({timeout:120000});
  assert.deepEqual(falhas,[]);
- console.log('OK: lista, vazio, link antigo, resumo sem data nativa e legenda pequena, janela (Esc/Cancelar/X), exportação paginada, conferência vazia, Moto no contrato, documentação, celular 390 px e importação segura. APIs simuladas, sem escrita remota.');
+ console.log('OK: lista, vazio, link antigo, painel com dois cards e R$ ou US, janela (Esc/Cancelar/X), exportação paginada, conferência vazia, Moto no contrato, documentação, celular 390 px e importação segura. APIs simuladas, sem escrita remota.');
  }catch(e){if(page){await page.screenshot({path:path.join(saida,'ui-falha.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(-3000));}throw e;}finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

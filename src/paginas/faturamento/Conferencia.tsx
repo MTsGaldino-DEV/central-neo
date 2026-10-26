@@ -8,7 +8,6 @@ import { erroFat } from '@/lib/faturamento';
 import { useDadosComCache } from '@/lib/useDadosComCache';
 import { CabecalhoFatura } from '@/components/faturamento/CabecalhoFatura';
 import { CarregandoNeo } from '@/components/faturamento/CarregandoNeo';
-import { AlternarFatura } from '@/components/faturamento/AlternarFatura';
 import { AjudaFat, RodapeFat } from '@/components/faturamento/AjudaFat';
 import { Pagination } from '@/components/Pagination';
 import { DetalheServico } from './DetalheServico';
@@ -70,7 +69,7 @@ export default function Conferencia() {
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 lg:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <AlternarFatura atual="conferencia" />
+        <span />
         <AjudaFat tema="conferencia" />
       </div>
       <CabecalhoFatura rotulo="Conferência · valores em US" faturas={faturas.map(f => ({ id: f.fatura, inicio: f.inicio, fim: f.fim }))}

@@ -34,7 +34,7 @@ export default function Inicio() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {temModulo(acesso, 'faturamento') && <Link to="/faturamento/resumo" className="bg-white border border-linha rounded-2xl p-6 hover:border-sinal"><Receipt className="text-sinal"/><h3 className="text-lg font-extrabold mt-4">Faturamento</h3><p className="text-sm text-aco">Créditos e glosas CEMIG comparados com o contrato.</p></Link>}
+        {temModulo(acesso, 'faturamento') && <Link to="/faturamento/painel" className="bg-white border border-linha rounded-2xl p-6 hover:border-sinal"><Receipt className="text-sinal"/><h3 className="text-lg font-extrabold mt-4">Faturamento</h3><p className="text-sm text-aco">Créditos e glosas CEMIG comparados com o contrato.</p></Link>}
         {veFechamento && (
           <Link to="/fechamento" className="group bg-white border border-linha rounded-2xl p-6 hover:border-sinal hover:shadow-md transition-all">
             <div className="flex items-start justify-between">

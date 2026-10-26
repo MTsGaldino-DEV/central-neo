@@ -63,7 +63,7 @@ function BarraConferencia({ f }: { f: TotaisFat }) {
 
 function LinhaFatura({ f, atual, maximo }: { f: TotaisFat; atual?: boolean; maximo: number }) {
   return (
-    <Link to={`/faturamento/resumo?fatura=${encodeURIComponent(f.fatura)}`}
+    <Link to={`/faturamento/painel?fatura=${encodeURIComponent(f.fatura)}`}
       className={`grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-3 px-4 py-3 hover:bg-sinal-fundo/50 focus-visible:outline-2 focus-visible:outline-sinal sm:grid-cols-[minmax(140px,1.2fr)_auto_1fr_auto_auto] ${atual ? 'rounded-2xl border-2 border-sinal bg-white py-4' : ''}`}>
       <div className="min-w-0">
         <div className="flex items-center gap-2">

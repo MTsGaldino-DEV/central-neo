@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react';
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { Loader2, Lock, LogOut } from 'lucide-react';
 import { useSessao } from '@/contexto/Sessao';
 import { temModulo, type Modulo } from '@/lib/neo';
@@ -28,7 +28,7 @@ const Colaboradores = lazy(() => import('@/paginas/Colaboradores'));
 const ContratoFat = lazy(() => import('@/paginas/faturamento/Contrato'));
 const ImportarFat = lazy(() => import('@/paginas/faturamento/Importar'));
 const ConferenciaFat = lazy(() => import('@/paginas/faturamento/Conferencia'));
-const ResumoFat = lazy(() => import('@/paginas/faturamento/Resumo'));
+const PainelFat = lazy(() => import('@/paginas/faturamento/Painel'));
 const FaturasFat = lazy(() => import('@/paginas/faturamento/Faturas'));
 const DocumentacaoFat = lazy(() => import('@/paginas/faturamento/Documentacao'));
 
@@ -102,6 +102,12 @@ function SoAdminTraceone({ children }: { children: ReactNode }) {
   return isAdmin(profile?.role) ? <>{children}</> : <Navigate to="/traceone" replace />;
 }
 
+/** Link antigo do "Resumo": vai para o Painel mantendo fatura e período. */
+function ParaPainel() {
+  const { search } = useLocation();
+  return <Navigate to={`/faturamento/painel${search}`} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -128,7 +134,8 @@ export default function App() {
           <Route path="conferencia" element={<ConferenciaFat />} />
           <Route path="tabelas" element={<ContratoFat />} />
           <Route path="importar" element={<ImportarFat />} />
-          <Route path="resumo" element={<ResumoFat />} />
+          <Route path="painel" element={<PainelFat />} />
+          <Route path="resumo" element={<ParaPainel />} />
           <Route path="documentacao" element={<DocumentacaoFat />} />
         </Route>
         <Route path="acessos" element={<ExigeAdminNeo><Acessos /></ExigeAdminNeo>} />
