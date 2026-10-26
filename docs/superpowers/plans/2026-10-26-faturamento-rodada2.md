@@ -257,3 +257,52 @@
 - [ ] **Step 1:** Rodar tudo: `npm run typecheck && npm run build && for f in scripts/faturamento-*-testar.cjs; do node "$f" || exit 1; done` (o `faturamento-ui-testar.cjs` com o dev server aberto). Expected: tudo PASS.
 - [ ] **Step 2:** Atualizar a memória e o relatório: 035 (tabela guardada, fim do tempo esgotado), 036 (o que entrou), `supabase/` fora do Git e o risco de não ter cópia, renome Manutenção, decisões tomadas sem o Matheus (lista de "decisões minhas" do spec e do ledger), pendências (modelo "Conferência como sistema" em avaliação; códigos nos lançamentos da Manutenção ainda vazios; push não feito).
 - [ ] **Step 3: Commit** `docs(faturamento): registra a rodada 2`.
+
+---
+
+## Resultado da execução (26/10/2026)
+
+Decisões tomadas durante a execução e itens menores adiados na revisão final (copiados do registro de trabalho, que foi apagado).
+
+- Setup: Ruling: executar no main, sem worktree — mesma decisão da rodada 1 aprovada pelo Matheus ("direto na sessão"); Codex usa o mesmo diretório — custo se errado: commits ficam no main local (sem push), fáceis de reverter.
+- Setup: Ruling: docs/modelos/conferencia-sistema.html entra no commit do spec — Matheus pediu para guardar o modelo e acessar depois — custo se errado: um arquivo a mais no repo.
+- Task 1: Ruling: busca da lista de valores é "contém" (como o Excel), não "começa com"; teste ajustado para includes('1.') — custo se errado: troca de um '%' no SQL.
+- Task 1: Ruling: criada a 037 (filtros rápidos) porque a 036 aplicada deixou a lista em 6 s (funções por linha com SET não embutidas); 036 não foi editada — custo se errado: nenhum, 037 só substitui funções.
+- Task 1: Ruling: helper neo_fat_servicos_filtrar devolve só as colunas de filtro/ordem; a página busca a linha completa pela chave — mantém o campo "ordem" nos serviços como antes.
+- Task 3: Ruling: mensagens do próprio sistema (Error comum, não TypeError, e P0001 do banco) aparecem como estão, com acao 'corrigir'; o teste "Error('qualquer') → genérica" virou "código desconhecido/TypeError → genérica" — todas as `throw Error` do código já são frases em português — custo se errado: algum Error técnico interno apareceria cru.
+- Task 3: Ruling: AvisoErro em Faturas, Importar e Contrato agora; Conferência, Painel e janela do serviço recebem nas tarefas 4/6/7, que reescrevem essas telas — custo se errado: nenhum, só ordem.
+- Task 3: Ruling: useAdminNeo fica em AvisoErro.tsx (precisa do contexto React), erros.ts fica puro para teste em Node.
+- Task 4: Ruling: o teste de navegador da Importação procurava a frase antiga do aviso (mudou na Task 3); ajustado para "A importação fica bloqueada até conferir…". A Task 3 só rodou testes puros e typecheck — o teste de navegador passa a rodar em toda tarefa de tela — custo se errado: nenhum.
+- Task 4: Ruling: Painel com fatura escolhida usa a pílula "Fatura N" preenchida; sem fatura, a pílula do atalho fica ativa (3 meses por padrão).
+- Task 5: Ruling: na aba Faturas o resumo do gráfico fica em US (a aba não tem a chave R$ | US) — custo se errado: acrescentar a chave na aba Faturas.
+- Task 5: Ruling: funil sem a etapa "Equipe identificada" (o spec lista só Serviços → Código no contrato → Valor confere → a mais → a menos); os sem equipe aparecem na nota de baixo quando houver.
+- Task 5: Ruling: tabela para leitores de tela do gráfico dentro de div.sr-only — a tabela sr-only com mais colunas estourava a largura no celular.
+- Task 6: Ruling: em vez de filtrosDaUrl/urlDosFiltros (plano), um EstadoConferencia com estadoDaUrl/urlDoEstado/filtrosDoEstado — o atalho (a menos, fora…) não se reconstrói só pelos filtros do banco; os testes cobrem o mesmo comportamento — custo se errado: só nomes.
+- Task 6: Ruling: botões 1.NS / Multado / 5.62 alternam em três estados (contém → não contém → tanto faz), atendendo "contém 1.NS ou não" — custo se errado: virar liga/desliga.
+- Task 6: Ruling: selo de situação: a mais em verde, confere neutro, fora do contrato em âmbar (cores do Painel aprovado) — custo se errado: troca de classes.
+- Task 6: Ruling: filtros de número digitados na unidade da tela (R$ ou US) e guardados na URL sempre em US.
+- Task 6: Ruling: link "Por código" do Painel usa codigo_principal (mesma conta do grupo), mostrado como etiqueta "Código principal".
+- Task 7: Ruling: descrição do código vem da tabela do contrato do Faturamento (contratosFat em cache), primeira linha; a RPC de linhas não foi alterada — custo se errado: nenhum além de 1 chamada a mais na janela.
+- Task 7: Ruling: em serviço pago por RC (uma vez por atendimento) a conta por linha dá lugar à nota de cálculo (RC pago uma vez); nos outros, uma linha de conta por código com fator.
+- Task 8: Ruling: a seção da página aberta reabre só quando a página muda (ou carrega), não no clique — senão não dava para fechar a seção em que se está — custo se errado: ajuste no efeito.
+- Task 8: Ruling: renome dos .md (memória, contexto, relatório) fica para a Task 11, junto com a atualização da memória.
+- Task 8: Ruling: "Fechamento de NSIS" (título da fila) virou "Manutenção · fila de NSIS"; no Login, "Manutenção · notas de NSIS"; "códigos de fechamento" da Tabela 11 do contrato continua (é o nome do tipo de código, não do módulo).
+- Task 10: Ruling: conteúdo com marcador **negrito** em texto simples, não HTML (sem dangerouslySetInnerHTML) — mesmo resultado, sem risco de marcação — custo se errado: nenhum.
+- Task 10: Ruling: rotas "documentacao" e "documentacao/:pagina" (duas rotas, em vez de :pagina?) e #tema antigo redireciona para a página nova.
+- Final review: reviewer opus — 0 Critical, 4 Important, 11 Minor. Re-grade: 2 minors subiram para Important (links antigos da Conferência — o redirecionamento de /faturamento?situacao= do próprio app caía na visão errada; "0.5" no filtro virava 5 em silêncio).
+- Final: fixed coluna com 200+ valores perdia linhas ao desmarcar — UI "Coluna com 200 valores" RED→GREEN, suite 12/12
+- Final: fixed soma do cabeçalho ignorava motivo/situação — rodada2-testar soma -3.998762 RED→GREEN (migration 038), suite 12/12
+- Final: fixed Conferência carregando para sempre sem painel — UI "Sem painel (falha ou nenhuma fatura)" RED→GREEN, suite 12/12
+- Final: fixed Error técnico chegava cru ao usuário — erros-testar "Corrupted zip/RangeError → genérica" RED→GREEN (ErroNeo + leitura de planilha protegida), suite 12/12
+- Final: fixed links antigos da Conferência — filtros-testar "lado/visao/situacao/motivo/cidade/codserv" RED→GREEN, suite 12/12
+- Final: fixed "0.5" lido como 5 — filtros-testar lerNumeroBr RED→GREEN, suite 12/12
+- Final: fixed (junto) pagina fracionária na URL — filtros-testar pagina=1.01 RED→GREEN, suite 12/12
+- Final: minor (deferred): atalho Fora/Conferem/Conferidos sobrepõe a seleção da coluna Situação sem avisar.
+- Final: minor (deferred): contagem das pílulas (fora do contrato, conferem) conta conferidos e pode diferir do total da lista.
+- Final: minor (deferred): apagar uma fatura com conferências falharia pelo gatilho DESCONFERIDO (não há caminho no app que apague fatura).
+- Final: minor (deferred): "(Selecionar tudo)" desmarcado + OK tira o filtro em vez de mostrar nada.
+- Final: minor (deferred): neo_fat_servico_manutencao responde por qualquer numserv a quem tem o módulo Faturamento (sem exigir o da Manutenção).
+- Final: minor (deferred): neo_fat_atualizar_totais faz select * da view (consulta a Manutenção para 21.910 linhas a cada recálculo; cabe no tempo).
+- Final: minor (deferred): na janela do serviço, o erro das linhas e o da Manutenção usam o mesmo aviso; falha no histórico mostra "Sem registros.".
+- Final: Ruling: valor da US pega a vigência mais recente mesmo se for futura — o spec pede "o mais recente" — custo se errado: R$ adiantado até a data da vigência.
+- Final: Ruling: período com várias faturas abre a Conferência da mais recente — decisão registrada no spec — custo se errado: link para outra fatura.
