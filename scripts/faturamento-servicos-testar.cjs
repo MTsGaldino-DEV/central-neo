@@ -23,6 +23,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     const rc=await s('245530193');                                   // RC07 pago uma vez, crédito dividido nas 2 linhas
     console.log('Um serviço:',Date.now()-inicio,'ms');
     assert.equal(rc.situacao,'OK');assert.equal(rc.rc_por_atendimento,true);assert.equal(rc.motivo,null);
+    assert.equal(rc.codigo_principal,'RC07');                       // no RC, o item pago é o próprio RC
     const nssr=await s('242861522');                                 // dois códigos, cada um pago
     assert.deepEqual([...nssr.codigos].sort(),['7.10','7.15']);assert.equal(nssr.qtd_linhas,2);
     assert.equal(nssr.rc_por_atendimento,false);assert.equal(nssr.situacao,'OK');

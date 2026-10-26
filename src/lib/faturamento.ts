@@ -23,7 +23,7 @@ export async function historicoFat(c: ContratoFat): Promise<HistoricoFat[]> {
   if(error) throw error;
   return data ?? [];
 }
-export const usFat = (n: number | null | undefined) => n == null ? '—' : Number(n).toLocaleString('pt-BR',{minimumFractionDigits:6,maximumFractionDigits:6});
+export { usFat } from './faturamentoTexto';
 export const erroFat = (e: unknown) => e instanceof Error ? e.message : (e as {message?:string})?.message ?? 'Não foi possível concluir a operação.';
 
 export interface FaturaFat { id:string; arquivo:string; arquivo_completo:string|null; inicio:string; fim:string; importado_em:string }
