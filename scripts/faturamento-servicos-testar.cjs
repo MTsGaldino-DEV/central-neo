@@ -3,6 +3,8 @@ const fs=require('fs'),assert=require('node:assert/strict');
 const postgres=require('../../traceone/frontend/node_modules/postgres');
 const env=Object.fromEntries(fs.readFileSync('.env','utf8').split(/\r?\n/).filter(l=>/^[A-Z_]+=/.test(l)).map(l=>[l.slice(0,l.indexOf('=')),l.slice(l.indexOf('=')+1).trim()]));
 const sql=postgres(env.NEO_DATABASE_URL,{ssl:'require',prepare:false,onnotice:()=>{}});
+// neo_fat_totais só abre para o dono (as telas leem pelo neo_fat_painel).
+const totais=async(t,c)=>{await t`reset role`;const r=await t`select ${t(c)} from neo_fat_totais where fatura='9844'`;await t`set local role authenticated`;return r;};
 const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Error('rollback');});}catch(e){if(e.message!=='rollback')throw e;}};
 (async()=>{try{
   await rollback(async t=>{
@@ -78,6 +80,43 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal(l.d.length,2);assert.deepEqual(l.d.map(x=>x.codserv),['5.14','7.42']);
     assert.equal((Number(l.d[0].creditado)+Number(l.d[1].creditado)).toFixed(6),Number(rc.devido).toFixed(6));
     assert.ok('justificativa' in l.d[0]&&'devido_csc' in l.d[0]&&'moto_cod' in l.d[0]);
+    // totais pré-calculados por fatura
+    inicio=Date.now();
+    const [p]=await t`select neo_fat_painel() d`;
+    console.log('Painel (calculando):',Date.now()-inicio,'ms');
+    const f=p.d.find(x=>x.fatura==='9844');
+    assert.ok(p.d.every((x,i,a)=>!i||a[i-1].fim>=x.fim));
+    assert.equal(f.servicos,21910);assert.equal(f.linhas,27389);
+    assert.equal(Number(f.creditado).toFixed(6),'917.112183');
+    assert.equal(Number(f.multas).toFixed(6),'21.226389');
+    assert.equal(Number(f.estorno).toFixed(6),'7.446161');
+    assert.equal(Number(f.ajustes.debito).toFixed(6),'64.963712');
+    assert.equal(Number(f.ajustes.credito).toFixed(6),'95.344853');
+    assert.ok(f.ajustes.itens.length>0&&'observacao' in f.ajustes.itens[0]);
+    assert.equal(f.funil.importados,21910);
+    assert.ok(f.funil.importados>=f.funil.equipe_identificada&&f.funil.equipe_identificada>=f.funil.codigo_no_contrato&&f.funil.codigo_no_contrato>=f.funil.valor_confere);
+    assert.equal(Number(f.saldo_a_receber).toFixed(6),Number(v.us).toFixed(6));
+    assert.equal(f.a_menos.servicos,v.n);
+    assert.equal(Number(f.pago_a_mais).toFixed(6),Number(am.d.lados.a_mais.us).toFixed(6));
+    assert.equal(f.grupos.tipo_turma.reduce((s,g)=>s+g.servicos,0),21910);
+    assert.ok(f.grupos.codserv.length>0&&f.grupos.cidade.length>0);
+    inicio=Date.now();await t`select neo_fat_painel()`;
+    console.log('Painel (em cache):',Date.now()-inicio,'ms');
+    // desatualização: reimportação simulada
+    await t`reset role`;await t`update neo_fat_faturas set importado_em=now()+interval '1 minute' where id='9844'`;await t`set local role authenticated`;
+    const [antes]=await totais(t,'calculado_em');
+    await t`select neo_fat_painel()`;
+    const [depois]=await totais(t,'calculado_em');
+    assert.ok(depois.calculado_em>antes.calculado_em);
+    // conferir atualiza o saldo
+    const alvo2=(await t`select numserv,-diferenca d from neo_fat_servicos where fatura='9844' and situacao='A_MENOS' limit 1`)[0];
+    await t`select neo_fat_conferir_servico('9844',${alvo2.numserv},'aceito pela equipe')`;
+    const [p2]=await totais(t,'dados');
+    assert.equal((Number(f.saldo_a_receber)-Number(p2.dados.saldo_a_receber)).toFixed(6),Number(alvo2.d).toFixed(6));
+    assert.equal(p2.dados.funil.conferidos,f.funil.conferidos+1);
+    await t`select neo_fat_desconferir_servico('9844',${alvo2.numserv})`;
+    const [p3]=await totais(t,'dados');
+    assert.equal(Number(p3.dados.saldo_a_receber).toFixed(6),Number(f.saldo_a_receber).toFixed(6));
     // relatório para o Matheus (não é asserção)
     const [dev]=await t`select sum(devido) d,count(*) filter(where parcial)::int parciais from neo_fat_servicos where fatura='9844'`;
     console.log('Devido por serviço:',Number(dev.d).toFixed(6),'· antes 857.921936 · parciais',dev.parciais);
@@ -92,6 +131,8 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_desconferir_servico('9844','1')`),/Sem acesso/);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_servicos_listar('{}'::jsonb,0,50)`),/Sem acesso/);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_servico_linhas('9844','245530193')`),/Sem acesso/);
+    await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_painel()`),/Sem acesso/);
+    await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_atualizar_totais('9844')`),/Sem acesso/);
   });
   console.log('OK: serviços fecham com as linhas, exemplos, revisão por serviço e acesso restrito.');
 }catch(e){console.error(e.message);process.exitCode=1;}finally{await sql.end();}})();
