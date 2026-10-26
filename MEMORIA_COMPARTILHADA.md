@@ -1,6 +1,6 @@
 # Memória compartilhada — Central NEO
 
-Atualizada em 26/10/2026 pelo Claude (redesenho do Faturamento). Este arquivo é o ponto de continuidade entre
+Atualizada em 26/10/2026 pelo Claude (rodada 2 do Faturamento). Este arquivo é o ponto de continuidade entre
 Codex e Claude neste repositório. Guarda decisões e estado de trabalho, não o
 histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
@@ -40,10 +40,16 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 - NEO = Núcleo de Eficiência Operacional.
 - React 19, TypeScript, Vite 6, Tailwind 4 e React Router 6. Docker/Nginx no Dokploy.
 - Supabase CENTRAL-NEO é o banco principal: autenticação, colaboradores, acessos,
-  Fechamento e Faturamento. A migração do login principal já ocorreu.
+  Manutenção (antigo Fechamento de Notas) e Faturamento. A migração do login principal já ocorreu.
 - TraceOne permanece em paralelo e fornece somente o módulo de medidores, com
   cliente, sessão e permissões próprios. Não alterar banco nem app do TraceOne.
 - Login único de NEO, NEC, TraceOne e Warefly é objetivo futuro, não integração concluída.
+- **`supabase/` fora do Git (26/10/2026, pedido do Matheus):** a pasta está no `.gitignore`
+  e não vai para o remoto. As migrations existem só na máquina local: guardar cópia.
+  O histórico antigo do remoto ainda tem as versões até a 027.
+- **Nome do módulo:** em tudo que o usuário lê, "Fechamento de Notas" passou a ser
+  **Manutenção** (26/10/2026). URLs `/fechamento…`, tabelas `neo_nsis*`, módulo
+  `fechamento` e arquivos `fechamento.ts` continuam com o nome antigo.
 - Novas migrations devem passar por `node scripts/migrar.cjs --testar` antes da
   aplicação. O script atual retorna código 1 também no rollback esperado
   `DRY-RUN: desfeito`; verificar a saída inteira para distinguir falha.
@@ -61,7 +67,59 @@ fica fora e pode deixar os cards zerados. Matheus pretende resolver com a sincro
 com o GDIS. Não ampliar a base desses cards sem solicitação. Relembrar quando essa
 integração for retomada.
 
-## Última entrega: redesenho do Faturamento por serviço — 26/10/2026 (Claude)
+## Última entrega: Faturamento rodada 2 — 26/10/2026 (Claude)
+
+Desenho: `docs/superpowers/specs/2026-10-26-faturamento-rodada2-design.md` (modelos
+aprovados no navegador, arquivos em `.superpowers/brainstorm/1866-1793030000/content/`).
+Plano: `docs/superpowers/plans/2026-10-26-faturamento-rodada2.md` (11 tarefas, direto na
+sessão). Commits `c0f6d21`..último `docs(faturamento)` na `main`, **sem push**.
+
+O que mudou:
+- **Painel** (antigo Resumo, rota `/faturamento/painel`; `/resumo` redireciona): dois
+  cards (pagou a menos em vermelho, pagou a mais todo verde, "A CEMIG pagou X e o
+  contrato prevê Y"), pílulas de fatura/período, chave **R$ | US**, funil até pagou a
+  mais/a menos (sempre estreitando, "i" com explicação), gráfico com resumo no mouse,
+  grupos e ajustes embaixo. Sem o botão "Resumo | Conferência".
+- **R$:** um valor da US para todo o Faturamento, o mais recente de `neo_valor_us`
+  (`neo_fat_valor_us()`, hoje R$ 2.964,33). Abre em R$; `?unidade=us` troca. Faturas
+  antigas também convertem pelo valor atual (decisão do Matheus).
+- **Conferência** em colunas com filtro estilo Excel (▾ por coluna, valores com
+  contagem vindos do banco, faixas numéricas), atalhos (todos, a menos, a mais, fora,
+  conferem, conferidos) e botões Contém 1.NS / Multado / 5.62 (contém → não → tanto faz).
+  Filtros na URL. "Exportar para Excel" (filtrado) e "Exportar para negociação".
+- **Janela do serviço:** nº do serviço, tipo, frota e tipo da frota em destaque; "como o
+  devido foi calculado" (despacho, zona, tabela, conta por código; sem etiqueta Moto);
+  tabela só com o pago e o 1.NS por último; avisos de 1.NS; bloco "1.NS · Pago pela
+  Manutenção" só quando há valor (código e observação do contrato, sem observação da
+  equipe); histórico de eventos.
+- **Erros:** uma linha com o que fazer; ADMIN vê "Ver mais detalhes" (`src/lib/erros.ts`,
+  `AvisoErro`). Não são gravados.
+- **Menu:** seções recolhíveis (lembradas no navegador), rolagem redesenhada.
+- **Documentação** em `/faturamento/documentacao/<página>`, uma por aba, layout dos guias
+  do Mercado Livre; "Esta página foi útil?" grava em `neo_doc_avaliacoes`.
+- Tabelas do contrato: Valor Moto antes de Fator Moto.
+
+Banco: **035** (cálculo por serviço guardado em `neo_fat_servicos_calc`, recalculado só
+quando a impressão muda; acabou o "statement timeout" da Conferência), **036** (indicadores
+1.NS/5.62/multado/Manutenção na lista, filtros por coluna, `neo_fat_servicos_valores`,
+totais por lado, `neo_fat_servico_manutencao`, `neo_fat_eventos` com gatilhos,
+`neo_fat_servico_historico`, `neo_fat_valor_us`, `neo_doc_avaliacoes`), **037** (filtros
+rápidos: a 036 deixou a lista em 6 s; voltou a 0,1–0,2 s).
+
+Cruzamento 1.NS: `neo_nsis.servico = numserv`. Na 9844, 204 serviços com 1.NS, 94 na
+Manutenção, 63 com valor; os 2.155 itens da Manutenção ainda não têm `codigo`
+(lançamentos antigos), então o bloco mostra "sem código". O valor da Manutenção não
+entra em nenhum total.
+
+Verificado em 26/10/2026: typecheck, build e todos os `scripts/faturamento-*testar.cjs`
+(banco em transação desfeita; navegador com APIs simuladas, desktop e 390 px; carga com
+10 chamadas simultâneas abaixo de 8 s). Não verificado: deploy no Dokploy e login real.
+
+Pendências: Matheus mostrar a quem usa o modelo "Conferência como sistema"
+(`docs/modelos/conferencia-sistema.html`) antes de decidir; push não feito; código 1.62
+(61 serviços) sem fator no contrato; envio para a gestora adiado pelo Matheus.
+
+## Entrega anterior: redesenho do Faturamento por serviço — 26/10/2026 (Claude)
 
 Desenho aprovado: `docs/superpowers/specs/2026-10-26-faturamento-ux-design.md`.
 Plano: `docs/superpowers/plans/2026-10-26-faturamento-ux.md` (12 tarefas, feitas

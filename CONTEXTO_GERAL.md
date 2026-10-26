@@ -11,8 +11,8 @@ Central do **NEO (Núcleo de Eficiência Operacional)**, irmã da Central NEC. R
 | Frente | Situação |
 |---|---|
 | Controle de medidores (TraceOne) | ✅ no MVP |
-| Fechamento de notas de manutenção (controle de NSMC, aba "211 NSIS") | ✅ no MVP |
-| Faturamento | conferência, importação, contrato e resumo implementados |
+| Manutenção (antigo Fechamento de Notas: controle de NSMC, aba "211 NSIS") | ✅ no MVP |
+| Faturamento | faturas, painel, conferência, importação, contrato e documentação implementados |
 | Notas de ouvidoria | em breve |
 | Conciliação: o que foi enviado para pagamento × o que a CEMIG pagou | em breve (o fechamento já traz o comparativo por fatura) |
 
@@ -69,7 +69,9 @@ cores `bg-[#1e3a5f]` → `bg-sinal`. Os tokens de cor (`tinta`, `sinal`, `nevoa`
 - As permissões das telas de medidores continuam vindo de `profiles.role` (RLS do TraceOne). Despachante só vê a lista, e Backup é só para ADMIN do TraceOne.
 - Primeiro admin: `matheus.galdino@engelmig.com.br`.
 
-## 4. Fechamento de NSIS
+## 4. Manutenção (Fechamento de NSIS)
+
+Na tela o módulo se chama **Manutenção** desde 26/10/2026; URLs, tabelas e arquivos mantêm o nome `fechamento`.
 
 ### O processo (como era na planilha)
 1. O GDIS gera o relatório **"Serviços Executados - Completo"**. Interessa só **Resp. = CONTRATADA**. Desde a migration 008 entram todos os tipos (NSIS, NSRI, MULTIFUNCIONAL…), e o **Tipo de Serv.** fica em `neo_nsis.tipo_serv`.
@@ -153,7 +155,7 @@ Deploy no Dokploy: `docker-compose.yml` (rede `dokploy-network`). Não precisa d
 
 Implementado em 23/10/2026. Compara créditos e glosas da CEMIG com as Tabelas 11 (código de fechamento) e 12 (RC por atendimento), sem compartilhar tabelas do Fechamento. Banco CENTRAL-NEO, objetos `neo_fat_*`, migrations 013–027 aplicadas após teste com rollback. Entrega inicial reprovada; as revisões posteriores corrigem as regras descritas abaixo, mas não substituem a validação de negócio por Matheus.
 
-- Rotas: `/faturamento` (conferência), `/faturamento/importar`, `/faturamento/tabelas`, `/faturamento/resumo`. Acesso via módulo `faturamento`; contrato editável por ADMIN com motivo e histórico.
+- Rotas (26/10/2026): `/faturamento` (faturas), `/faturamento/painel` (`/resumo` redireciona), `/faturamento/conferencia`, `/faturamento/importar`, `/faturamento/tabelas`, `/faturamento/documentacao/<página>`. Migrations até a 037; `supabase/` fica fora do Git. Acesso via módulo `faturamento`; contrato editável por ADMIN com motivo e histórico.
 - Leitura pura: `src/lib/faturamentoPlanilhas.ts`. Dados originais são preservados em JSON; importação em lotes publica a fatura numa transação, mantendo conferências em tabela separada. Identificador estável: `idapropriacaotemposervico`. Alteração dos dados, equipe/frota, fatores, devido ou situação calculada invalida a conferência anterior; ela permanece registrada para consulta. `neo_fat_conferencias.contexto` guarda o contexto da revisão; revisões anteriores à migration 027 são reabertas para contemplar a mudança da regra de RC.
 - Tabela 12 tem precedência sobre 11, **exceto** na transposição obrigatória das notas 2–3: se há um único código remunerável da lista contratual, com eventuais códigos informativos de fator zero, o RC é descartado e vale a Tabela 11. A lista configurável fica em `neo_fat_rc_transposicao`. RC não transposto é pago uma vez por atendimento (`fatura + numserv`), mesmo com vários códigos/linhas. O devido fica na primeira linha por `id` para totalização; o detalhe mostra o valor do serviço e `REVISAR_RC_MULTILINHA` quando o líquido fecha mas as linhas não. Comparação dos dois fatores CSC/COD, seis casas, tolerância 0,000001. Tabela 11 usa FATOR RURAL/MOTO por código (`neo_fat_contrato.rural/moto`); RC e códigos Moto 0,7 usam configuração `neo_fat_config`, inclusive o rural de Moto 0,9 provisório. Regras em `neo_fat_base`/`neo_fat_calculo`.
 - Importação exige **Fatura Resumida** e **Fatura Completa**. `US_Servico.numserv → Serviço.numserv → Serviço.veiculo → US_Turma.numvei`; `Serviço.ident_turma` desempata veículos que mudam de tipo, conferindo também a frota. Tipos D/M/U/Q = Multifuncional/Moto/Umpla/Quarteto. RPCs `neo_fat_iniciar_completa` e `neo_fat_finalizar_completa` publicam valores/vínculos juntos. Nome da Completa é guardado; período vem de Apropriação. Faltantes/ambíguos seguem sem equipe confirmada; coincidência exclusiva com moto gera `MOTO_PROVAVEL`. RC multilinha respeita equipe na comparação agregada.

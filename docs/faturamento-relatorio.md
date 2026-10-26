@@ -2,12 +2,21 @@
 
 Atualizado em 23/10/2026. Os dois PDFs fornecidos foram lidos por inteiro: [Código de Serviço Unificado.pdf](../Comparação%20de%20fatura/Código%20de%20Serviço%20Unificado.pdf) (Tabela 11, 14 páginas) e [Nota de Serviço Unificado.pdf](../Comparação%20de%20fatura/Nota%20de%20Serviço%20Unificado.pdf) (Tabela 12, 2 páginas). As tabelas, descrições, coluna **Como lançar** e notas ao fim de cada PDF foram confrontadas com a fatura 9844. O texto da NOTA 8 termina cortado nos dois arquivos e a NOTA 10, citada em quatro códigos, não consta neles.
 
+## Rodada 2 (26/10/2026)
+
+- **Painel** (`/faturamento/painel`, antigo Resumo): dois cards, "pagou a menos" (principal) e "pagou a mais", cada um com "A CEMIG pagou X e o contrato prevê Y"; funil até os divergentes; gráfico com resumo no mouse; valores em **R$** pelo valor da US mais recente do apostilamento (hoje R$ 2.964,33), com a chave R$ | US.
+- **Conferência** em colunas com filtro estilo Excel, atalhos por situação e os botões Contém 1.NS, Multado e 5.62.
+- **Janela do serviço** com nº de frota, tipo do serviço, nº do serviço e tipo da frota em destaque; fatores aplicados em cima; tabela só com o pago; o 1.NS cruzado com a **Manutenção** (antigo Fechamento de Notas), sem entrar na soma; histórico.
+- **Tempo esgotado** ("canceling statement due to statement timeout") resolvido na **035**: o cálculo por serviço fica guardado em `neo_fat_servicos_calc` e só é refeito quando algo muda. A **036** traz filtros por coluna, totais por lado, Manutenção, histórico e o valor da US; a **037** deixou esses filtros rápidos (0,1–0,2 s).
+- Na 9844: 204 serviços com 1.NS, 94 deles na Manutenção, 63 com valor lançado. Os lançamentos antigos da Manutenção não têm código, então aparecem como "sem código".
+- Fora do contrato (88 na 9844): 61 são o código 1.62, que está na Tabela 11 sem fator (a CEMIG pagou 7,666 US neles); 27 usam códigos que não existem na tabela, todos com crédito zero.
+
 ## Conferência por serviço (26/10/2026)
 
 A tela passou a trabalhar **por serviço** (número do serviço), e não por linha. Rotas novas:
 
 - `/faturamento`: lista de faturas, com três cartões (pago, pago a menos, multas), comparação entre faturas e o saldo a receber de cada fatura.
-- `/faturamento/resumo`: manchete da diferença, funil, grupos e ajustes.
+- `/faturamento/resumo` (hoje `/faturamento/painel`): manchete da diferença, funil, grupos e ajustes.
 - `/faturamento/conferencia`: o que a CEMIG pagou a menos no centro, o que pagou a mais ao lado, com motivo e frase por serviço, mais a exportação para negociação.
 - `/faturamento/documentacao`: explicação curta para leigos.
 
