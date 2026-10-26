@@ -61,6 +61,23 @@ fica fora e pode deixar os cards zerados. Matheus pretende resolver com a sincro
 com o GDIS. Não ampliar a base desses cards sem solicitação. Relembrar quando essa
 integração for retomada.
 
+## Redesenho do Faturamento — em andamento, 26/10/2026
+
+Matheus aprovou o desenho em `docs/superpowers/specs/2026-10-26-faturamento-ux-design.md`
+e o plano em `docs/superpowers/plans/2026-10-26-faturamento-ux.md` (12 tarefas,
+migrations 028–031). A execução vai ser direto na sessão do Claude, sem subagentes.
+Nenhuma tarefa foi implementada ainda.
+
+Decisões principais:
+- A Conferência passa a ser **por serviço** (21.910 na 9844).
+- Multas (glosas) ficam **fora** do saldo a receber.
+- Serviço conferido sai do saldo e da exportação, e existe um filtro "Conferidos".
+- Cada fatura tem seu próprio saldo.
+- A reimportação substitui a versão anterior, depois de confirmar com o número da fatura.
+
+Preferência de Matheus: planos e documentos só em `.md`, sem abrir no navegador
+(gasta tokens). O navegador fica só para mockups, quando pedidos.
+
 ## Última entrega: Faturamento
 
 **Revisão da entrega inicial em 23/10/2026:** Matheus reprovou o resultado por não atender ao pedido.
