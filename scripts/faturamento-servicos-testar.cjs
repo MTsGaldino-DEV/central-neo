@@ -41,6 +41,43 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal((await s(alvo)).situacao,'A_MENOS');
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_conferir_servico('9844',${alvo},'ab')`),/observação/);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_conferir_servico('9844','nao-existe','observação válida')`),/não encontrado/);
+    // listagem paginada por lado
+    inicio=Date.now();
+    const [r]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado:'a_menos'})},0,50) d`;
+    console.log('Primeira página a_menos:',Date.now()-inicio,'ms');
+    assert.ok(r.d.total>0);assert.ok(r.d.servicos.length<=50);
+    assert.ok(r.d.servicos.every(x=>x.situacao_calculo==='A_MENOS'));
+    assert.ok(r.d.servicos.every((x,i,a)=>!i||Number(a[i-1].diferenca)<=Number(x.diferenca)));
+    const [v]=await t`select sum(-diferenca) us,count(*)::int n from neo_fat_servicos where fatura='9844' and situacao='A_MENOS'`;
+    assert.equal(Number(r.d.lados.a_menos.us).toFixed(6),Number(v.us).toFixed(6));
+    assert.equal(r.d.lados.a_menos.servicos,v.n);
+    const soma=Object.values(r.d.lados.a_menos.por_motivo).reduce((s,m)=>s+m.servicos,0);
+    assert.equal(soma,v.n);
+    const [am]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado:'a_mais'})},0,5) d`;
+    assert.ok(am.d.servicos.every((x,i,a)=>x.situacao_calculo==='A_MAIS'&&(!i||Number(a[i-1].diferenca)>=Number(x.diferenca))));
+    assert.ok(Number(am.d.lados.a_mais.us)>0);
+    const [mot]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado:'a_menos',motivo:'RC_NAO_PAGO'})},0,50) d`;
+    assert.equal(mot.d.total,r.d.lados.a_menos.por_motivo.RC_NAO_PAGO.servicos);
+    assert.ok(mot.d.servicos.every(x=>x.motivo==='RC_NAO_PAGO'));
+    const [big]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844'})},0,1000) d`;
+    assert.equal(big.d.total,21910);assert.equal(big.d.servicos.length,1000);
+    assert.ok(big.d.servicos.every((x,i,a)=>!i||a[i-1].numserv<=x.numserv));
+    const [cod]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',codserv:'7.15',q:'2428615'})},0,50) d`;
+    assert.ok(cod.d.servicos.some(x=>x.numserv==='242861522'));assert.ok(cod.d.servicos.every(x=>x.codigos.includes('7.15')));
+    await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_servicos_listar('{}'::jsonb,0,1001)`),/Paginação/);
+    await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_servicos_listar('{}'::jsonb,-1,50)`),/Paginação/);
+    // conferido: some do lado e do total do lado; filtro "somente" mostra
+    await t`select neo_fat_conferir_servico('9844',${alvo},'conferido no teste')`;
+    const [sem]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado:'a_menos'})},0,50) d`;
+    assert.equal(sem.d.total,r.d.total-1);assert.equal(sem.d.lados.a_menos.servicos,v.n-1);
+    const [so]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado:'a_menos',conferidos:'somente'})},0,50) d`;
+    assert.deepEqual(so.d.servicos.map(x=>x.numserv),[alvo]);
+    await t`select neo_fat_desconferir_servico('9844',${alvo})`;
+    // linhas do serviço (RC07: crédito dividido nas duas linhas, soma = um RC)
+    const [l]=await t`select neo_fat_servico_linhas('9844','245530193') d`;
+    assert.equal(l.d.length,2);assert.deepEqual(l.d.map(x=>x.codserv),['5.14','7.42']);
+    assert.equal((Number(l.d[0].creditado)+Number(l.d[1].creditado)).toFixed(6),Number(rc.devido).toFixed(6));
+    assert.ok('justificativa' in l.d[0]&&'devido_csc' in l.d[0]&&'moto_cod' in l.d[0]);
     // relatório para o Matheus (não é asserção)
     const [dev]=await t`select sum(devido) d,count(*) filter(where parcial)::int parciais from neo_fat_servicos where fatura='9844'`;
     console.log('Devido por serviço:',Number(dev.d).toFixed(6),'· antes 857.921936 · parciais',dev.parciais);
@@ -53,6 +90,8 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal(r.n,0);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_conferir_servico('9844','1','observação válida')`),/Sem acesso/);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_desconferir_servico('9844','1')`),/Sem acesso/);
+    await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_servicos_listar('{}'::jsonb,0,50)`),/Sem acesso/);
+    await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_servico_linhas('9844','245530193')`),/Sem acesso/);
   });
   console.log('OK: serviços fecham com as linhas, exemplos, revisão por serviço e acesso restrito.');
 }catch(e){console.error(e.message);process.exitCode=1;}finally{await sql.end();}})();
