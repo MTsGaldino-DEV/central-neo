@@ -1,20 +1,155 @@
-import {useEffect,useState} from 'react';
-import {Link,useSearchParams} from 'react-router-dom';
-import {supabase} from '@/lib/supabase';
-import {usFat,erroFat} from '@/lib/faturamento';
-interface Grupo {chave:string;valor:string;linhas:number;creditado:number;debitado:number;estorno:number;devido:number|null;diferenca:number|null}
-interface Resumo {totais:Record<string,number|null>;grupos:Grupo[];ajustes:{fatura:string;dados:Record<string,string|number>}[]}
-export default function Resumo(){
- const [p,setP]=useSearchParams(),[dados,setDados]=useState<Resumo|null>(null),[erro,setErro]=useState(''),[carregando,setCarregando]=useState(false);
- const de=p.get('de')??'',ate=p.get('ate')??'',fatura=p.get('fatura')??'';
- useEffect(()=>{let ativo=true;setCarregando(true);setErro('');supabase.rpc('neo_fat_resumo',{p_inicio:de||'2000-01-01',p_fim:ate||'2100-12-31',p_fatura:fatura||null}).then(({data,error})=>{if(!ativo)return;if(error)setErro(erroFat(error));else setDados(data);setCarregando(false);});return()=>{ativo=false;};},[de,ate,fatura]);
- function mudar(k:string,v:string){const n=new URLSearchParams(p);if(v)n.set(k,v);else n.delete(k);setP(n,{replace:true});}
- const faturas=dados?.grupos.filter(g=>g.chave==='fatura')??[];
- const escala=Math.max(0.000001,...faturas.flatMap(g=>[g.creditado,g.devido??0,g.debitado]));
- return <div className="p-4 lg:p-6 space-y-5 max-w-7xl mx-auto"><div><h2 className="text-xl font-extrabold">Resumo do faturamento</h2><p className="text-sm text-aco">Período da fatura · valores em US · devido de referência usa CSC quando nenhum fator coincide.</p></div><div className="flex flex-wrap gap-3"><label>De<input type="date" value={de} onChange={e=>mudar('de',e.target.value)} className="block border rounded-lg p-2"/></label><label>Até<input type="date" value={ate} onChange={e=>mudar('ate',e.target.value)} className="block border rounded-lg p-2"/></label><label>Fatura<input value={fatura} onChange={e=>mudar('fatura',e.target.value)} placeholder="Todas" className="block border rounded-lg p-2"/></label></div>{erro&&<p role="alert" className="text-erro">{erro}</p>}{carregando&&<p>Carregando resumo…</p>}
- {dados&&<><div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">{[['creditado','Creditado'],['debitado','Debitado'],['estorno','Estornos'],['devido','Devido parcial'],['diferenca','Diferença comparável'],['linhas','Linhas'],['divergentes','Divergentes'],['pendentes','Pendentes']].map(([k,n])=><div key={k} className="bg-white border border-linha rounded-2xl p-4"><p className="text-xs text-aco uppercase">{n}</p><p className="font-codigo font-bold mt-2">{['linhas','divergentes','pendentes'].includes(k)?dados.totais[k]:usFat(dados.totais[k])}</p></div>)}</div><p className="text-sm text-cobre">{dados.totais.sem_fator} linhas sem fator validado estão fora do total devido. Ajustes da fatura estão separados abaixo.</p>
- <section className="bg-white border border-linha rounded-2xl p-5 space-y-5"><h3 className="font-bold">Comparação entre faturas</h3><p className="text-xs text-aco">Crédito (petróleo) · Devido (cobre) · Débito (vermelho). Escala única para todas as barras.</p>{faturas.map(g=><Link key={g.valor} to={`/faturamento?fatura=${encodeURIComponent(g.valor)}`} className="block space-y-1"><p className="text-sm font-bold">Fatura {g.valor}</p>{[[g.creditado,'bg-sinal','Crédito'],[g.devido??0,'bg-cobre','Devido'],[g.debitado,'bg-erro','Débito']].map(([v,cor,n])=><div key={String(n)} className="flex items-center gap-2 text-xs" title={`${n}: ${usFat(Number(v))} US`}><span className="w-14">{n}</span><div className="flex-1 bg-nevoa rounded h-5"><div className={`${cor} rounded h-5 hover:opacity-75 transition-all`} style={{width:`${Number(v)/escala*100}%`}}/></div><span className="font-codigo w-28 text-right">{usFat(Number(v))}</span></div>)}</Link>)}</section>
- <div className="grid lg:grid-cols-3 gap-4">{[['tipo_serv','Por tipo de serviço'],['codserv','Por código'],['cidade','Por cidade']].map(([k,titulo])=><section key={k} className="bg-white border border-linha rounded-2xl p-4"><h3 className="font-bold mb-3">{titulo}</h3><div className="max-h-96 overflow-auto">{dados.grupos.filter(g=>g.chave===k).map(g=><Link className="flex justify-between border-t border-linha py-2 gap-2 text-sm hover:text-sinal" key={g.valor} to={`/faturamento?${new URLSearchParams({de,ate,...fatura?{fatura}:{},[k]:g.valor})}`}><span>{g.valor} <small>({g.linhas})</small></span><span className="font-codigo" title={`Devido: ${usFat(g.devido)} / Débito: ${usFat(g.debitado)}`}>{usFat(g.creditado)}</span></Link>)}</div></section>)}</div>
- <section className="bg-white border border-linha rounded-2xl p-4"><h3 className="font-bold">Ajustes · Débito / Crédito</h3><p className="text-sm text-aco">Prontidão e outros ajustes, fora da conferência dos serviços.</p><div className="max-h-80 overflow-auto"><table className="w-full text-sm text-left"><thead><tr><th>Fatura</th><th>Tipo</th><th>Observação</th><th>Valor</th></tr></thead><tbody>{dados.ajustes.map((a,i)=><tr key={i} className="border-t border-linha"><td className="py-2">{a.fatura}</td><td>{a.dados.tipoajusteapropriacao}</td><td>{a.dados.observacao}</td><td className="font-codigo">{usFat(Number(a.dados.valor))}</td></tr>)}</tbody></table></div></section></>}
- </div>;
+import { useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
+import { painelFat, type GrupoTotaisFat, type TotaisFat } from '@/lib/faturamentoServicos';
+import { somarTotais, usFat } from '@/lib/faturamentoTexto';
+import { TIPOS_TURMA_FAT } from '@/lib/faturamentoPlanilhas';
+import { useDadosComCache } from '@/lib/useDadosComCache';
+import { CabecalhoFatura } from '@/components/faturamento/CabecalhoFatura';
+import { atalhoPeriodo, type PeriodoFat } from '@/components/faturamento/SeletorPeriodo';
+import { CarregandoNeo } from '@/components/faturamento/CarregandoNeo';
+import { FunilConferencia } from '@/components/faturamento/FunilConferencia';
+import { GraficoFaturas } from '@/components/faturamento/GraficoFaturas';
+import { AlternarFatura } from '@/components/faturamento/AlternarFatura';
+import { AjudaFat, RodapeFat } from '@/components/faturamento/AjudaFat';
+
+const numero = (n: number) => n.toLocaleString('pt-BR');
+const comSinal = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${usFat(Math.abs(n))}`;
+const cartao = 'rounded-2xl border border-linha bg-white p-4';
+
+function Apoio({ rotulo, dica, valor, cor = 'text-tinta' }: { rotulo: string; dica: string; valor: string; cor?: string }) {
+  return (
+    <div className={`${cartao} flex items-center justify-between gap-3`}>
+      <div className="min-w-0"><p className="text-[11px] font-bold tracking-wide text-aco uppercase">{rotulo}</p><p className="text-xs text-aco">{dica}</p></div>
+      <p className={`font-codigo text-lg font-extrabold ${cor}`}>{valor}</p>
+    </div>
+  );
+}
+
+function Grupo({ titulo, itens, rotulo, link }: {
+  titulo: string; itens: GrupoTotaisFat[]; rotulo: (v: string | null) => string; link: (v: string | null) => string;
+}) {
+  const [todos, setTodos] = useState(false);
+  const visiveis = todos ? itens : itens.slice(0, 6);
+  return (
+    <section className={cartao}>
+      <h2 className="mb-2 text-sm font-extrabold text-tinta">{titulo}</h2>
+      <ul className={todos ? 'max-h-96 overflow-auto' : ''}>
+        {visiveis.map(g => (
+          <li key={g.valor ?? '—'}>
+            <Link to={link(g.valor)} className="flex items-baseline justify-between gap-2 border-t border-linha py-2 text-xs hover:text-sinal">
+              <span className="min-w-0 truncate">{rotulo(g.valor)} <small className="text-aco">{numero(g.servicos)}</small></span>
+              <span className="text-right">
+                <span className="font-codigo">{usFat(g.creditado)}</span>
+                {(g.saldo ?? 0) > 0 && <span className="block font-codigo text-[11px] text-erro">a receber {usFat(g.saldo)}</span>}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      {itens.length > 6 && <button type="button" onClick={() => setTodos(t => !t)} className="mt-2 text-xs font-bold text-sinal hover:underline">
+        {todos ? 'mostrar menos' : `ver todos (${itens.length}) →`}
+      </button>}
+    </section>
+  );
+}
+
+export default function Resumo() {
+  const [p, setP] = useSearchParams();
+  const navegar = useNavigate();
+  const { dados, erro, atualizando, salvoEm, recarregar } = useDadosComCache('painel', painelFat, []);
+  const faturas = dados ?? [];
+  const fatura = p.get('fatura');
+  const escolhida = fatura ? faturas.find(f => f.fatura === fatura) : undefined;
+  const periodo: PeriodoFat = escolhida ? { de: escolhida.inicio, ate: escolhida.fim }
+    : p.get('de') && p.get('ate') ? { de: p.get('de')!, ate: p.get('ate')! }
+    : faturas[0] ? atalhoPeriodo('3m', faturas[0].fim) : { de: '', ate: '' };
+  const doPeriodo = faturas.filter(f => f.fim >= periodo.de && f.inicio <= periodo.ate);
+  const t: TotaisFat | null = escolhida ?? (doPeriodo.length ? somarTotais(doPeriodo) : null);
+  const base = new URLSearchParams(fatura ? { fatura } : {});
+  const conferencia = (extra: Record<string, string>) => `/faturamento/conferencia?${new URLSearchParams({ ...Object.fromEntries(base), ...extra })}`;
+  const mudar = (n: Record<string, string | null>) => {
+    const q = new URLSearchParams(p);
+    for (const [k, v] of Object.entries(n)) if (v) q.set(k, v); else q.delete(k);
+    setP(q, { replace: true });
+  };
+  const liquido = t ? t.creditado - t.multas + t.estorno : 0;
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-4 p-4 lg:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <AlternarFatura atual="resumo" />
+        <AjudaFat tema="funil" />
+      </div>
+      <CabecalhoFatura rotulo="Resumo do faturamento · valores em US" faturas={faturas.map(f => ({ id: f.fatura, inicio: f.inicio, fim: f.fim }))}
+        fatura={escolhida?.fatura ?? null} periodo={periodo} salvoEm={salvoEm} atualizando={atualizando} onRecarregar={recarregar}
+        onFatura={id => mudar({ fatura: id, de: null, ate: null })} onPeriodo={x => mudar({ fatura: null, de: x.de, ate: x.ate })} />
+
+      {erro && <p role="alert" className="rounded-xl border border-erro/30 bg-erro-fundo px-4 py-3 text-sm text-erro">
+        {dados ? 'Não foi possível atualizar; mostrando os últimos dados vistos. ' : ''}{erro} <button type="button" onClick={recarregar} className="font-bold underline">Tentar de novo</button>
+      </p>}
+
+      {!dados && !erro ? <CarregandoNeo variante="resumo" /> : dados && !faturas.length ? (
+        <div className={`${cartao} py-10 text-center`}><p className="font-bold">Nenhuma fatura importada ainda.</p>
+          <Link to="/faturamento/importar" className="mt-3 inline-flex rounded-xl bg-sinal px-4 py-2 text-sm font-bold text-white">Importar a primeira fatura</Link></div>
+      ) : dados && !t ? (
+        <div className={`${cartao} py-10 text-center`}><p className="font-bold">Nenhuma fatura neste período.</p>
+          <p className="mt-1 text-sm text-aco">Escolha outro período ou uma fatura no título.</p></div>
+      ) : t && <>
+        <div className="grid gap-3 lg:grid-cols-[1.3fr_1fr]">
+          <section className="rounded-2xl bg-noite p-5 text-white">
+            <p className="text-[11px] font-bold tracking-wide text-aco-claro uppercase">Diferença · pago − devido</p>
+            <p className="mt-1 font-codigo text-3xl font-extrabold text-sinal-claro sm:text-4xl">{comSinal(t.diferenca)} US</p>
+            <p className="mt-2 text-sm text-linha">A CEMIG pagou <b>{usFat(t.pago_com_fator)}</b> e o contrato prevê <b>{usFat(t.devido)}</b>.</p>
+            {t.sem_fator_servicos > 0 && <p className="mt-2 text-xs text-aco-claro">⚠ {numero(t.sem_fator_servicos)} serviços sem fator no contrato ficaram de fora do devido{t.parciais > 0 ? `; ${numero(t.parciais)} serviços contam só a parte com fator` : ''}.</p>}
+            <Link to={conferencia({})} className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/20">
+              A receber: <span className="font-codigo text-erro-marca">{usFat(t.saldo_a_receber)}</span> em {numero(t.a_menos.servicos)} serviços <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </section>
+          <div className="grid gap-3">
+            <Apoio rotulo="Serviços analisados" dica={`${numero(t.linhas)} linhas da planilha`} valor={numero(t.servicos)} />
+            <Apoio rotulo="US pagos" dica={`crédito ${usFat(t.creditado)} · estorno ${usFat(t.estorno)}`} valor={usFat(liquido)} />
+            <Apoio rotulo="Multas (glosas)" dica="descontos aplicados pela CEMIG" valor={`−${usFat(t.multas)}`} cor="text-erro" />
+          </div>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-[1fr_1.5fr]">
+          <section className={cartao}>
+            <FunilConferencia funil={t.funil} onEtapa={e => navegar(e === 'fora_contrato' ? conferencia({ visao: 'todos', situacao: 'FORA_CONTRATO' }) : conferencia({}))} />
+          </section>
+          <section className={cartao}>
+            <GraficoFaturas itens={[...faturas].reverse().slice(-8).map(f => ({ fatura: f.fatura, pago: f.creditado, devido: f.devido, multas: f.multas }))}
+              destaque={escolhida?.fatura ?? faturas[0]?.fatura} />
+          </section>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <Grupo titulo="Por tipo de equipe" itens={t.grupos.tipo_turma} rotulo={v => v ? TIPOS_TURMA_FAT[v] ?? v : 'Sem equipe'}
+            link={v => conferencia({ visao: 'todos', ...(v ? { tipo_turma: v } : {}) })} />
+          <Grupo titulo="Por código" itens={t.grupos.codserv} rotulo={v => v ?? '—'} link={v => conferencia({ visao: 'todos', ...(v ? { codserv: v } : {}) })} />
+          <Grupo titulo="Por cidade" itens={t.grupos.cidade} rotulo={v => v ?? 'Sem cidade'} link={v => conferencia({ visao: 'todos', ...(v ? { cidade: v } : {}) })} />
+        </div>
+
+        <section className={cartao}>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-extrabold text-tinta">Ajustes da fatura (fora da conferência)</h2>
+            <p className="text-xs text-aco">débito <b className="font-codigo text-erro">−{usFat(t.ajustes.debito)}</b> · crédito <b className="font-codigo">+{usFat(t.ajustes.credito)}</b></p>
+          </div>
+          {t.ajustes.itens.length ? <div className="mt-2 max-h-80 overflow-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="sticky top-0 bg-white text-[11px] text-aco uppercase"><tr><th className="py-2 pr-2">Tipo</th><th className="py-2 pr-2">Observação</th><th className="py-2 text-right">US</th></tr></thead>
+              <tbody>{t.ajustes.itens.map((a, i) => (
+                <tr key={i} className="border-t border-linha">
+                  <td className="py-1.5 pr-2">{a.tipo === 'D' ? 'Débito' : a.tipo === 'C' ? 'Crédito' : a.tipo}</td>
+                  <td className="py-1.5 pr-2">{a.observacao}</td>
+                  <td className={`py-1.5 text-right font-codigo ${a.tipo === 'D' ? 'text-erro' : ''}`}>{a.tipo === 'D' ? '−' : '+'}{usFat(a.valor)}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div> : <p className="mt-2 text-sm text-aco">Sem ajustes nesta fatura.</p>}
+        </section>
+      </>}
+      <RodapeFat />
+    </div>
+  );
 }
