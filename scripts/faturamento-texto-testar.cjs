@@ -75,3 +75,22 @@ assert.equal(vm.fator,0.7);assert.equal(vm.csc.toFixed(6),'0.016380');assert.equ
 assert.equal(valorMoto({tabela:'12',moto:null,fator_csc:0.0912,fator_cod:0.1},0.7).fator,0.7);
 assert.equal(valorMoto({tabela:'12',moto:'1',fator_csc:0.0912,fator_cod:0.1},0.7).fator,0.7);   // exceção só vale na Tabela 11
 console.log('OK: valor Moto do contrato.');
+// valores em R$ ou US (rodada 2): um valor da US para todo o Faturamento
+{
+const {valorFat,outraUnidadeFat,somarTotais:somar}=require('../src/lib/faturamentoTexto.ts');
+assert.equal(valorFat(-7.447278,'reais',2964.33,true),'−R$ 22.076,19');
+assert.equal(valorFat(17.001786,'us',2964.33,true),'+17,001786 US');
+assert.equal(valorFat(5.1968,'reais',2964.33),'R$ 15.405,03');
+assert.ok(valorFat(1,'reais',null).endsWith(' US'),'sem valor da US cai em US');
+assert.ok(outraUnidadeFat(0.3288,'reais',2964.33).endsWith(' US'));
+assert.equal(outraUnidadeFat(1,'us',2964.33),'R$ 2.964,33');
+assert.equal(outraUnidadeFat(1,'reais',null),null);
+assert.equal(valorFat(null,'reais',2964.33),'—');
+const lado=(n,o)=>({servicos:n,us:o,pago:o,devido:2*o,por_motivo:{}});
+const tt=(f,o)=>({...somar([]),fatura:f,inicio:'2026-09-01',fim:'2026-09-30',importado_em:'x',fora_contrato:o,
+  a_menos:{...lado(1,o),com_1ns:o},a_mais:{...lado(2,o),c562:{servicos:o,us:o}}});
+const st=somar([tt('1',1),tt('2',2)]);
+assert.equal(st.a_menos.pago,3);assert.equal(st.a_menos.devido,6);assert.equal(st.a_menos.us,3);assert.equal(st.a_menos.com_1ns,3);
+assert.equal(st.a_mais.c562.servicos,3);assert.equal(st.a_mais.c562.us,3);assert.equal(st.fora_contrato,3);
+console.log('OK: valores em R$ ou US e totais por lado.');
+}

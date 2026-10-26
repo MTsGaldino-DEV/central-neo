@@ -11,6 +11,7 @@ export interface ServicoFat {
   fator_aplicado:string|null; moto:boolean|null; bate:boolean; parcial:boolean; rc_por_atendimento:boolean; diferenca:number|null;
   situacao:SituacaoServicoFat; motivo:string|null; observacao_manual:string|null; conferido_por:string|null; conferido_em:string|null;
   revisao_desatualizada:boolean; situacao_calculo:Exclude<SituacaoServicoFat,'CONFERIDO'>; contexto:unknown[];
+  tem_1ns:boolean; tem_562:boolean; multado:boolean; na_manutencao:boolean; manutencao_com_valor:boolean;
 }
 export interface LinhaServicoFat {
   id:string; codserv:string; tipo_serv:string; tabela:string|null; urbano:number; rural:number; creditado:number; glosa:number;
@@ -24,17 +25,51 @@ export interface TotaisFat {
   fatura:string; inicio:string; fim:string; importado_em:string; calculado_em?:string;
   linhas:number; servicos:number; creditado:number; pago_com_fator:number; multas:number; estorno:number; devido:number; diferenca:number;
   sem_fator_servicos:number; parciais:number; saldo_a_receber:number; pago_a_mais:number;
-  a_menos:{servicos:number; por_motivo:Record<string,{us:number;servicos:number}>};
-  a_mais:{servicos:number; por_motivo:Record<string,{us:number;servicos:number}>};
+  a_menos:{servicos:number; us:number; pago:number; devido:number; com_1ns:number; por_motivo:Record<string,{us:number;servicos:number}>};
+  a_mais:{servicos:number; us:number; pago:number; devido:number; c562:{servicos:number; us:number}; por_motivo:Record<string,{us:number;servicos:number}>};
+  fora_contrato:number;
   funil:{importados:number; equipe_identificada:number; codigo_no_contrato:number; valor_confere:number; conferidos:number};
   grupos:{tipo_turma:GrupoTotaisFat[]; codserv:GrupoTotaisFat[]; cidade:GrupoTotaisFat[]};
   ajustes:{debito:number; credito:number; itens:{tipo:string; observacao:string; valor:number}[]};
 }
 
-export async function listarServicosFat(filtros: Record<string,string>, pagina: number, limite = 50): Promise<{total:number; servicos:ServicoFat[]; lados:LadosFat}> {
+/** Filtros da lista: texto, listas (estilo Excel), faixas numéricas e a ordem. */
+export type FiltrosListaFat = Record<string, string | string[] | number | { coluna: string; dir: 'asc' | 'desc' }>;
+export type ColunaFiltroFat = 'situacao'|'tipo_serv'|'codigos'|'numvei'|'tipo_turma'|'cidade'|'motivo';
+export interface ItemManutencaoFat { codigo:string|null; operacao:string|null; atividade:string|null; descricao:string|null; quantidade:number; valor:number }
+export interface EventoFat { tipo:'IMPORTADA'|'CONFERIDO'|'DESCONFERIDO'; observacao:string|null; usuario_nome:string|null; data:string }
+
+export async function listarServicosFat(filtros: FiltrosListaFat, pagina: number, limite = 50): Promise<{total:number; servicos:ServicoFat[]; lados:LadosFat}> {
   const { data, error } = await supabase.rpc('neo_fat_servicos_listar', { p_filtros: filtros, p_offset: pagina * limite, p_limite: limite });
   if (error) throw error;
   return data;
+}
+/** Valores de uma coluna com a contagem, respeitando os outros filtros (como o filtro do Excel). */
+export async function valoresColunaFat(filtros: FiltrosListaFat, coluna: ColunaFiltroFat, busca?: string): Promise<{valor:string|null; n:number}[]> {
+  const { data, error } = await supabase.rpc('neo_fat_servicos_valores', { p_filtros: filtros, p_coluna: coluna, p_busca: busca || null });
+  if (error) throw error;
+  return data ?? [];
+}
+/** O que a Manutenção (antigo Fechamento de Notas) tem lançado para o serviço; não entra na soma. */
+export async function manutencaoServicoFat(numserv: string): Promise<{existe:boolean; itens:ItemManutencaoFat[]}> {
+  const { data, error } = await supabase.rpc('neo_fat_servico_manutencao', { p_numserv: numserv });
+  if (error) throw error;
+  return { existe: !!data?.existe, itens: (data?.itens ?? []).map((i: ItemManutencaoFat) => ({ ...i, quantidade: Number(i.quantidade), valor: Number(i.valor) })) };
+}
+export async function historicoServicoFat(fatura: string, numserv: string): Promise<EventoFat[]> {
+  const { data, error } = await supabase.rpc('neo_fat_servico_historico', { p_fatura: fatura, p_numserv: numserv });
+  if (error) throw error;
+  return data ?? [];
+}
+/** Valor da US mais recente do apostilamento; null se não houver. */
+export async function valorUsFat(): Promise<{valor:number; vigencia:string} | null> {
+  const { data, error } = await supabase.rpc('neo_fat_valor_us');
+  if (error) throw error;
+  return data ? { valor: Number(data.valor), vigencia: String(data.vigencia) } : null;
+}
+export async function avaliarDocFat(pagina: string, util: boolean): Promise<void> {
+  const { error } = await supabase.rpc('neo_doc_avaliar', { p_pagina: pagina, p_util: util });
+  if (error) throw error;
 }
 export async function linhasServicoFat(fatura: string, numserv: string): Promise<LinhaServicoFat[]> {
   const { data, error } = await supabase.rpc('neo_fat_servico_linhas', { p_fatura: fatura, p_numserv: numserv });
