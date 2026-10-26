@@ -5,7 +5,9 @@ import { lerFatura, lerFaturaCompleta, cruzarFaturas, hashArquivo, linhasDuplica
 import { painelFat, type TotaisFat } from '@/lib/faturamentoServicos';
 import { JanelaModal } from '@/components/faturamento/JanelaModal';
 import { AjudaFat } from '@/components/faturamento/AjudaFat';
-import { importarFat, faturasFat, usFat, erroFat, type FaturaFat } from '@/lib/faturamento';
+import { traduzirErro, type ErroAmigavel } from '@/lib/erros';
+import { AvisoErro } from '@/components/faturamento/AvisoErro';
+import { importarFat, faturasFat, usFat, type FaturaFat } from '@/lib/faturamento';
 
 const numero = (n: number) => n.toLocaleString('pt-BR');
 const data = (s: string) => s.split('-').reverse().join('/');
@@ -16,17 +18,17 @@ export default function Importar() {
   const [completa, setCompleta] = useState<ArquivoLido<LeituraCompletaFat> | null>(null);
   const [faturas, setFaturas] = useState<FaturaFat[]>([]);
   const [lendo, setLendo] = useState(''), [enviando, setEnviando] = useState(false);
-  const [erro, setErro] = useState(''), [mensagem, setMensagem] = useState('');
+  const [erro, setErro] = useState<ErroAmigavel | null>(null), [mensagem, setMensagem] = useState('');
   const [percentual, setPercentual] = useState(0), [concluida, setConcluida] = useState(false);
   const ocupado = !!lendo || enviando;
   // Sem a lista de faturas não dá para saber se a importação substitui uma existente: bloqueia até carregar.
-  const [faturasOk, setFaturasOk] = useState(false), [erroFaturas, setErroFaturas] = useState('');
-  const carregarFaturas = () => { setErroFaturas(''); faturasFat().then(l => { setFaturas(l); setFaturasOk(true); }).catch(e => { setFaturasOk(false); setErroFaturas(erroFat(e)); }); };
+  const [faturasOk, setFaturasOk] = useState(false), [erroFaturas, setErroFaturas] = useState<ErroAmigavel | null>(null);
+  const carregarFaturas = () => { setErroFaturas(null); faturasFat().then(l => { setFaturas(l); setFaturasOk(true); }).catch(e => { setFaturasOk(false); setErroFaturas(traduzirErro(e, 'Importar fatura › conferir faturas já importadas')); }); };
   useEffect(carregarFaturas, []);
   const previa = useMemo(() => {
     if (!resumida || !completa) return null;
-    try { return { dados: cruzarFaturas(resumida.dados, completa.dados), erro: '' }; }
-    catch (e) { return { dados: null, erro: erroFat(e) }; }
+    try { return { dados: cruzarFaturas(resumida.dados, completa.dados), erro: null }; }
+    catch (e) { return { dados: null, erro: traduzirErro(e, 'Importar fatura › cruzar as duas planilhas') }; }
   }, [resumida, completa]);
   const cruzamento = previa?.dados;
   const anterior = faturas.find(f => f.id === resumida?.dados.fatura);
@@ -36,7 +38,7 @@ export default function Importar() {
   const [confirmar, setConfirmar] = useState(false);
   async function ler(f: File, tipo: 'resumida' | 'completa') {
     if (ocupado) return;
-    setLendo(tipo); setErro(''); setConcluida(false); setMensagem(''); setPercentual(0);
+    setLendo(tipo); setErro(null); setConcluida(false); setMensagem(''); setPercentual(0);
     if (tipo === 'resumida') setResumida(null); else setCompleta(null);
     try {
       if (!/\.xlsx$/i.test(f.name)) throw Error('Selecione uma planilha Excel no formato .xlsx.');
@@ -46,7 +48,7 @@ export default function Importar() {
       const hash = await hashArquivo(buffer);
       if (tipo === 'resumida') setResumida({ arquivo: f, dados: lerFatura(buffer), hash });
       else setCompleta({ arquivo: f, dados: lerFaturaCompleta(buffer), hash });
-    } catch (e) { setErro(erroFat(e)); } finally { setLendo(''); }
+    } catch (e) { setErro(traduzirErro(e, `Importar fatura › ler ${f.name}`)); } finally { setLendo(''); }
   }
   // Confere de novo no servidor: outra pessoa pode ter importado a mesma fatura depois que a tela abriu.
   async function iniciar() {
@@ -55,21 +57,21 @@ export default function Importar() {
     try {
       const lista = await faturasFat(); setFaturas(lista);
       if (lista.some(f => f.id === resumida.dados.fatura)) { setConfirmar(true); return; }
-    } catch (e) { setFaturasOk(false); setErroFaturas(erroFat(e)); return; }
+    } catch (e) { setFaturasOk(false); setErroFaturas(traduzirErro(e, 'Importar fatura › conferir faturas já importadas')); return; }
     await importar(false);
   }
   async function importar(substituir: boolean) {
     if (!resumida || !completa || !cruzamento || ocupado || identico) return;
-    setConfirmar(false); setEnviando(true); setErro(''); setMensagem('Preparando a importação…'); setPercentual(0);
+    setConfirmar(false); setEnviando(true); setErro(null); setMensagem('Preparando a importação…'); setPercentual(0);
     try {
       await importarFat(resumida.dados, resumida.arquivo.name, completa.dados, completa.arquivo.name, (s, p) => { setMensagem(s); setPercentual(p); }, { resumida: resumida.hash, completa: completa.hash }, substituir);
       setConcluida(true); faturasFat().then(setFaturas).catch(() => {});
-    } catch (e) { setErro(erroFat(e)); setMensagem('Não foi possível confirmar a conclusão. Você pode tentar novamente; a mesma fatura não será duplicada.'); }
+    } catch (e) { setErro(traduzirErro(e, `Importar fatura › enviar (${mensagem || 'início'})`)); setMensagem('Não foi possível confirmar a conclusão. Você pode tentar novamente; a mesma fatura não será duplicada.'); }
     finally { setEnviando(false); }
   }
   function limpar(tipo: 'resumida' | 'completa') {
     if (tipo === 'resumida') setResumida(null); else setCompleta(null);
-    setConcluida(false); setErro(''); setMensagem(''); setPercentual(0);
+    setConcluida(false); setErro(null); setMensagem(''); setPercentual(0);
   }
   return <div className="max-w-6xl mx-auto p-4 lg:p-8 space-y-6">
     <header className="flex flex-wrap items-start justify-between gap-4">
@@ -79,8 +81,8 @@ export default function Importar() {
     <ol className="flex flex-wrap gap-x-6 gap-y-3 text-sm border-b border-linha pb-5" aria-label="Etapas da importação">
       {['Selecionar arquivos', 'Revisar cruzamento', 'Conferir fatura'].map((s, i) => <li key={s} className={'flex items-center gap-2 ' + ((concluida ? 2 : cruzamento ? 1 : 0) >= i ? 'text-sinal font-bold' : 'text-aco')}><span className={'size-6 rounded-full flex items-center justify-center text-xs ' + ((concluida ? 2 : cruzamento ? 1 : 0) >= i ? 'bg-sinal text-white' : 'bg-linha')}>{concluida || (cruzamento && i === 0) ? <Check size={14}/> : i + 1}</span>{s}</li>)}
     </ol>
-    {erroFaturas && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-pendente/20 bg-pendente-fundo p-4 text-sm text-pendente"><AlertTriangle size={19} className="shrink-0"/>Não foi possível conferir as faturas já importadas ({erroFaturas}). A importação fica bloqueada até conferir. <button type="button" onClick={carregarFaturas} className="font-bold underline">Tentar de novo</button></div>}
-    {(erro || previa?.erro) && <div role="alert" className="flex items-start gap-3 rounded-xl border border-erro/15 bg-erro-fundo p-4 text-sm text-erro"><AlertTriangle size={19} className="shrink-0"/>{erro || previa?.erro}</div>}
+    {erroFaturas && <AvisoErro erro={erroFaturas} onTentar={carregarFaturas} contexto="A importação fica bloqueada até conferir as faturas já importadas." />}
+    {(erro || previa?.erro) && <AvisoErro erro={(erro || previa?.erro)!} />}
     <div className="grid md:grid-cols-2 gap-5">
       <AreaArquivo titulo="Fatura Resumida" subtitulo="Valores e turmas da fatura" numero="01" dica="Planilha Resumo_Fat, com US_Servico e US_Turma." arquivo={resumida?.arquivo} detalhe={resumida ? numero(resumida.dados.abas.US_Servico.length) + ' linhas de faturamento' : ''} ocupado={ocupado} lendo={lendo === 'resumida'} onArquivo={f => void ler(f, 'resumida')} onLimpar={() => limpar('resumida')}/>
       <AreaArquivo titulo="Fatura Completa" subtitulo="Serviços e veículos que executaram" numero="02" dica="Relatório completo, com as abas Serviço e Apropriação." arquivo={completa?.arquivo} detalhe={completa ? numero(completa.dados.vinculos.length) + ' serviços identificados' : ''} ocupado={ocupado} lendo={lendo === 'completa'} onArquivo={f => void ler(f, 'completa')} onLimpar={() => limpar('completa')}/>

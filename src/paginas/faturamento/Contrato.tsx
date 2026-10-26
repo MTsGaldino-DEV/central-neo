@@ -2,7 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen } from 'lucide-react';
 import { useSessao } from '@/contexto/Sessao';
-import { contratosFat, acertarContratoFat, configFat, historicoFat, usFat, erroFat, type ContratoFat, type HistoricoFat } from '@/lib/faturamento';
+import { traduzirErro, type ErroAmigavel } from '@/lib/erros';
+import { AvisoErro } from '@/components/faturamento/AvisoErro';
+import { contratosFat, acertarContratoFat, configFat, historicoFat, usFat, type ContratoFat, type HistoricoFat } from '@/lib/faturamento';
 import { valorMoto } from '@/lib/faturamentoMoto';
 import { CarregandoNeo } from '@/components/faturamento/CarregandoNeo';
 import { JanelaModal } from '@/components/faturamento/JanelaModal';
@@ -15,15 +17,16 @@ export default function Contrato() {
   const admin = acesso?.papel === 'ADMIN';
   const [lista,setLista] = useState<ContratoFat[]>([]), [busca,setBusca] = useState(''), [tabela,setTabela] = useState('');
   const [motoUrbano,setMotoUrbano] = useState(0.7);
-  const [erro,setErro] = useState(''),[carregando,setCarregando] = useState(true),[salvando,setSalvando] = useState(false);
+  const [erro,setErroBruto] = useState<ErroAmigavel|null>(null),[carregando,setCarregando] = useState(true),[salvando,setSalvando] = useState(false);
   const [item,setItem] = useState<ContratoFat|null>(null),[historico,setHistorico] = useState<HistoricoFat[]>([]);
-  async function carregar() { setCarregando(true); try { setLista(await contratosFat()); } catch(e) {setErro(erroFat(e));} finally {setCarregando(false);} }
-  useEffect(()=>{void carregar();configFat().then(c=>setMotoUrbano(c.moto_urbano)).catch(e=>setErro(erroFat(e)));},[]);
-  async function abrir(c:ContratoFat) { setItem(c);setHistorico([]);setErro('');if(admin)try {setHistorico(await historicoFat(c));} catch(e){setErro(erroFat(e));} }
+  const setErro=(e:unknown,onde='Tabelas do contrato')=>setErroBruto(e?traduzirErro(e,onde):null);
+  async function carregar() { setCarregando(true); try { setLista(await contratosFat()); } catch(e) {setErro(e,'Tabelas do contrato › carregar a lista');} finally {setCarregando(false);} }
+  useEffect(()=>{void carregar();configFat().then(c=>setMotoUrbano(c.moto_urbano)).catch(e=>setErro(e,'Tabelas do contrato › configuração Moto'));},[]);
+  async function abrir(c:ContratoFat) { setItem(c);setHistorico([]);setErro(null);if(admin)try {setHistorico(await historicoFat(c));} catch(e){setErro(e,'Tabelas do contrato › histórico');} }
   async function salvar(e:FormEvent<HTMLFormElement>) {
-    e.preventDefault();if(!item)return;const f=new FormData(e.currentTarget);setSalvando(true);setErro('');
+    e.preventDefault();if(!item)return;const f=new FormData(e.currentTarget);setSalvando(true);setErro(null);
     try {await acertarContratoFat(item,Number(f.get('csc')),Number(f.get('cod')),f.get('ativo')==='on',String(f.get('motivo')));setItem(null);await carregar();}
-    catch(e){setErro(erroFat(e));}finally{setSalvando(false);}
+    catch(e){setErro(e,'Tabelas do contrato › salvar acerto');}finally{setSalvando(false);}
   }
   const visiveis = lista.filter(c=>(!tabela||c.tabela===tabela)&&`${c.codigo} ${c.descricao}`.toLowerCase().includes(busca.toLowerCase()));
   return <div className="p-4 lg:p-6 space-y-5 max-w-7xl mx-auto">
@@ -32,7 +35,7 @@ export default function Contrato() {
       <Link to="/faturamento/documentacao#contrato" className="inline-flex items-center gap-1.5 rounded-xl border border-linha bg-white px-3 py-2 text-sm font-bold text-sinal hover:border-sinal"><BookOpen className="size-4" aria-hidden="true"/>Documentação</Link>
     </div>
     <p className="p-4 rounded-xl bg-sinal-fundo text-sinal text-sm">Os fatores publicados no contrato independem do valor pago na fatura. CSC/CSI e COD são comparados na Conferência. O Valor Moto já vem calculado: fator {fatorTexto(motoUrbano)} na maioria dos códigos, 1 nos que pagam sem desconto e 0 nos que não pagam Moto.</p>
-    {erro && !item && <p role="alert" className="text-erro">{erro}</p>}
+    {erro && !item && <AvisoErro erro={erro} onTentar={()=>void carregar()}/>}
     <div className="flex gap-3"><input aria-label="Buscar código ou descrição" placeholder="Código ou descrição" value={busca} onChange={e=>setBusca(e.target.value)} className="border border-linha rounded-lg p-2 flex-1 min-w-0"/><select aria-label="Tabela" value={tabela} onChange={e=>setTabela(e.target.value)} className="border border-linha rounded-lg p-2"><option value="">Todas as tabelas</option><option>11</option><option>12</option></select></div>
     {carregando && !lista.length ? <CarregandoNeo variante="lista"/> : <div className="bg-white border border-linha rounded-2xl overflow-auto"><table className="w-full text-sm text-left"><thead className="bg-nevoa"><tr>{['Tabela','Código','Descrição','CSC/CSI','COD','Fator Moto','Valor Moto','Validação'].map(h=><th className="p-3 whitespace-nowrap" key={h}>{h}</th>)}</tr></thead><tbody>
       {visiveis.map(c=>{const m=valorMoto(c,motoUrbano);return <tr key={c.tabela+c.codigo} data-codigo={c.codigo} className="border-t border-linha hover:bg-nevoa"><td className="p-3">{c.tabela}</td><td className="p-3 font-codigo"><button className="text-sinal underline" onClick={()=>void abrir(c)}>{c.codigo}</button></td><td className="p-3 max-w-md"><p className="line-clamp-2">{c.descricao}</p>{c.nota&&<span className="text-cobre">Com NOTA no contrato</span>}</td><td className="p-3 font-codigo">{usFat(c.fator_csc)}</td><td className="p-3 font-codigo">{usFat(c.fator_cod)}</td>
@@ -47,7 +50,7 @@ export default function Contrato() {
         <p>Fator Moto: <b className="font-codigo">{fatorTexto(valorMoto(item,motoUrbano).fator)}</b></p>{item.nota&&<p className="whitespace-pre-line text-cobre">{item.nota}</p>}
         <p className="text-xs text-aco">{item.origem}</p><p>Publicados: CSC {usFat(item.fator_original)} / COD {usFat(item.fator_cod_original)}</p>
         {admin&&<form id="acerto-contrato" onSubmit={salvar} className="space-y-3"><label className="block font-bold">Fator CSC/CSI<input name="csc" type="number" min="0" step="0.000001" required defaultValue={item.fator_csc??''} className="mt-1 border border-linha rounded-lg p-2 w-full font-normal"/></label><label className="block font-bold">Fator COD<input name="cod" type="number" min="0" step="0.000001" required defaultValue={item.fator_cod??''} className="mt-1 border border-linha rounded-lg p-2 w-full font-normal"/></label><label className="block"><input type="checkbox" name="ativo" defaultChecked={item.ativo}/> Ativo</label><label className="block font-bold">Motivo do acerto<textarea name="motivo" minLength={3} required className="mt-1 border border-linha rounded-lg p-2 w-full font-normal"/></label></form>}
-        {admin&&<div><h4 className="font-bold">Histórico</h4>{historico.map(h=><p key={h.id} className="border-t border-linha py-3">{new Date(h.data).toLocaleString('pt-BR')} · {h.motivo}<br/>CSC: {usFat(h.anterior.fator_csc)} → {usFat(h.novo.fator_csc)} · COD: {usFat(h.anterior.fator_cod)} → {usFat(h.novo.fator_cod)}<br/>Usuário: {h.usuario}</p>)}</div>}{erro&&<p role="alert" className="text-erro">{erro}</p>}
+        {admin&&<div><h4 className="font-bold">Histórico</h4>{historico.map(h=><p key={h.id} className="border-t border-linha py-3">{new Date(h.data).toLocaleString('pt-BR')} · {h.motivo}<br/>CSC: {usFat(h.anterior.fator_csc)} → {usFat(h.novo.fator_csc)} · COD: {usFat(h.anterior.fator_cod)} → {usFat(h.novo.fator_cod)}<br/>Usuário: {h.usuario}</p>)}</div>}{erro&&<AvisoErro erro={erro} compacto/>}
       </div>
     </JanelaModal>}
     <RodapeFat/>

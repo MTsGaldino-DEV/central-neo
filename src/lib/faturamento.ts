@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { traduzirErro } from './erros';
 import { ABAS_FAT, cruzarFaturas, type LeituraCompletaFat, type LeituraFat, type RegistroFat } from './faturamentoPlanilhas';
 
 export interface ContratoFat {
@@ -29,7 +30,7 @@ export async function historicoFat(c: ContratoFat): Promise<HistoricoFat[]> {
   return data ?? [];
 }
 export { usFat } from './faturamentoTexto';
-export const erroFat = (e: unknown) => e instanceof Error ? e.message : (e as {message?:string})?.message ?? 'Não foi possível concluir a operação.';
+export const erroFat = (e: unknown) => traduzirErro(e).mensagem;
 
 export interface FaturaFat { id:string; arquivo:string; arquivo_completo:string|null; inicio:string; fim:string; importado_em:string; hash_resumida:string|null; hash_completa:string|null }
 export async function faturasFat():Promise<FaturaFat[]> {

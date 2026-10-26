@@ -8,6 +8,7 @@ import { CarregandoNeo } from '@/components/faturamento/CarregandoNeo';
 import { GraficoFaturas } from '@/components/faturamento/GraficoFaturas';
 import { MiniBarras } from '@/components/faturamento/MiniBarras';
 import { AjudaFat, RodapeFat } from '@/components/faturamento/AjudaFat';
+import { AvisoErro } from '@/components/faturamento/AvisoErro';
 
 const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 const mesFatura = (f: TotaisFat) => `${MESES[Number(f.inicio.slice(5, 7)) - 1]}/${f.inicio.slice(0, 4)}`;
@@ -88,7 +89,7 @@ function LinhaFatura({ f, atual, maximo }: { f: TotaisFat; atual?: boolean; maxi
 }
 
 function ListaFaturas() {
-  const { dados, erro, atualizando, salvoEm, recarregar } = useDadosComCache('painel', painelFat, []);
+  const { dados, erro, falha, atualizando, salvoEm, recarregar } = useDadosComCache('painel', painelFat, [], true, 'Faturamento › Faturas › carregar o painel');
   const faturas = dados ?? [];
   const [atual, anterior] = faturas;
   const antigas = [...faturas].reverse();
@@ -114,9 +115,7 @@ function ListaFaturas() {
         </Link>
       </div>
 
-      {erro && <p role="alert" className="rounded-xl border border-erro/30 bg-erro-fundo px-4 py-3 text-sm text-erro">
-        {dados ? 'Não foi possível atualizar; mostrando os últimos dados vistos. ' : ''}{erro} <button type="button" onClick={recarregar} className="font-bold underline">Tentar de novo</button>
-      </p>}
+      {falha && <AvisoErro erro={falha} onTentar={recarregar} contexto={dados ? 'Mostrando os últimos dados vistos.' : undefined} />}
 
       {!dados && !erro ? <CarregandoNeo variante="lista" /> : dados && !faturas.length ? (
         <div className="rounded-2xl border border-dashed border-linha bg-white px-6 py-12 text-center">
