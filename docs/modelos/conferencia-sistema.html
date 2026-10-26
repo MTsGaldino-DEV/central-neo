@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Conferência como sistema (modelo)</title>
+<style>body{margin:0;padding:24px;background:#eef2f3;font-family:Manrope,system-ui,sans-serif}h2{font-family:Manrope,system-ui,sans-serif;margin:0 0 4px}.subtitle{color:#586e74;margin:0 0 16px;font-size:14px}</style></head><body>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+  .neo{font-family:Manrope,system-ui,sans-serif;color:#0b1f24;background:#f4f7f8;border-radius:14px;padding:18px}
+  .neo .mono{font-family:'JetBrains Mono',monospace}
+  .neo .card{background:#fff;border:1px solid #dde6e8;border-radius:14px;padding:14px}
+  .neo .lbl{font-size:11px;color:#586e74;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .neo .hint{font-size:12px;color:#586e74;line-height:1.4}
+  .neo .pill{display:inline-flex;gap:6px;align-items:center;border:1px solid #dde6e8;background:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;color:#0b1f24}
+  .grupo{display:block;border:1px solid #dde6e8;background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .grupo.sel{border:2px solid #0b7285;background:#f6fbfc}
+  .grupo .t{display:flex;justify-content:space-between;gap:8px;font-weight:800;font-size:13px}
+  .grupo .barra{height:5px;border-radius:9px;background:#eef2f3;margin-top:8px;overflow:hidden}
+  .grupo .barra i{display:block;height:100%}
+  .sec{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px}
+  .est{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px}
+  .acao{display:inline-block;font-size:12px;font-weight:800;padding:7px 12px;border-radius:9px;border:1px solid #dde6e8;background:#fff;color:#0b1f24}
+  .acao.pri{background:#b91c1c;border-color:#b91c1c;color:#fff}
+  .lin{display:grid;grid-template-columns:20px 1fr auto auto;gap:10px;align-items:center;padding:9px 4px;border-top:1px solid #eef2f3;font-size:12px}
+  .lin .q{width:14px;height:14px;border:1.5px solid #93a5aa;border-radius:4px}
+  .lin .q.on{background:#0b7285;border-color:#0b7285}
+  .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:6px;background:#eef2f3;color:#586e74;margin-right:4px;font-weight:700}
+  .passo{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#586e74}
+  .passo b{display:inline-flex;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center;font-size:11px;background:#eef2f3}
+  .passo.on{color:#0b7285} .passo.on b{background:#0b7285;color:#fff}
+  .passo.ok{color:#047857} .passo.ok b{background:#10b981;color:#fff}
+</style>
+
+<h2>Conferência como sistema: o trabalho já vem organizado</h2>
+<p class="subtitle">Em vez de uma planilha para filtrar, a tela agrupa as divergências por causa, explica cada uma em português, cruza com o Fechamento e leva até a contestação para a CEMIG. A planilha continua a um clique ("Ver como planilha") para quem quiser. Dados reais da 9844.</p>
+
+<div class="neo">
+  <!-- topo: andamento da fatura -->
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+    <div><div style="font-weight:800;font-size:20px">Conferência · fatura <span class="mono">9844</span></div><div class="hint">setembro/2026 · 1 US = R$ 2.964,33</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill">Fatura <span class="mono">9844</span> ▾</span><span class="pill">R$ | US</span><span class="pill">▦ Ver como planilha</span></div>
+  </div>
+
+  <div class="card" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:center;margin-bottom:12px">
+    <div><div class="lbl" style="color:#b91c1c">A recuperar da CEMIG</div><div class="mono" style="font-size:22px;font-weight:800;color:#b91c1c">R$ 22.076</div><div class="hint">106 serviços pagos a menos</div></div>
+    <div><div class="lbl">Andamento</div><div style="font-size:22px;font-weight:800"><span class="mono">34</span><span class="hint"> de 278 decididos</span></div>
+      <div style="height:6px;background:#eef2f3;border-radius:9px;margin-top:6px;overflow:hidden"><i style="display:block;width:12%;height:100%;background:#0b7285"></i></div></div>
+    <div><div class="lbl">Na contestação</div><div class="mono" style="font-size:22px;font-weight:800">R$ 11.854</div><div class="hint">34 serviços prontos para enviar</div></div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="passo ok"><b>✓</b>Importar fatura</div>
+      <div class="passo on"><b>2</b>Decidir as divergências</div>
+      <div class="passo"><b>3</b>Enviar contestação à CEMIG</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:300px 1fr;gap:12px">
+    <!-- esquerda: causas -->
+    <div>
+      <div class="sec" style="color:#b91c1c;margin-top:0">Pagou a menos · R$ 22.076</div>
+      <div class="grupo sel">
+        <div class="t"><span>RC não pago</span><span class="mono" style="color:#b91c1c">−R$ 11.854</span></div>
+        <div class="hint">34 serviços · 18 cidades · 25 frotas</div>
+        <div class="barra"><i style="width:100%;background:#0b7285"></i></div>
+        <div class="hint" style="margin-top:4px;color:#0b7285;font-weight:700">34 de 34 na contestação ✓</div>
+      </div>
+      <div class="grupo">
+        <div class="t"><span>Fator menor que o contrato</span><span class="mono" style="color:#b91c1c">−R$ 6.767</span></div>
+        <div class="hint">68 serviços · 54 são RC com multa e estorno juntos</div>
+        <div class="barra"><i style="width:0"></i></div>
+      </div>
+      <div class="grupo">
+        <div class="t"><span>Código não pago <span class="tag" style="background:#f5f3ff;color:#6d28d9">1.NS</span></span><span class="mono" style="color:#b91c1c">−R$ 3.456</span></div>
+        <div class="hint">4 serviços · 3 com 1.NS que ainda não estão no Fechamento</div>
+        <div class="barra"><i style="width:0"></i></div>
+      </div>
+
+      <div class="sec" style="color:#047857">Pagou a mais · R$ 50.399</div>
+      <div class="grupo">
+        <div class="t"><span>5.62 pago como RC inteiro</span><span class="mono" style="color:#047857">+R$ 49.428</span></div>
+        <div class="hint">158 serviços · deveria pagar só a verificação</div>
+      </div>
+      <div class="grupo">
+        <div class="t"><span>Outras</span><span class="mono" style="color:#047857">+R$ 971</span></div>
+        <div class="hint">14 serviços</div>
+      </div>
+
+      <div class="sec" style="color:#b45309">Sem como calcular</div>
+      <div class="grupo">
+        <div class="t"><span>1.62 sem fator no contrato</span><span class="mono" style="color:#b45309">61</span></div>
+        <div class="hint">CEMIG pagou R$ 22.725 · cadastre o fator para conferir</div>
+      </div>
+      <div class="grupo">
+        <div class="t"><span>Códigos fora da tabela</span><span class="mono" style="color:#b45309">27</span></div>
+        <div class="hint">todos com crédito zero</div>
+      </div>
+    </div>
+
+    <!-- direita: a causa aberta -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <div style="font-weight:800;font-size:17px">RC não pago</div>
+          <div style="font-size:13px;margin-top:4px;max-width:520px">O atendimento (RC) foi feito, mas a CEMIG não creditou nada. O contrato prevê o pagamento do RC uma vez por atendimento. 16 dos 34 vieram só com o código <b>0.06</b> (RC06, RC07, RC08, RC30).</div>
+        </div>
+        <div style="text-align:right"><div class="mono" style="font-size:20px;font-weight:800;color:#b91c1c">−R$ 11.854</div><div class="hint">−4,00 US</div></div>
+      </div>
+
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 4px">
+        <span class="acao pri">Contestar os 34 com a CEMIG</span>
+        <span class="acao">Aceitar como está</span>
+        <span class="acao">Vai pelo 1.NS / Fechamento</span>
+        <span class="hint" style="align-self:center;margin-left:auto">Agrupar por: <b>frota</b> · cidade · código</span>
+      </div>
+
+      <div class="lin" style="border-top:0;color:#586e74;font-size:11px;font-weight:800;text-transform:uppercase"><span></span><span>Serviço</span><span style="text-align:right">Diferença</span><span>Decisão</span></div>
+      <div class="lin"><span class="q on"></span><div><b class="mono">245916456</b> <span class="tag">RC08</span><span class="tag">Frota 2131 · Multifuncional</span><span class="tag">TIPITI</span><div class="hint">Contrato prevê 0,1399 US · CEMIG pagou 0</div></div><span class="mono" style="color:#b91c1c;font-weight:700;text-align:right">−R$ 414,71</span><span class="est" style="background:#fef2f2;color:#b91c1c">Contestar</span></div>
+      <div class="lin"><span class="q on"></span><div><b class="mono">245689576</b> <span class="tag">RC08</span><span class="tag">Frota 4399 · Multifuncional</span><span class="tag">GOV. VALADARES</span><div class="hint">Contrato prevê 0,1399 US · CEMIG pagou 0</div></div><span class="mono" style="color:#b91c1c;font-weight:700;text-align:right">−R$ 414,71</span><span class="est" style="background:#fef2f2;color:#b91c1c">Contestar</span></div>
+      <div class="lin"><span class="q on"></span><div><b class="mono">245670551</b> <span class="tag">RC08</span><span class="tag">Frota 4566 · Multifuncional</span><span class="tag">COROACI</span><div class="hint">Contrato prevê 0,1399 US · CEMIG pagou 0</div></div><span class="mono" style="color:#b91c1c;font-weight:700;text-align:right">−R$ 414,71</span><span class="est" style="background:#fef2f2;color:#b91c1c">Contestar</span></div>
+      <div class="lin"><span class="q on"></span><div><b class="mono">245862643</b> <span class="tag">RC08</span><span class="tag">Frota 7811 · Multifuncional</span><span class="tag">AGUA BOA</span><div class="hint">Contrato prevê 0,1399 US · CEMIG pagou 0</div></div><span class="mono" style="color:#b91c1c;font-weight:700;text-align:right">−R$ 414,71</span><span class="est" style="background:#fef2f2;color:#b91c1c">Contestar</span></div>
+      <div class="hint" style="padding:8px 4px">+ 30 serviços · clique num serviço para abrir os detalhes e o histórico</div>
+
+      <div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:#f6fbfc;border:1px solid #cfe6ea;font-size:12px">
+        <b>Também aconteceu antes:</b> RC sem crédito apareceu em 2 faturas anteriores (9730: 21 serviços; 9612: 17). <span style="color:#0b7285;font-weight:700">Ver o histórico →</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    <div><b>Contestação da fatura 9844</b> <span class="hint">· 34 serviços · R$ 11.854 · agrupada por causa, com a regra do contrato em cada uma</span></div>
+    <div style="display:flex;gap:6px"><span class="acao">Pré-visualizar</span><span class="acao" style="background:#0b7285;border-color:#0b7285;color:#fff">⬇ Gerar planilha para a CEMIG</span></div>
+  </div>
+  <p class="hint" style="margin-top:8px">A recorrência "também aconteceu antes" é só exemplo: hoje só a 9844 está importada.</p>
+</div>
+
+</body></html>
