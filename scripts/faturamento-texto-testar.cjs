@@ -31,4 +31,17 @@ assert.deepEqual(s.grupos.tipo_turma,[{valor:'M',servicos:2,creditado:3,devido:3
 assert.equal(somarTotais([]).servicos,0);
 assert.equal(variacao(903.33,871.05).toFixed(1),'3.7');assert.equal(variacao(1,0),null);
 assert.equal(Object.keys(MOTIVOS_FAT).length,6);assert.equal(SITUACOES_SERVICO_FAT.A_MENOS,'Pagou a menos');
-console.log('OK: textos e soma de totais.');
+// cache dos últimos dados: armazenamento bloqueado ou corrompido não quebra a tela
+const {lerCache,gravarCache,tempoRelativo}=require('../src/lib/cacheTela.ts');
+const mem=new Map(),arm={getItem:k=>mem.get(k)??null,setItem:(k,v)=>mem.set(k,v)};
+gravarCache('painel',{a:1},arm);assert.deepEqual(lerCache('painel',arm).dados,{a:1});
+assert.ok(mem.has('neo-fat:painel'));assert.equal(typeof lerCache('painel',arm).salvoEm,'number');
+assert.equal(lerCache('outra',arm),null);
+const quebrado={getItem(){throw new Error('bloqueado')},setItem(){throw new Error('bloqueado')}};
+assert.equal(lerCache('painel',quebrado),null);assert.doesNotThrow(()=>gravarCache('painel',{a:1},quebrado));
+mem.set('neo-fat:ruim','{nao json');assert.equal(lerCache('ruim',arm),null);
+assert.equal(lerCache('painel'),null);assert.doesNotThrow(()=>gravarCache('painel',{a:1}));   // Node sem localStorage
+assert.equal(tempoRelativo(0,30_000),'agora');assert.equal(tempoRelativo(0,120_000),'há 2 min');
+assert.equal(tempoRelativo(0,3*3600_000),'há 3 h');assert.equal(tempoRelativo(0,2*86400_000),'há 2 dias');
+assert.equal(tempoRelativo(0,86400_000),'há 1 dia');
+console.log('OK: textos, soma de totais e cache.');
