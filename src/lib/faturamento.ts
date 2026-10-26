@@ -14,10 +14,10 @@ export async function contratosFat(): Promise<ContratoFat[]> {
   if (error) throw error;
   return data ?? [];
 }
-export async function configFat(): Promise<{ moto_urbano: number }> {
-  const { data, error } = await supabase.from('neo_fat_config').select('moto_urbano').single();
+export async function configFat(): Promise<{ moto_urbano: number; rural: number }> {
+  const { data, error } = await supabase.from('neo_fat_config').select('moto_urbano,rural').single();
   if (error) throw error;
-  return { moto_urbano: Number(data.moto_urbano) };
+  return { moto_urbano: Number(data.moto_urbano), rural: Number(data.rural) };
 }
 export async function acertarContratoFat(c: ContratoFat, csc: number, cod: number, ativo: boolean, motivo: string) {
   const { error } = await supabase.rpc('neo_fat_acertar_contrato', { p_tabela:c.tabela,p_codigo:c.codigo,p_csc:csc,p_cod:cod,p_ativo:ativo,p_motivo:motivo });

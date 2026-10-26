@@ -39,6 +39,7 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  const listar=f=>{
    const base=real[f.p_filtros.lado==='a_menos'||f.p_filtros.lado==='a_mais'?f.p_filtros.lado:'todos'];
    if(estado.lista==='vazio')return {...base,total:0,servicos:[],lados:{...base.lados,a_menos:{us:0,servicos:0,por_motivo:{}}}};
+   if(estado.lista==='manutencao')return {...base,servicos:[{...base.servicos[0],numserv:'245579601',na_manutencao:true,manutencao_com_valor:true}]};
    if(estado.lista!=='exportar')return base;
    const n=Math.max(Math.min(f.p_limite,1500-f.p_offset),0),modelo=base.servicos[0]??real.a_menos.servicos[0];
    return {...base,total:1500,servicos:Array.from({length:n},(_,i)=>({...modelo,numserv:String(9e8+f.p_offset+i)}))};
@@ -71,7 +72,7 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
    else if(recurso==='neo_fat_registrar_hashes'){registrou=dados();corpo=null;}
    else if(recurso==='neo_fat_atualizar_totais'){totaisPedidos.push(dados().p_fatura);corpo=real.painel[0];}
    else if(recurso==='neo_fat_contrato')corpo=real.contrato;
-   else if(recurso==='neo_fat_config')corpo={moto_urbano:0.7};
+   else if(recurso==='neo_fat_config')corpo={moto_urbano:0.7,rural:1.2};
    else if(recurso==='neo_fat_contrato_historico')corpo=[];
    else throw Error('Requisição inesperada: '+recurso);
    await route.fulfill({status:200,contentType:'application/json',headers:{'content-range':'0-49/50'},body:JSON.stringify(corpo)});
@@ -173,6 +174,22 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await primeiro.click();await page.getByRole('dialog').getByRole('button',{name:'Cancelar'}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  await primeiro.click();await page.getByRole('dialog').getByRole('button',{name:'Fechar'}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  await foto('conferencia-desktop');
+ // Janela do serviço: identificação, fatores, 1.NS na tabela e cruzamento com a Manutenção
+ assert.equal(real.a_menos.servicos[0].numserv,'246101137','o primeiro pago a menos mudou');
+ await primeiro.click();const jan=page.getByRole('dialog');await jan.waitFor();
+ for(const t of ['Nº do serviço','Tipo do serviço','Nº de frota','Tipo da frota','Multifuncional','Rural × 1,2','Histórico'])await jan.getByText(t,{exact:true}).first().waitFor();
+ await jan.getByText('Não encontrado na Manutenção.').waitFor();
+ await jan.getByText('8180',{exact:true}).first().waitFor();
+ assert.equal(await jan.getByText('Devido CSC',{exact:false}).count(),0,'ainda mostra Devido CSC · COD · Moto');
+ assert.equal(await jan.getByText('Moto',{exact:true}).count(),0,'etiqueta Moto na janela');
+ await jan.getByRole('cell',{name:'1.NS',exact:true}).waitFor();
+ assert.equal(await jan.getByText('Pago pela Manutenção',{exact:false}).count(),0,'bloco da Manutenção sem valor');
+ await foto('janela-servico');await page.keyboard.press('Escape');await jan.waitFor({state:'detached'});
+ estado.lista='manutencao';await page.reload();
+ await page.getByRole('button',{name:'Abrir serviço 245579601'}).click();await jan.waitFor();
+ await jan.getByText('Pago pela Manutenção',{exact:false}).waitFor();await jan.getByText('sem código',{exact:true}).waitFor();
+ assert.equal(await jan.getByText('Observação da equipe',{exact:false}).count(),0);
+ await foto('janela-manutencao');await page.keyboard.press('Escape');estado.lista='real';await page.reload();
  // Exportações percorrem as páginas
  estado.lista='exportar';chamadasLista.length=0;
  const [baixado]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.getByRole('button',{name:'Exportar para negociação'}).click()]);
