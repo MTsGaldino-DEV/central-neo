@@ -22,6 +22,16 @@ assert.equal(lerFaturaCompleta(arquivo([{numserv:1,veiculo:7},{numserv:1,veiculo
 assert.throws(()=>lerFaturaCompleta(arquivo([{numserv:1,frota:7}])),/veiculo/);
 assert.throws(()=>lerFaturaCompleta(arquivo([{numserv:null,veiculo:7}])),/numserv/);
 console.log('OK: 21.910 serviços reais, quatro equipes, período, faturas incompatíveis, frota ambígua, turma/veículo incompatíveis e duplicidades.');
+// acionamento, término e área (homem-hora e zona)
+const v779=completa.vinculos.find(v=>v.numserv==='246015779');
+assert.equal(v779.acionamento,'2026-09-17T06:23:00');assert.equal(v779.termino,'2026-09-17T08:36:00');
+assert.deepEqual(completa.vinculos.reduce((c,v)=>(c[v.area]=(c[v.area]||0)+1,c),{}),{U:17137,R:4764,S:9});
+const sint=lerFaturaCompleta(arquivo([{numserv:1,veiculo:7,dh_aciona:'17/09/2026 06:23',dh_terreal:46282.25,cod_tip_area:'r'},{numserv:2,veiculo:7,dh_aciona:null,dh_terreal:'',cod_tip_area:null}])).vinculos;
+assert.equal(sint[0].acionamento,'2026-09-17T06:23:00');assert.equal(sint[0].termino,'2026-09-17T06:00:00');assert.equal(sint[0].area,'R');
+assert.equal(sint[1].acionamento,null);assert.equal(sint[1].termino,null);assert.equal(sint[1].area,null);
+const rep=lerFaturaCompleta(arquivo([{numserv:1,veiculo:7,dh_aciona:'17/09/2026 06:23'},{numserv:1,veiculo:7,dh_aciona:'18/09/2026 07:00'}])).vinculos;
+assert.equal(rep.length,1);assert.equal(rep[0].acionamento,'2026-09-17T06:23:00');
+console.log('OK: acionamento, término e área da Fatura Completa.');
 // importação segura: hash do arquivo, linhas idênticas e resumo antes/depois
 (async()=>{
   const {hashArquivo,linhasDuplicadas,resumoImportacao}=require('../src/lib/faturamentoPlanilhas.ts');

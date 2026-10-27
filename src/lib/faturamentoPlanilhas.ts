@@ -51,6 +51,11 @@ export interface VinculoServicoFat {
   numserv: string;
   numvei: string | null;
   ident_turma: string | null;
+  /** dh_aciona e dh_terreal (aaaa-mm-ddThh:mm:ss): horas do homem-hora. */
+  acionamento: string | null;
+  termino: string | null;
+  /** cod_tip_area: U urbano, R rural, S (tratado como rural). */
+  area: string | null;
 }
 
 export interface LeituraCompletaFat {
@@ -76,6 +81,21 @@ function dataDaPlanilha(valor: unknown): string {
   throw new ErroNeo('Período não encontrado na aba Apropriação da Fatura Completa.');
 }
 
+/** Data e hora da aba Serviço (série do Excel, dd/mm/aaaa hh:mm ou ISO); vazio vira null. */
+function dataHoraDaPlanilha(valor: unknown): string | null {
+  const p = (n: number) => String(n).padStart(2, '0');
+  if (typeof valor === 'number') {
+    const d = XLSX.SSF.parse_date_code(valor);
+    if (d) return `${d.y}-${p(d.m)}-${p(d.d)}T${p(d.H)}:${p(d.M)}:${p(Math.floor(d.S))}`;
+  }
+  const s = texto(valor);
+  const br = s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (br) return `${br[3]}-${br[2]}-${br[1]}T${p(Number(br[4] ?? 0))}:${br[5] ?? '00'}:${br[6] ?? '00'}`;
+  const iso = s.match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (iso) return `${iso[1]}T${iso[2] ?? '00'}:${iso[3] ?? '00'}:${iso[4] ?? '00'}`;
+  return null;
+}
+
 /** Lê somente as abas necessárias, sem carregar endereços/equipes em outras abas. */
 export function lerFaturaCompleta(buffer: ArrayBuffer | Uint8Array): LeituraCompletaFat {
   const wb = lerPlanilha(buffer, { type: 'array', sheets: ['Serviço', 'Servico', 'Apropriação', 'Apropriacao'] });
@@ -97,12 +117,22 @@ export function lerFaturaCompleta(buffer: ArrayBuffer | Uint8Array): LeituraComp
       numserv: texto(r.numserv),
       numvei: texto(r.veiculo) || null,
       ident_turma: texto(r.ident_turma) || null,
+      acionamento: dataHoraDaPlanilha(r.dh_aciona),
+      termino: dataHoraDaPlanilha(r.dh_terreal),
+      area: texto(r.cod_tip_area).toUpperCase() || null,
     };
     const anterior = unicos.get(vinculo.numserv);
     if (anterior && (anterior.numvei !== vinculo.numvei || anterior.ident_turma !== vinculo.ident_turma)) {
       throw new ErroNeo(`O serviço ${vinculo.numserv} tem vínculos diferentes na Fatura Completa. Revise a origem.`);
     }
-    unicos.set(vinculo.numserv, vinculo);
+    // Linha repetida do serviço: vale o primeiro horário e a primeira área informados.
+    if (anterior) unicos.set(vinculo.numserv, {
+      ...anterior,
+      acionamento: anterior.acionamento ?? vinculo.acionamento,
+      termino: anterior.termino ?? vinculo.termino,
+      area: anterior.area ?? vinculo.area,
+    });
+    else unicos.set(vinculo.numserv, vinculo);
   }
   if (!unicos.size) throw new ErroNeo('A aba Serviço da Fatura Completa está vazia.');
   return { fatura, inicio, fim, vinculos: [...unicos.values()] };
