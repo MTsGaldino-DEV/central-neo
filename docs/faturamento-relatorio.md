@@ -2,6 +2,19 @@
 
 Atualizado em 23/10/2026. Os dois PDFs fornecidos foram lidos por inteiro: [Código de Serviço Unificado.pdf](../Comparação%20de%20fatura/Código%20de%20Serviço%20Unificado.pdf) (Tabela 11, 14 páginas) e [Nota de Serviço Unificado.pdf](../Comparação%20de%20fatura/Nota%20de%20Serviço%20Unificado.pdf) (Tabela 12, 2 páginas). As tabelas, descrições, coluna **Como lançar** e notas ao fim de cada PDF foram confrontadas com a fatura 9844. O texto da NOTA 8 termina cortado nos dois arquivos e a NOTA 10, citada em quatro códigos, não consta neles.
 
+## Homem-hora, despacho COD e área (27/10/2026)
+
+Regras do Matheus, desenho em [2026-10-27-faturamento-homem-hora-cod-design.md](superpowers/specs/2026-10-27-faturamento-homem-hora-cod-design.md). Migration local **039**.
+
+- **Despacho:** o serviço é COD quando o `tipo_serv` está na lista do COD (`neo_fat_despacho_cod`, 43 tipos, com RC01); senão, CSC. A escolha pelo valor que coincide acabou. Na 9844, antes: tipos da lista com CSC ≠ COD → 1.350 linhas pagas como COD e 6 como CSC (RC08); fora da lista → 12 pagas como COD (RC01 ×3, RC04, RC06, RC07 ×5, RC21, RC36).
+- **Área:** Fatura Completa, aba Serviço, `cod_tip_area` (U urbano; R e **S** rural). A quantidade continua K + M. Bateu com K/M em todas as 26.760 linhas com quantidade; 10 linhas com S passaram a rural.
+- **Homem-hora (1.62, 1.73, 5.63, 5.64):** horas = `dh_terreal − dh_aciona`, por minuto (a CEMIG paga assim: 61/61 serviços 1.62 conferem), × Tabela 14 pela equipe (`neo_fat_prontidao`: dupla 0,1097, umpla 0,0922, moto 0,0366, quarteto 0,1753 US/h) × (1 + 0,2 COD + 0,2 rural).
+- **1.62 na 9844:** 61 serviços, todos COD (MA62), 39 rurais e 22 urbanos; devido 9,9655 US contra 7,6662 pagos (a CEMIG usou 0,1097 × 1,0 em todos).
+- **5.63/5.64:** só 2 viram homem-hora (245640158, 246310816: 0,071586 US, pagos 0). Os 5.64 de 246042202 (RC15) e 246140737 (RC05) vêm com o código 0.00, então pela regra de transposição o RC continua pago.
+- **Situação dos serviços na 9844:** a menos 106 → 178, a mais 172 → 181, fora 88 → 27, conferem 21.544 → 21.524. Mudanças: 59 homem-hora fora → a menos e 2 fora → confere; 2 5.63 → a menos; 9 RC04/06/07/21/36 pagos como COD → a mais; 6 RC08 pagos como CSC → a menos; 5 serviços com área S → a menos (rural).
+- **Totais da 9844:** devido 858,175 → 869,387 US; a menos 7,447 → 10,766 US (R$ 31.913,78); a mais 17,002 → 16,774 US.
+- Faturas importadas antes da 039 não têm horário nem área: a 9844 foi preenchida por `scripts/faturamento-tempo-carregar.cjs`; as próximas importações já gravam tudo.
+
 ## Rodada 2 (26/10/2026)
 
 - **Painel** (`/faturamento/painel`, antigo Resumo): dois cards, "pagou a menos" (principal) e "pagou a mais", cada um com "A CEMIG pagou X e o contrato prevê Y"; funil até os divergentes; gráfico com resumo no mouse; valores em **R$** pelo valor da US mais recente do apostilamento (hoje R$ 2.964,33), com a chave R$ | US.
@@ -9,7 +22,7 @@ Atualizado em 23/10/2026. Os dois PDFs fornecidos foram lidos por inteiro: [Cód
 - **Janela do serviço** com nº de frota, tipo do serviço, nº do serviço e tipo da frota em destaque; fatores aplicados em cima; tabela só com o pago; o 1.NS cruzado com a **Manutenção** (antigo Fechamento de Notas), sem entrar na soma; histórico.
 - **Tempo esgotado** ("canceling statement due to statement timeout") resolvido na **035**: o cálculo por serviço fica guardado em `neo_fat_servicos_calc` e só é refeito quando algo muda. A **036** traz filtros por coluna, totais por lado, Manutenção, histórico e o valor da US; a **037** deixou esses filtros rápidos (0,1–0,2 s).
 - Na 9844: 204 serviços com 1.NS, 94 deles na Manutenção, 63 com valor lançado. Os lançamentos antigos da Manutenção não têm código, então aparecem como "sem código".
-- Fora do contrato (88 na 9844): 61 são o código 1.62, que está na Tabela 11 sem fator (a CEMIG pagou 7,666 US neles); 27 usam códigos que não existem na tabela, todos com crédito zero.
+- Fora do contrato (88 na 9844): 61 são o código 1.62, que está na Tabela 11 sem fator (a CEMIG pagou 7,666 US neles); 27 usam códigos que não existem na tabela, todos com crédito zero. *(27/10: o 1.62 passou a ser calculado por hora; ficam 27 fora.)*
 
 ## Conferência por serviço (26/10/2026)
 
@@ -93,14 +106,14 @@ A [extração por célula](faturamento-celulas-pdf.json) guarda página, posiç�
 
 | Decisão | Ponto de ajuste | Efeito na 9844 |
 |---|---|---|
-| Comparar CSC/CSI e COD, sem campo que identifique o centro acionador | `neo_fat_calculo`, seleção de candidatos; `neo_fat_contrato.fator_csc/fator_cod` | O fator que coincide é mostrado; referência CSC quando nenhum coincide. Devido parcial: **857,921936 US**; alternativas sem troca por coincidência: CSC **836,567217** / COD **1.003,879036**. |
+| Comparar CSC/CSI e COD, sem campo que identifique o centro acionador | `neo_fat_calculo`, seleção de candidatos; `neo_fat_contrato.fator_csc/fator_cod` | O fator que coincide é mostrado; referência CSC quando nenhum coincide. Devido parcial: **857,921936 US**; alternativas sem troca por coincidência: CSC **836,567217** / COD **1.003,879036**. | **Substituído em 27/10/2026:** despacho pela lista do COD.
 | Rural e moto por código da Tabela 11; moto 0,7/0,9 para códigos sem exceção e RC | `neo_fat_base`; `neo_fat_contrato.rural/moto`; `neo_fat_config.rural/moto_urbano/moto_rural` | 5.70, 6.01 e 6.05 de Moto deixam de ser falsamente divergentes por desconto indevido. O rural de Moto 0,9 ainda depende de confirmação. |
 | Lista de códigos que transpõem RC | Tabela `neo_fat_rc_transposicao` (campo `ativo`) e `neo_fat_base` | 1.813 serviços usam Tabela 11; exemplo RC07/8.82 fecha em 0,016340 US, sem somar RC. |
 | RC pago uma vez por atendimento; devido alocado à primeira linha para totalização | `neo_fat_base` e `neo_fat_calculo` | 1.310 linhas em `REVISAR_RC_MULTILINHA`; 642 `DIVERGENTE`. A alocação não afirma que a primeira linha executou todo o atendimento. |
-| L/N/O guardadas sem cálculo | `neo_fat_calculo.observacoes`; `neo_fat_linhas.dados` | 61 linhas MA62/1.62 com `qtdhh`; aguardam regra/fator da NOTA 10. |
+| L/N/O guardadas sem cálculo | `neo_fat_calculo.observacoes`; `neo_fat_linhas.dados` | 61 linhas MA62/1.62 com `qtdhh`; aguardam regra/fator da NOTA 10. | **27/10/2026:** coluna O (homem-hora) calculada pela Tabela 14.
 | Moto provável somente quando equipe não identificada | `neo_fat_calculo` e vínculo das duas planilhas | 0 `MOTO_PROVAVEL`; todos os 21.910 serviços têm equipe identificada. |
 | Glosa positiva como estorno; débito negativo separado | `neo_fat_calculo`; `neo_fat_resumo` | Crédito **917,112183**, débito **21,226389**, estorno **7,446161 US**. Glosa parcial continua caso de revisão. |
-| NOTA 10 sem regra nem fator inventado | `neo_fat_contrato.nota`, `fator_csc/fator_cod` nulos | 1.62/1.73/5.63/5.64 ficam sem cálculo quando aplicáveis. |
+| NOTA 10 sem regra nem fator inventado | `neo_fat_contrato.nota`, `fator_csc/fator_cod` nulos | 1.62/1.73/5.63/5.64 ficam sem cálculo quando aplicáveis. | **27/10/2026:** calculados por hora (Tabela 14), regra do Matheus.
 | Tolerância e seis casas decimais | `neo_fat_config.tolerancia`; `round` em `neo_fat_base` | Tolerância atual: **0,000001 US**. |
 
 ## Números da fatura 9844

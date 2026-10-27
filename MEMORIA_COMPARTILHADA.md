@@ -1,6 +1,6 @@
 # Memória compartilhada — Central NEO
 
-Atualizada em 26/10/2026 pelo Claude (rodada 2 do Faturamento). Este arquivo é o ponto de continuidade entre
+Atualizada em 27/10/2026 pelo Claude (homem-hora e despacho COD no Faturamento). Este arquivo é o ponto de continuidade entre
 Codex e Claude neste repositório. Guarda decisões e estado de trabalho, não o
 histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
@@ -67,6 +67,44 @@ fica fora e pode deixar os cards zerados. Matheus pretende resolver com a sincro
 com o GDIS. Não ampliar a base desses cards sem solicitação. Relembrar quando essa
 integração for retomada.
 
+## Última entrega: homem-hora, despacho COD e área — 27/10/2026 (Claude)
+
+Desenho: `docs/superpowers/specs/2026-10-27-faturamento-homem-hora-cod-design.md`. Plano:
+`docs/superpowers/plans/2026-10-27-faturamento-homem-hora-cod.md`. Commits na `main`, **sem push**.
+Migration **039** aplicada no CENTRAL-NEO (arquivo local em `supabase/`, fora do Git).
+
+Regras do Matheus em vigor:
+- **Despacho:** COD quando o `tipo_serv` está em `neo_fat_despacho_cod` (43 tipos: MA01…MA95,
+  MACT, MAC1, MAB8, NSRI, RC01, RC08, RC09, RC11); senão CSC. Não se escolhe mais pelo valor
+  que coincide. RC04/RC06/RC07/RC21/RC36 pagos como COD = pagos a mais (decisão do Matheus).
+- **Área:** `cod_tip_area` da aba Serviço da Fatura Completa (U urbano; R rural; **S rural,
+  provisório**). Quantidade continua nas colunas K + M. Sem área (fatura antiga) → K/M.
+- **Homem-hora** (1.62, 1.73, 5.63, 5.64, `neo_fat_contrato.remuneracao='HOMEM_HORA'`):
+  horas de `dh_aciona` a `dh_terreal`, por minuto (como a CEMIG) × Tabela 14 pela equipe
+  (`neo_fat_prontidao`: D 0,1097, U 0,0922, M 0,0366, Q 0,1753 US/h) × (1 + 0,2 COD + 0,2 rural).
+  Moto não leva o fator 0,7. Sem equipe/horário ou término antes do acionamento → sem devido,
+  com observação. Ligação equipe → linha da Tabela 14 é decisão do Claude (sem objeção).
+- A importação grava `acionamento`, `termino` e `area` em `neo_fat_anexos` (aba `Servico`).
+  A 9844 foi preenchida por `scripts/faturamento-tempo-carregar.cjs`.
+- Telas: janela do serviço mostra "COD (lista)" e a conta do homem-hora; Tabelas do contrato
+  mostram a lista do COD e a Tabela 14 (só leitura, RPC `neo_fat_regras_despacho`).
+
+9844 depois: a menos 178 (10,766 US · R$ 31.913,78), a mais 181, fora 27, conferem 21.524.
+1.62: devido 9,9655 US contra 7,6662 pagos. Detalhes e transições no relatório
+(`docs/faturamento-relatorio.md`, seção de 27/10/2026).
+
+Verificado em 27/10/2026: `faturamento-homem-hora-testar` (novo), todos os
+`scripts/faturamento-*testar.cjs` (números alterados pela regra anotados nos testes),
+typecheck, build e interface com APIs simuladas (`NEO_TEST_URL=http://localhost:5173`;
+capturas `janela-homem-hora` e `contrato-homem-hora` conferidas). Cálculo por linha ficou mais
+rápido (contagem 1,2 s contra 1,9 s). Não verificado: login real.
+
+Pendências:
+- **Perguntar à supervisora Elen o que é `S` em `cod_tip_area`** (hoje rural; 9 serviços na 9844).
+- Matheus disse que ensinaria mais sobre CSC × COD; se houver outro critério além da lista, revisar.
+- 5.64 em serviço RC com código 0.00 (RC05/RC15 na 9844) continua pago pelo RC (regra de transposição).
+- Linha viva, caminhão com 2/3/5–9 elementos e hora extra da Tabela 14 não são identificáveis na fatura.
+
 ## Ajuste: total pago no Início e no Painel — 26/10/2026 (Claude)
 
 - **Início:** o card Faturamento mostra a fatura mais recente (`neo_fat_painel()[0]`, mesmo
@@ -131,7 +169,7 @@ Verificado em 26/10/2026: typecheck, build e todos os `scripts/faturamento-*test
 
 Pendências: Matheus mostrar a quem usa o modelo "Conferência como sistema"
 (`docs/modelos/conferencia-sistema.html`) antes de decidir; conferir o deploy; código 1.62
-(61 serviços) sem fator no contrato; envio para a gestora adiado pelo Matheus.
+(61 serviços) sem fator no contrato (resolvido em 27/10/2026, homem-hora); envio para a gestora adiado pelo Matheus.
 
 ## Entrega anterior: redesenho do Faturamento por serviço — 26/10/2026 (Claude)
 
