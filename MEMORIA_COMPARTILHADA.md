@@ -70,7 +70,7 @@ integração for retomada.
 ## Última entrega: homem-hora, despacho COD e área — 27/10/2026 (Claude)
 
 Desenho: `docs/superpowers/specs/2026-10-27-faturamento-homem-hora-cod-design.md`. Plano:
-`docs/superpowers/plans/2026-10-27-faturamento-homem-hora-cod.md`. Commits na `main`, **sem push**.
+`docs/superpowers/plans/2026-10-27-faturamento-homem-hora-cod.md`. Commits `e6d5c46`..`74998c1` na `main`; **push feito em 27/10/2026**.
 Migration **039** aplicada no CENTRAL-NEO (arquivo local em `supabase/`, fora do Git).
 
 Regras do Matheus em vigor:
