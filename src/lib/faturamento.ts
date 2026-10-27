@@ -8,6 +8,15 @@ export interface ContratoFat {
   fator_csc: number | null; fator_cod: number | null;
   rural: string | null; moto: string | null; nota: string | null;
   ativo: boolean; validado: boolean; origem: string;
+  /** HOMEM_HORA: pago por hora pela Tabela 14 (1.62, 1.73, 5.63, 5.64). */
+  remuneracao: string | null;
+}
+export interface ProntidaoFat { tipo_turma: string; elementos: number; veiculo: string; us_hora: number }
+/** Tipos de serviço despachados pelo COD e Tabela 14 (US/h por equipe), só leitura. */
+export async function regrasDespachoFat(): Promise<{ despacho_cod: string[]; prontidao: ProntidaoFat[] }> {
+  const { data, error } = await supabase.rpc('neo_fat_regras_despacho');
+  if (error) throw error;
+  return data ?? { despacho_cod: [], prontidao: [] };
 }
 export async function contratosFat(): Promise<ContratoFat[]> {
   const { data, error } = await supabase.from('neo_fat_contrato').select('*').order('tabela').order('codigo');

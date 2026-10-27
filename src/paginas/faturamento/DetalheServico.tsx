@@ -55,7 +55,9 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
   const descricao = (l: LinhaServicoFat) => contrato.dados?.find(c => c.codigo === l.codserv && (!l.tabela || c.tabela === l.tabela))?.descricao?.split(/\r?\n/)[0] ?? '—';
   const lista = linhas ?? [];
   const normais = lista.filter(l => l.codserv !== '1.NS'), ns = lista.filter(l => l.codserv === '1.NS');
-  const temUrbano = lista.some(l => Number(l.urbano) > 0), temRural = lista.some(l => Number(l.rural) > 0);
+  // Área pela Fatura Completa (cod_tip_area); homem-hora não tem quantidade urbana/rural.
+  const zonaLinha = (l: LinhaServicoFat) => l.area ?? (Number(l.rural) > 0 ? (Number(l.urbano) > 0 ? 'AMBAS' : 'RURAL') : 'URBANO');
+  const temUrbano = lista.some(l => ['URBANO', 'AMBAS'].includes(zonaLinha(l))), temRural = lista.some(l => ['RURAL', 'AMBAS'].includes(zonaLinha(l)));
   const zona = temUrbano && temRural ? 'Urbana e rural' : temRural ? 'Rural' : 'Urbana';
   const outros = servico.codigos.filter(c => c !== '1.NS');
   const glosas = lista.filter(l => Number(l.glosa) !== 0);
@@ -63,7 +65,12 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
     const f = contrato.dados?.find(c => c.codigo === l.codserv && c.tabela === l.tabela);
     const fx = servico.fator_aplicado === 'COD' ? f?.fator_cod : f?.fator_csc;
     const devido = servico.moto ? (servico.fator_aplicado === 'COD' ? l.moto_cod : l.moto_csc) : (servico.fator_aplicado === 'COD' ? l.devido_cod : l.devido_csc);
-    if (devido == null) return null;
+    const homemHora = l.observacoes?.split('; ').find(o => o.startsWith('homem-hora'));
+    if (l.horas != null && l.us_hora != null && devido != null) {
+      const min = Math.round(Number(l.horas) * 60);
+      return `${l.codserv}: ${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')} × ${fator(l.us_hora)} US/h × ${fator(l.multiplicador)} (${l.despacho ?? servico.fator_aplicado} ${zonaLinha(l) === 'RURAL' ? 'rural' : 'urbano'}) = ${usFat(devido)} US devido · a CEMIG pagou ${usFat(l.creditado)}`;
+    }
+    if (devido == null) return homemHora ? `${l.codserv}: ${homemHora}` : null;
     const qtd = [Number(l.urbano) > 0 && `${fator(l.urbano)} urbano`, Number(l.rural) > 0 && `${fator(l.rural)} rural × ${fator(rural)}`].filter(Boolean).join(' + ');
     return `${l.codserv}: fator ${servico.fator_aplicado ?? 'CSC'} ${fator(fx)} × ${qtd || '1'}${servico.moto ? ' (valor Moto)' : ''} = ${usFat(devido)} US devido · a CEMIG pagou ${usFat(l.creditado)}`;
   };
@@ -103,7 +110,7 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
         <section>
           <p className={rotulo}>Como o devido foi calculado</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            <span className={etiqueta}>Despacho <b className="text-sinal">{servico.fator_aplicado ?? '—'}</b></span>
+            <span className={etiqueta}>Despacho <b className="text-sinal">{servico.fator_aplicado === 'COD' ? 'COD (lista)' : servico.fator_aplicado ?? '—'}</b></span>
             <span className={etiqueta}>Zona <b className="text-sinal">{temRural ? `Rural × ${fator(rural)}` : 'Urbano'}</b></span>
             <span className={etiqueta}>Tabela <b className="text-sinal">{servico.tabela ?? 'fora'}</b></span>
           </div>
@@ -132,7 +139,7 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
                   {normais.map(l => (
                     <tr key={l.id} className="border-t border-linha">
                       <td className="py-1.5 pr-2 font-codigo font-bold">{l.codserv}</td><td className="pr-2">{descricao(l)}</td>
-                      <td className="pr-2">{Number(l.rural) > 0 ? (Number(l.urbano) > 0 ? 'Urbana e rural' : 'Rural') : 'Urbana'}</td>
+                      <td className="pr-2">{({ RURAL: 'Rural', AMBAS: 'Urbana e rural' } as Record<string, string>)[zonaLinha(l)] ?? 'Urbana'}</td>
                       <td className={`pr-2 text-right font-codigo ${Number(l.creditado) === 0 && (servico.devido ?? 0) > 0 ? 'font-bold text-erro' : ''}`}>{usFat(l.creditado)}</td>
                       <td className={`text-right font-codigo ${Number(l.glosa) < 0 ? 'text-erro' : 'text-aco-claro'}`}>{Number(l.glosa) ? usFat(l.glosa) : '—'}</td>
                     </tr>

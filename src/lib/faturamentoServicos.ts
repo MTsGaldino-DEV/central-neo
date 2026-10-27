@@ -16,6 +16,8 @@ export interface ServicoFat {
 export interface LinhaServicoFat {
   id:string; codserv:string; tipo_serv:string; tabela:string|null; urbano:number; rural:number; creditado:number; glosa:number;
   devido_csc:number|null; devido_cod:number|null; moto_csc:number|null; moto_cod:number|null; justificativa:string|null; observacoes:string;
+  /** Despacho pela lista do COD; área pela Fatura Completa; horas/US-h/multiplicador só no homem-hora. */
+  despacho?:'CSC'|'COD'; area?:'URBANO'|'RURAL'|null; horas?:number|null; us_hora?:number|null; multiplicador?:number|null;
 }
 export type LadoFat = 'a_menos'|'a_mais'|'todos';
 export interface LadoResumoFat { us:number; servicos:number; por_motivo:Record<string,{us:number;servicos:number}> }

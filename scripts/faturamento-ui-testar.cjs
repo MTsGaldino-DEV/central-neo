@@ -23,7 +23,8 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
      real.contrato=await t`select * from neo_fat_contrato`;
      await t`select neo_fat_atualizar_totais('9844')`;
      real.painel=(await t`select neo_fat_painel() d`)[0].d;
-     real.valorUs=(await t`select neo_fat_valor_us() d`)[0].d;
+     real.valorUs=(await t`select neo_fat_valor_us() d`)[0].d;real.regras=(await t`select neo_fat_regras_despacho() d`)[0].d;
+     real.hh=(await t`select to_jsonb(s) d from neo_fat_servicos_lista s where fatura='9844' and numserv='246015779'`)[0].d;real.linhasHH=(await t`select neo_fat_servico_linhas('9844','246015779') d`)[0].d;
      real.manutencao={};for(const n of ['246101137','245579601'])real.manutencao[n]=(await t`select neo_fat_servico_manutencao(${n}) d`)[0].d;
      real.historico=(await t`select neo_fat_servico_historico('9844','246101137') d`)[0].d;
      for(const lado of ['a_menos','a_mais','todos'])real[lado]=(await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado})},0,50) d`)[0].d;
@@ -39,6 +40,7 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  const listar=f=>{
    const base=real[f.p_filtros.lado==='a_menos'||f.p_filtros.lado==='a_mais'?f.p_filtros.lado:'todos'];
    if(estado.lista==='vazio')return {...base,total:0,servicos:[],lados:{...base.lados,a_menos:{us:0,servicos:0,por_motivo:{}}}};
+   if(estado.lista==='homem-hora')return {...base,total:1,servicos:[real.hh]};
    if(estado.lista==='manutencao')return {...base,servicos:[{...base.servicos[0],numserv:'245579601',na_manutencao:true,manutencao_com_valor:true}]};
    if(estado.lista!=='exportar')return base;
    const n=Math.max(Math.min(f.p_limite,1500-f.p_offset),0),modelo=base.servicos[0]??real.a_menos.servicos[0];
@@ -59,7 +61,8 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
    else if(recurso==='neo_fat_painel')corpo=estado.painel==='vazio'?[]:real.painel;
    else if(recurso==='neo_fat_faturas_desatualizadas')corpo=estado.desatualizadas;
    else if(recurso==='neo_fat_servicos_listar'){const f=dados();chamadasLista.push({lado:f.p_filtros.lado,offset:f.p_offset,modo:estado.lista,fatura:f.p_filtros.fatura,filtros:f.p_filtros});corpo=listar(f);}
-   else if(recurso==='neo_fat_servico_linhas')corpo=real.linhas;
+   else if(recurso==='neo_fat_servico_linhas')corpo=dados().p_numserv==='246015779'?real.linhasHH:real.linhas;
+   else if(recurso==='neo_fat_regras_despacho')corpo=real.regras;
    else if(recurso==='neo_fat_valor_us')corpo=estado.valorUs==='nenhum'?null:real.valorUs;
    else if(recurso==='neo_fat_servicos_valores'){const f=dados();chamadasValores.push(f);corpo=estado.valores==='muitos'?Array.from({length:200},(_,i)=>({valor:'V'+i,n:200-i})):[{valor:'ALPERCATA',n:2},{valor:'COLUNA',n:1}];}
    else if(recurso==='neo_fat_servico_manutencao')corpo=real.manutencao[dados().p_numserv]??{existe:false,itens:[]};
@@ -121,12 +124,12 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  assert.equal(await page.locator('input[type=date]').count(),0);
  await page.getByText('Pagou a menos',{exact:true}).first().waitFor();
  await page.getByText('Pagou a mais',{exact:true}).first().waitFor();
- await page.getByText('−R$ 22.076,19').first().waitFor();
+ await page.getByText('−R$ 31.913,78').first().waitFor();
  await page.getByText('1 US = R$ 2.964,33').first().waitFor();
  await page.getByText('são 5.62 pago como RC inteiro',{exact:false}).first().waitFor();
  await page.getByRole('button',{name:'US',exact:true}).click();
  await page.waitForURL(u=>u.searchParams.get('unidade')==='us');
- await page.getByText('−7,447278 US').first().waitFor();
+ await page.getByText('−10,765935 US').first().waitFor();
  await foto('painel-desktop');
  // Funil até os divergentes, explicação no "i" e resumo do gráfico no mouse
  const larguras=await page.locator('[data-etapa]').evaluateAll(l=>l.map(e=>e.getBoundingClientRect().width));
@@ -138,8 +141,8 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await page.getByText('Serviços em que a CEMIG pagou diferente do que o contrato prevê',{exact:false}).waitFor();
  await page.locator('[data-grafico-fatura="9844"]').hover();
  const balao=page.getByRole('tooltip');await balao.waitFor();
- await balao.getByText('A menos · 106').waitFor();await balao.getByText('A mais · 172').waitFor();
- assert.notEqual(await balao.getByText('A menos · 106').evaluate(e=>e.getBoundingClientRect().top),await balao.getByText('A mais · 172').evaluate(e=>e.getBoundingClientRect().top),'resumo do gráfico numa linha só');
+ await balao.getByText('A menos · 178').waitFor();await balao.getByText('A mais · 181').waitFor();
+ assert.notEqual(await balao.getByText('A menos · 178').evaluate(e=>e.getBoundingClientRect().top),await balao.getByText('A mais · 181').evaluate(e=>e.getBoundingClientRect().top),'resumo do gráfico numa linha só');
  await page.goto(urlBase+'/faturamento/painel');
  assert.equal(await page.getByRole('button',{name:'3 meses'}).getAttribute('aria-pressed'),'true');
  estado.valorUs='nenhum';await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('neo-fat:valor-us')).forEach(k=>localStorage.removeItem(k)));
@@ -219,6 +222,12 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await jan.getByText('Pago pela Manutenção',{exact:false}).waitFor();await jan.getByText('sem código',{exact:true}).waitFor();
  assert.equal(await jan.getByText('Observação da equipe',{exact:false}).count(),0);
  await foto('janela-manutencao');await page.keyboard.press('Escape');estado.lista='real';await page.reload();
+ // Homem-hora: horas × US/h × multiplicador, despacho pela lista do COD
+ estado.lista='homem-hora';await page.reload();
+ await page.getByRole('button',{name:'Abrir serviço 246015779'}).click();await jan.waitFor();
+ await jan.getByText('COD (lista)',{exact:true}).waitFor();
+ await jan.getByText(/1\.62: 2h13 × 0,1097 US\/h × 1,[24] \(COD (rural|urbano)\)/).waitFor();
+ await foto('janela-homem-hora');await page.keyboard.press('Escape');estado.lista='real';await page.reload();
  // Exportações percorrem as páginas
  estado.lista='exportar';chamadasLista.length=0;
  const [baixado]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.getByRole('button',{name:'Exportar para negociação'}).click()]);
@@ -243,6 +252,11 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  const colContrato=(await page.getByRole('columnheader').allTextContents()).map(t=>t.trim());
  assert(colContrato.indexOf('Valor Moto')>=0&&colContrato.indexOf('Valor Moto')<colContrato.indexOf('Fator Moto'),'Valor Moto deve vir antes de Fator Moto: '+colContrato);
  await foto('contrato-moto');
+ await page.getByLabel('Buscar código ou descrição').fill('1.62');
+ await page.locator('tr[data-codigo="1.62"]').getByText('por hora (Tabela 14), inclusive Moto').waitFor();
+ await page.getByText('Despachados pelo COD',{exact:true}).waitFor();await page.getByText('RC01',{exact:true}).waitFor();
+ await page.getByRole('cell',{name:'0,0922',exact:true}).waitFor();
+ await foto('contrato-homem-hora');
 
  // Documentação: uma página por aba, no layout dos guias do Mercado Livre
  await page.goto(urlBase+'/faturamento/documentacao#rc-codigo');
