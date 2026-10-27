@@ -17,7 +17,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal(r.total,3);assert.ok(r.servicos.every(s=>s.tem_1ns===true));
     const s137=r.servicos.find(s=>s.numserv==='246101137');assert.ok(s137);assert.equal(s137.na_manutencao,false);
     assert.equal((await listar({lado:'todos',tem_562:'sim',situacoes:['A_MAIS']})).total,158);
-    assert.equal((await listar({lado:'a_menos',multado:'sim'})).total,72);
+    assert.equal((await listar({lado:'a_menos',multado:'sim'})).total,74); // 72 até a 039 (despacho pela lista e área S rural)
     assert.equal((await listar({lado:'todos',codigos:['1.62']})).total,61);
     r=await listar({lado:'todos',cidades:['ALPERCATA'],codigos:['1.21']});
     assert.ok(r.servicos.some(s=>s.numserv==='246101137'));assert.ok(r.servicos.every(s=>s.cidade==='ALPERCATA'));
@@ -32,7 +32,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
 
     // revisão final: a soma do cabeçalho segue a lista filtrada (motivo incluso)
     r=await listar({lado:'a_menos',motivos:['RC_NAO_PAGO']});
-    assert.equal(r.total,34);assert.equal(Number(r.soma).toFixed(6),'-3.998762');
+    assert.equal(r.total,34);assert.equal(Number(r.soma).toFixed(6),'-4.189605'); // -3.998762 até a 039: RC08/09/11 não pagos valem COD
     let v=await valores({lado:'a_menos'},'motivo');
     assert.equal(v.find(x=>x.valor==='RC_NAO_PAGO').n,34);
     v=await valores({lado:'a_menos',motivos:['RC_NAO_PAGO']},'motivo');
@@ -45,10 +45,11 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     await rejeita(()=>valores({lado:'todos'},'senha'),/Coluna inválida/);
 
     const tot=(await t`select neo_fat_atualizar_totais('9844') d`)[0].d;
-    assert.equal(tot.a_menos.servicos,106);assert.equal(tot.a_menos.com_1ns,3);
-    assert.equal(Number(tot.a_menos.pago).toFixed(4),'5.1968');assert.equal(Number(tot.a_menos.devido).toFixed(4),'12.6441');
-    assert.equal(Number(tot.a_menos.us).toFixed(4),'7.4473');
-    assert.equal(tot.a_mais.c562.servicos,158);assert.equal(tot.fora_contrato,88);
+    // Até a 039: 106 serviços, pago 5,1968, devido 12,6441, 7,4473 a menos e 88 fora (homem-hora sem regra).
+    assert.equal(tot.a_menos.servicos,178);assert.equal(tot.a_menos.com_1ns,3);
+    assert.equal(Number(tot.a_menos.pago).toFixed(4),'13.5243');assert.equal(Number(tot.a_menos.devido).toFixed(4),'24.2902');
+    assert.equal(Number(tot.a_menos.us).toFixed(4),'10.7659');
+    assert.equal(tot.a_mais.c562.servicos,158);assert.equal(tot.fora_contrato,27);
 
     let m=(await t`select neo_fat_servico_manutencao('246101137') d`)[0].d;
     assert.deepEqual(m,{existe:false,itens:[]});

@@ -9,7 +9,7 @@ const sql=postgres(env.NEO_DATABASE_URL,{ssl:'require',prepare:false,onnotice:()
  const [ex]=await t`select * from neo_fat_conferencia where fatura='9844' and numserv='246220152' and codserv='7.28'`;
  assert.equal(Number(ex.creditado),0.056511);assert.equal(ex.situacao_calculo,'OK');assert.equal(ex.tabela,'11');
  await t`insert into neo_fat_faturas(id,arquivo,inicio,fim) values('__teste__','teste','2026-09-02','2026-10-01')`;
- const casos=[['moto','RC79','1.02',9,0.421205],['divergente','RC79','7.28',9,9],['ausente','RC79','SEM-CODIGO',9,1],['rc1','RC08','5.71',1,0.058292],['rc2','RC08','T.10',1,0.058292]];
+ const casos=[['moto','RC79','1.02',9,0.421205],['divergente','RC79','7.28',9,9],['ausente','RC79','SEM-CODIGO',9,1],['rc1','RC08','5.71',1,0.069950],['rc2','RC08','T.10',1,0.069951]];
  for(const [id,tipo,codigo,qtd,valor] of casos){const dados={...ex.dados,qtdurbanohn:qtd,qtdruralhn:0,ustotal:valor,usglosa:0};await t`insert into neo_fat_linhas values('__teste__',${id},${String(id).startsWith('rc')?'rc':id},${tipo},${codigo},'TESTE',${t.json(dados)})`;}
  for(const [id,codigo,urbano,rural,credito] of [['sem_desconto','6.01',1,0,0.001065],['rural_moto','1.02',0,1,0.060172],['rural_zero','7.70',0,1,0]]){
    const dados={...ex.dados,qtdurbanohn:urbano,qtdruralhn:rural,ustotal:credito,usglosa:0};
