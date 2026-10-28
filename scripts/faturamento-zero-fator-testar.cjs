@@ -8,6 +8,8 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
   await rollback(async t=>{
     const [{v}]=await t`select neo_fat_impressao_calc('9844')->>0 v`;
     if(v!=='041')await t.unsafe(fs.readFileSync('supabase/migrations/041_faturamento_006_fator12.sql','utf8'));
+    const [{tem08}]=await t`select pg_get_viewdef('neo_fat_servicos_lista'::regclass) like '%0.8%' tem08`;
+    if(!tem08)await t.unsafe(fs.readFileSync('supabase/migrations/042_faturamento_fator_08.sql','utf8'));
     const [admin]=await t`select user_id from neo_acessos where papel='ADMIN' and ativo limit 1`;
     await t`select set_config('request.jwt.claim.sub',${admin.user_id},true)`;
     await t`select neo_fat_recalcular('9844')`;
@@ -40,6 +42,10 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal((await listar({lado:'a_mais',fator_12:'sim'})).total,nc.acima);
     assert.equal((await listar({lado:'a_menos',fator_12:'nao'})).total+nc.abaixo,(await listar({lado:'a_menos'})).total);
     assert.equal((await listar({lado:'a_mais',fator_12:'sim'})).servicos[0].fator_12,'ACIMA');
+    // 20% a menos ao pé da letra: pago = devido × 0,8
+    await t`update neo_fat_servicos_calc set pago_comparado=round(devido*0.8,6) where fatura='9844' and numserv='246015779'`;
+    const [p08]=await t`select fator_12 from neo_fat_servicos_lista where fatura='9844' and numserv='246015779'`;
+    assert.equal(p08.fator_12,'ABAIXO_08');
   });
   console.log('OK: 0.06 zera o serviço (17 na 9844) e sinal fator 1,2 (9 acima, 32 abaixo) com filtro.');
 }catch(e){console.error(e);process.exitCode=1;}finally{await sql.end();}})();

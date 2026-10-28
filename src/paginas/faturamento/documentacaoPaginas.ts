@@ -82,7 +82,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
       { id: 'atalhos', titulo: 'Atalhos e botões', blocos: [
         { tipo: 'texto', texto: 'Os atalhos no topo escolhem a situação: Todos, Pagou a menos, Pagou a mais, Fora do contrato, Conferem e Conferidos. Ao lado, **Contém 1.NS**, **Multado** e **5.62**: cada clique alterna entre contém, não contém e tanto faz.' },
         { tipo: 'nota', texto: 'Para separar as falhas que serão acertadas pela Manutenção, use "Pagou a menos" com "Contém 1.NS".' },
-        { tipo: 'texto', texto: '**Fator 1,2** separa os serviços em que a CEMIG pagou exatamente 20% acima (devido × 1,2) ou abaixo (devido ÷ 1,2) do contrato: costuma ser COD ou zona rural trocados. A etiqueta "Fator 1,2" aparece também na situação de cada serviço.' },
+        { tipo: 'texto', texto: '**Fator errado?** separa os serviços em que a CEMIG pagou exatamente 20% acima (devido × 1,2) ou abaixo (devido ÷ 1,2 ou × 0,8) do previsto: costuma ser COD ou zona rural trocados. Na lista, a situação ganha a etiqueta **Possível fator errado** e o motivo diz qual fator foi pago.' },
         { tipo: 'texto', texto: 'O **botão redondo** no canto de baixo, à direita, abre o **Contrato rápido**: busca de códigos com CSC, COD e Moto, a lista dos tipos despachados pelo COD e a Tabela 14, sem sair da lista. Esc ou X fecha.' },
       ] },
       { id: 'janela', titulo: 'A janela do serviço', blocos: [

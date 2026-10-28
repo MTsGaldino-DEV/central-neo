@@ -18,6 +18,8 @@ export function outraUnidadeFat(us: number | null | undefined, unidade: UnidadeF
   return valorFat(us, unidade === 'reais' ? 'us' : 'reais', taxa);
 }
 
+/** Possível fator errado: como o pago se relaciona com o previsto. */
+export const FATOR_ERRADO_FAT: Record<string, string> = { ACIMA: 'pago × 1,2', ABAIXO: 'pago ÷ 1,2', ABAIXO_08: 'pago × 0,8' };
 export const MOTIVOS_FAT: Record<string,string> = {
   MOTO_INDEVIDO:'Desconto de Moto indevido', RC_NAO_PAGO:'RC não pago', FATOR_MENOR:'Fator menor que o contrato',
   RC_VARIAS_LINHAS:'RC pago em várias linhas', FATOR_MAIOR:'Fator maior que o contrato', OUTRA:'Outra diferença',
