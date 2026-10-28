@@ -1,6 +1,6 @@
 # Memória compartilhada — Central NEO
 
-Atualizada em 27/10/2026 pelo Claude (homem-hora e despacho COD no Faturamento). Este arquivo é o ponto de continuidade entre
+Atualizada em 28/10/2026 pelo Claude (homem-hora e despacho COD no Faturamento). Este arquivo é o ponto de continuidade entre
 Codex e Claude neste repositório. Guarda decisões e estado de trabalho, não o
 histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
@@ -71,7 +71,8 @@ integração for retomada.
 
 Desenho: `docs/superpowers/specs/2026-10-27-faturamento-homem-hora-cod-design.md`. Plano:
 `docs/superpowers/plans/2026-10-27-faturamento-homem-hora-cod.md`. Commits `e6d5c46`..`74998c1` na `main`; **push feito em 27/10/2026**.
-Migration **039** aplicada no CENTRAL-NEO (arquivo local em `supabase/`, fora do Git).
+Migrations **039** e **040** aplicadas no CENTRAL-NEO pelo `scripts/migrar.cjs` (arquivos locais em
+`supabase/`, fora do Git; nada a rodar no painel do Supabase).
 
 Regras do Matheus em vigor:
 - **Despacho:** COD quando o `tipo_serv` está em `neo_fat_despacho_cod` (43 tipos: MA01…MA95,
@@ -83,13 +84,18 @@ Regras do Matheus em vigor:
   horas de `dh_aciona` a `dh_terreal`, por minuto (como a CEMIG) × Tabela 14 pela equipe
   (`neo_fat_prontidao`: D 0,1097, U 0,0922, M 0,0366, Q 0,1753 US/h) × (1 + 0,2 COD + 0,2 rural).
   Moto não leva o fator 0,7. Sem equipe/horário ou término antes do acionamento → sem devido,
-  com observação. Ligação equipe → linha da Tabela 14 é decisão do Claude (sem objeção).
+  com observação. Equipe → Tabela 14: dupla = caminhonete 2, umpla = caminhonete 1, moto,
+  quarteto = caminhonete cabine dupla com 4 elementos (linha de 4, 0,1753; Matheus, 28/10).
+- **RC com homem-hora** (28/10/2026, migration 040): se o serviço RC tem 1.62, 1.73, 5.63 ou
+  5.64, não vale mais o RC por atendimento; cada linha paga o próprio código (o homem-hora
+  por hora). Na 9844: 246042202 (RC15) e 246140737 (RC05); a CEMIG calculou o 5.64 por hora e glosou.
+- **CSC × COD:** a lista é o único critério (Matheus, 28/10). NEO não trabalha com linha viva nem caminhão.
 - A importação grava `acionamento`, `termino` e `area` em `neo_fat_anexos` (aba `Servico`).
   A 9844 foi preenchida por `scripts/faturamento-tempo-carregar.cjs`.
 - Telas: janela do serviço mostra "COD (lista)" e a conta do homem-hora; Tabelas do contrato
   mostram a lista do COD e a Tabela 14 (só leitura, RPC `neo_fat_regras_despacho`).
 
-9844 depois: a menos 178 (10,766 US · R$ 31.913,78), a mais 181, fora 27, conferem 21.524.
+9844 depois: a menos 177 (10,638 US · R$ 31.535,01), a mais 181, fora 27, conferem 21.525.
 1.62: devido 9,9655 US contra 7,6662 pagos. Detalhes e transições no relatório
 (`docs/faturamento-relatorio.md`, seção de 27/10/2026).
 
@@ -101,9 +107,6 @@ rápido (contagem 1,2 s contra 1,9 s). Não verificado: login real.
 
 Pendências:
 - **Perguntar à supervisora Elen o que é `S` em `cod_tip_area`** (hoje rural; 9 serviços na 9844).
-- Matheus disse que ensinaria mais sobre CSC × COD; se houver outro critério além da lista, revisar.
-- 5.64 em serviço RC com código 0.00 (RC05/RC15 na 9844) continua pago pelo RC (regra de transposição).
-- Linha viva, caminhão com 2/3/5–9 elementos e hora extra da Tabela 14 não são identificáveis na fatura.
 
 ## Ajuste: total pago no Início e no Painel — 26/10/2026 (Claude)
 

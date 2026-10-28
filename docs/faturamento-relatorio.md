@@ -4,15 +4,16 @@ Atualizado em 23/10/2026. Os dois PDFs fornecidos foram lidos por inteiro: [Cód
 
 ## Homem-hora, despacho COD e área (27/10/2026)
 
-Regras do Matheus, desenho em [2026-10-27-faturamento-homem-hora-cod-design.md](superpowers/specs/2026-10-27-faturamento-homem-hora-cod-design.md). Migration local **039**.
+Regras do Matheus, desenho em [2026-10-27-faturamento-homem-hora-cod-design.md](superpowers/specs/2026-10-27-faturamento-homem-hora-cod-design.md). Migrations locais **039** e **040** (28/10).
 
 - **Despacho:** o serviço é COD quando o `tipo_serv` está na lista do COD (`neo_fat_despacho_cod`, 43 tipos, com RC01); senão, CSC. A escolha pelo valor que coincide acabou. Na 9844, antes: tipos da lista com CSC ≠ COD → 1.350 linhas pagas como COD e 6 como CSC (RC08); fora da lista → 12 pagas como COD (RC01 ×3, RC04, RC06, RC07 ×5, RC21, RC36).
 - **Área:** Fatura Completa, aba Serviço, `cod_tip_area` (U urbano; R e **S** rural). A quantidade continua K + M. Bateu com K/M em todas as 26.760 linhas com quantidade; 10 linhas com S passaram a rural.
 - **Homem-hora (1.62, 1.73, 5.63, 5.64):** horas = `dh_terreal − dh_aciona`, por minuto (a CEMIG paga assim: 61/61 serviços 1.62 conferem), × Tabela 14 pela equipe (`neo_fat_prontidao`: dupla 0,1097, umpla 0,0922, moto 0,0366, quarteto 0,1753 US/h) × (1 + 0,2 COD + 0,2 rural).
 - **1.62 na 9844:** 61 serviços, todos COD (MA62), 39 rurais e 22 urbanos; devido 9,9655 US contra 7,6662 pagos (a CEMIG usou 0,1097 × 1,0 em todos).
-- **5.63/5.64:** só 2 viram homem-hora (245640158, 246310816: 0,071586 US, pagos 0). Os 5.64 de 246042202 (RC15) e 246140737 (RC05) vêm com o código 0.00, então pela regra de transposição o RC continua pago.
-- **Situação dos serviços na 9844:** a menos 106 → 178, a mais 172 → 181, fora 88 → 27, conferem 21.544 → 21.524. Mudanças: 59 homem-hora fora → a menos e 2 fora → confere; 2 5.63 → a menos; 9 RC04/06/07/21/36 pagos como COD → a mais; 6 RC08 pagos como CSC → a menos; 5 serviços com área S → a menos (rural).
-- **Totais da 9844:** devido 858,175 → 869,387 US; a menos 7,447 → 10,766 US (R$ 31.913,78); a mais 17,002 → 16,774 US.
+- **5.63/5.64:** 4 serviços por hora, 0,170316 US. **RC com homem-hora** (040, 28/10): quando o serviço RC tem 1.62/1.73/5.63/5.64, não vale o RC por atendimento; cada linha paga o seu código. Em 246042202 (RC15) e 246140737 (RC05) a CEMIG calculou o 5.64 por hora (35 e 12 min × 0,1097) e glosou o valor inteiro; o 246140737 confere e o 246042202 fica a menos 0,0128 US (rural).
+- **Situação dos serviços na 9844:** a menos 106 → 177, a mais 172 → 181, fora 88 → 27, conferem 21.544 → 21.525 (com a 040). Mudanças: 59 homem-hora fora → a menos e 2 fora → confere; 2 5.63 → a menos; 9 RC04/06/07/21/36 pagos como COD → a mais; 6 RC08 pagos como CSC → a menos; 5 serviços com área S → a menos (rural).
+- **Totais da 9844:** devido 858,175 → 869,281 US; a menos 7,447 → 10,638 US (R$ 31.535,01); a mais 17,002 → 16,774 US.
+- Quarteto = caminhonete cabine dupla com 4 elementos (linha de 4 da Tabela 14, 0,1753). CSC × COD só pela lista. NEO não trabalha com linha viva nem caminhão.
 - Faturas importadas antes da 039 não têm horário nem área: a 9844 foi preenchida por `scripts/faturamento-tempo-carregar.cjs`; as próximas importações já gravam tudo.
 
 ## Rodada 2 (26/10/2026)

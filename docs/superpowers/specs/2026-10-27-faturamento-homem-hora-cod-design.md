@@ -127,7 +127,12 @@ Verificação esperada na 9844 (script em transação desfeita):
   pagos como CSC → pago a menos; RC01 confere.
 - Contagem geral de OK/a menos/a mais antes e depois, com a explicação das mudanças.
 
+## Atualização de 28/10/2026 (migration 040)
+
+- RC com 1.62, 1.73, 5.63 ou 5.64: esquece o RC por atendimento e paga os códigos (Matheus).
+- Quarteto = caminhonete cabine dupla, 4 elementos: linha de 4 da Tabela 14 (0,1753).
+- CSC × COD: a lista é o único critério. NEO não trabalha com linha viva nem caminhão.
+
 ## Pendências
 
 - **Perguntar à supervisora Elen o que é `S` em `cod_tip_area`** (hoje tratado como rural).
-- Matheus vai ensinar outros critérios de CSC × COD, se houver além da lista.

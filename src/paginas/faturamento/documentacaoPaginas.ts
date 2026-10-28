@@ -9,7 +9,7 @@ export type BlocoDoc =
 export interface SecaoDoc { id: string; titulo: string; blocos: BlocoDoc[] }
 export interface PaginaDoc { id: string; titulo: string; grupo: 'Faturamento' | 'Referência'; atualizada: string; resumo: string; secoes: SecaoDoc[] }
 
-const HOJE = '27/10/2026';
+const HOJE = '28/10/2026';
 
 export const PAGINAS_DOC: PaginaDoc[] = [
   { id: 'visao-geral', titulo: 'Visão geral', grupo: 'Faturamento', atualizada: HOJE,
@@ -127,6 +127,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
         { tipo: 'texto', texto: 'Os códigos **1.62, 1.73, 5.63 e 5.64** pagam por hora. As horas vão do acionamento (dh_aciona) ao término real (dh_terreal) da Fatura Completa, **por minuto**, sem arredondar a hora. O valor da hora vem da Tabela 14 pela equipe: dupla 0,1097, umpla 0,0922, moto 0,0366 e quarteto 0,1753 US/h.' },
         { tipo: 'tabela', cabecalho: ['Despacho e zona', 'Multiplicador'], linhas: [['CSC urbano', '1,0'], ['CSC rural', '1,2'], ['COD urbano', '1,2'], ['COD rural', '1,4']] },
         { tipo: 'exemplo', titulo: '1.62 · dupla, COD rural', linhas: [['2h13 × 0,1097 US/h × 1,4', '0,340436 US']] },
+        { tipo: 'importante', texto: 'Dentro de um RC também: se o atendimento tem 1.62, 1.73, 5.63 ou 5.64, o RC deixa de ser pago por atendimento e cada linha vale o seu código, com o homem-hora por hora.' },
         { tipo: 'nota', texto: 'A zona vem da coluna cod_tip_area: U urbano, R rural. O valor S também conta como rural até a supervisora Elen confirmar o que significa.' },
       ] },
       { id: 'moto', titulo: 'Valor e fator Moto', blocos: [

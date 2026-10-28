@@ -11,6 +11,8 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
   await rollback(async t=>{
     const [{aplicada}]=await t`select exists(select 1 from information_schema.columns where table_name='neo_fat_base' and column_name='despacho') aplicada`;
     if(!aplicada)await t.unsafe(fs.readFileSync('supabase/migrations/039_faturamento_homem_hora_cod.sql','utf8'));
+    const [{v040}]=await t`select neo_fat_impressao_calc('9844')->>0='040' v040`;
+    if(!v040)await t.unsafe(fs.readFileSync('supabase/migrations/040_faturamento_rc_homem_hora.sql','utf8'));
     const [admin]=await t`select user_id from neo_acessos where papel='ADMIN' and ativo limit 1`;
     await t`select set_config('request.jwt.claim.sub',${admin.user_id},true)`;
     const [{ok}]=await t`select exists(select 1 from neo_fat_anexos where fatura='9844' and aba='Servico' and dados ? 'area') ok`;
@@ -31,13 +33,18 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     }
     perto(l162.find(l=>l.numserv==='246015779').horas,2.216667,0.000001);
     assert.ok(l162.filter(l=>l.tipo_turma==='U').every(l=>Number(l.us_hora)===0.0922));
-    // 5.63 / 5.64: fora de RC entram por hora; com RC05/RC15 + 0.00 não há transposição e o RC continua pago
+    // 5.63 / 5.64: sempre por hora; RC com código de homem-hora deixa de pagar o RC e paga os códigos (Matheus, 28/10/2026)
     const l56=await t`select numserv,horas,coalesce(devido_csc,devido_cod) devido from neo_fat_calculo where fatura='9844' and codserv in ('5.63','5.64')`;
-    const porHora=l56.filter(l=>l.horas!==null);
-    assert.deepEqual(porHora.map(l=>l.numserv).sort(),['245640158','246310816']);
-    perto(porHora.reduce((s,l)=>s+Number(l.devido),0),0.071586,0.000001);
-    const rc=await t`select numserv,tabela from neo_fat_calculo where fatura='9844' and numserv in ('246042202','246140737') and codserv='5.64'`;
-    assert.ok(rc.every(l=>l.tabela==='12'));
+    assert.equal(l56.filter(l=>l.horas!==null).length,4);
+    perto(l56.reduce((s,l)=>s+Number(l.devido),0),0.170316,0.000001);
+    const rc=await t`select numserv,codserv,tabela,coalesce(devido_csc,devido_cod) devido from neo_fat_calculo where fatura='9844' and numserv in ('246042202','246140737')`;
+    assert.ok(rc.every(l=>l.tabela!=='12'),'RC com homem-hora não paga o RC');
+    assert.equal(Number(rc.find(l=>l.numserv==='246042202'&&l.codserv==='5.64').devido),0.07679);
+    const sit=async n=>(await t`select situacao_calculo s from neo_fat_servicos_calc where fatura='9844' and numserv=${n}`)[0].s;
+    assert.equal(await sit('246140737'),'OK');assert.equal(await sit('246042202'),'A_MENOS');
+    // quarteto: 4 elementos da Tabela 14
+    const [q]=await t`select us_hora from neo_fat_calculo where fatura='9844' and numserv='245640158' and codserv='5.63'`;
+    assert.equal(Number(q.us_hora),0.1753);
 
     // despacho por serviço
     const serv=async(...ns)=>t`select numserv,tipo_serv,fator_aplicado,situacao_calculo from neo_fat_servicos_calc where fatura='9844' and numserv in ${t(ns)}`;
@@ -63,6 +70,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal(d[0].despacho,'COD');assert.ok(d[0].horas>3);assert.equal(Number(d[0].us_hora),0.1097);
     const [{r}]=await t`select neo_fat_regras_despacho() r`;
     assert.equal(r.despacho_cod.length,43);assert.ok(r.despacho_cod.includes('RC01'));assert.equal(r.prontidao.length,4);
+    assert.equal(r.prontidao.find(p=>p.tipo_turma==='Q').veiculo,'Caminhonete cabine dupla');
 
     const depois=await t`select situacao_calculo s,count(*)::int n from neo_fat_servicos_calc where fatura='9844' group by 1 order by 1`;
     console.log('Situação antes :',Object.fromEntries(antes.map(x=>[x.s,x.n])));
