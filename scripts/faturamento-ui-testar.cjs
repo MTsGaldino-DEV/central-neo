@@ -233,8 +233,8 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await jan.locator('[data-fator-pago]').getByText(/contrato × 1,[24]/).waitFor();
  await foto('janela-homem-hora');await page.keyboard.press('Escape');estado.lista='real';await page.reload();
  // Fator 1,2 e contrato rápido (botão redondo)
- await page.getByRole('button',{name:'Fator errado?'}).first().waitFor();
- const sinal=page.getByText('Possível fator errado').first();await sinal.waitFor();
+ await page.getByRole('button',{name:'Possível fator errado'}).first().waitFor();
+ const sinal=page.locator('tbody').getByText('Possível fator errado').first();await sinal.waitFor();
  await sinal.locator('xpath=ancestor::tr').screenshot({path:path.join(saida,'lista-fator-errado.png')});
  await page.getByRole('button',{name:'Contrato rápido'}).click();
  const painel=page.getByRole('complementary',{name:'Contrato rápido'});await painel.waitFor();

@@ -71,7 +71,7 @@ integração for retomada.
 
 Desenho: `docs/superpowers/specs/2026-10-27-faturamento-homem-hora-cod-design.md`. Plano:
 `docs/superpowers/plans/2026-10-27-faturamento-homem-hora-cod.md`. Commits `e6d5c46`..`74998c1` na `main`; **push feito em 27/10/2026**.
-Migrations **039** a **042** aplicadas no CENTRAL-NEO pelo `scripts/migrar.cjs` (arquivos locais em
+Migrations **039** a **043** aplicadas no CENTRAL-NEO pelo `scripts/migrar.cjs` (arquivos locais em
 `supabase/`, fora do Git; nada a rodar no painel do Supabase).
 
 Regras do Matheus em vigor:
@@ -92,10 +92,11 @@ Regras do Matheus em vigor:
 - **CSC × COD:** a lista é o único critério (Matheus, 28/10). NEO não trabalha com linha viva nem caminhão.
 - **0.06 não paga** (28/10, migration 041): Tabela 11 com valor 0; serviço com 0.06 (inclusive RC) tem devido 0.
   Na 9844: 17 RC fechados só com 0.06, pagos 0, passaram a conferir.
-- **Possível fator errado** (041/042): `neo_fat_servicos_lista.fator_12` = ACIMA (pago = devido × 1,2),
-  ABAIXO (÷ 1,2) ou ABAIXO_08 (× 0,8, a 042), tolerância 2 × 0,000001 por linha. Só esses casos exatos,
-  sem faixa (Matheus, 28/10). Botão "Fator errado?", etiqueta "Possível fator errado" na situação, motivo
-  com o fator pago, aviso na janela e coluna na exportação para Excel.
+- **Possível fator errado** (041–043): `neo_fat_servicos_lista.fator_12` guarda o texto do caso exato:
+  pago × 1,2 / × 1,4 / × 1,44, "1,4 no lugar de 1,2" (a mais); ÷ 1,2 / ÷ 1,4 / ÷ 1,44, "1,2 no lugar de
+  1,4", × 0,8 (a menos). Tolerância 3 × 0,000001 × linhas × fator. Sem faixa aproximada (Matheus, 28/10).
+  Botão e etiqueta "Possível fator errado", motivo com o caso, aviso na janela, coluna na exportação.
+  Na 9844: 74 (33 "÷ 1,4" = 1.62 rural; 32 "÷ 1,2"; 9 "× 1,2").
   Na 9844: 9 acima, 32 abaixo. Janela mostra **Fator pago** (pago ÷ base CSC urbano × 1,0) e o do contrato
   (`src/lib/faturamentoFator.ts`). **Contrato rápido**: botão redondo na Conferência, painel lateral
   (`ContratoFlutuante`) com códigos, lista do COD e Tabela 14 — Matheus disse que ajusta depois.

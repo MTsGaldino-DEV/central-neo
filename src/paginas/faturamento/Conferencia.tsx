@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Download, FileSpreadsheet, Loader2, RotateCw, X } from 'lucide-react';
 import { exportarListaFat, exportarNegociacaoFat, listarServicosFat, painelFat, type ServicoFat } from '@/lib/faturamentoServicos';
-import { MOTIVOS_FAT, SITUACOES_SERVICO_FAT, valorFat, FATOR_ERRADO_FAT } from '@/lib/faturamentoTexto';
+import { MOTIVOS_FAT, SITUACOES_SERVICO_FAT, valorFat } from '@/lib/faturamentoTexto';
 import { TIPOS_TURMA_FAT } from '@/lib/faturamentoPlanilhas';
 import { traduzirErro, type ErroAmigavel } from '@/lib/erros';
 import { useDadosComCache } from '@/lib/useDadosComCache';
@@ -29,7 +29,7 @@ const ROTULO_ATALHO: Record<AtalhoConferencia, string> = {
 };
 const BOTOES: { id: BotaoFat; sim: string; nao: string }[] = [
   { id: 'tem_1ns', sim: 'Contém 1.NS', nao: 'Sem 1.NS' }, { id: 'multado', sim: 'Multado', nao: 'Sem multa' }, { id: 'tem_562', sim: '5.62', nao: 'Sem 5.62' },
-  { id: 'fator_12', sim: 'Fator errado?', nao: 'Sem fator errado' },
+  { id: 'fator_12', sim: 'Possível fator errado', nao: 'Sem fator errado' },
 ];
 const rotuloValor: Partial<Record<ChaveListaFat, (v: string) => string>> = {
   situacoes: v => SITUACOES_SERVICO_FAT[v] ?? v, tipos_turma: v => TIPOS_TURMA_FAT[v] ?? v, motivos: v => MOTIVOS_FAT[v] ?? v,
@@ -211,7 +211,7 @@ function Linha({ s, unidade, taxa, abrir }: { s: ServicoFat; unidade: 'reais' | 
   const v = (n: number | null) => valorFat(n, unidade, taxa);
   return (
     <tr onClick={abrir} className={`cursor-pointer hover:brightness-[0.97] ${fundo}`}>
-      <td className={td}><SeloSituacao situacao={s.situacao} />{s.fator_12 && <span title={`Possível fator errado: ${FATOR_ERRADO_FAT[s.fator_12]} o previsto`} className="mt-1 flex w-fit items-center gap-1 rounded-full border border-pendente/40 bg-pendente-fundo px-2 py-0.5 text-[11px] font-bold whitespace-nowrap text-pendente">
+      <td className={td}><SeloSituacao situacao={s.situacao} />{s.fator_12 && <span title={`Possível fator errado: ${s.fator_12} o previsto`} className="mt-1 flex w-fit items-center gap-1 rounded-full border border-pendente/40 bg-pendente-fundo px-2 py-0.5 text-[11px] font-bold whitespace-nowrap text-pendente">
         <AlertTriangle className="size-3" aria-hidden="true" />Possível fator errado</span>}{s.revisao_desatualizada && <span className="mt-1 block text-[10px] font-bold text-pendente">conferência antiga: rever</span>}</td>
       <td className={td}><button type="button" aria-label={`Abrir serviço ${s.numserv}`} onClick={x => { x.stopPropagation(); abrir(); }}
         className="font-codigo font-bold text-tinta hover:text-sinal focus-visible:outline-2 focus-visible:outline-sinal">{s.numserv}</button></td>
@@ -228,7 +228,7 @@ function Linha({ s, unidade, taxa, abrir }: { s: ServicoFat; unidade: 'reais' | 
       <td className={num}>{v(s.devido)}</td>
       <td className={`${num} font-bold ${(s.diferenca ?? 0) < 0 && !s.bate ? 'text-erro' : (s.diferenca ?? 0) > 0 && !s.bate ? 'text-concluido' : 'text-aco'}`}>{s.bate || s.diferenca == null ? '—' : valorFat(s.diferenca, unidade, taxa, true)}</td>
       <td className={num}>{s.multas ? v(s.multas) : '—'}</td>
-      <td className={td}>{s.fator_12 && <b className="block whitespace-nowrap text-pendente">Fator errado? {FATOR_ERRADO_FAT[s.fator_12]}</b>}{MOTIVOS_FAT[s.motivo ?? ''] ?? '—'}</td>
+      <td className={td}>{s.fator_12 && <b className="block whitespace-nowrap text-pendente">Possível fator errado: {s.fator_12}</b>}{MOTIVOS_FAT[s.motivo ?? ''] ?? '—'}</td>
     </tr>
   );
 }

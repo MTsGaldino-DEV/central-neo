@@ -113,7 +113,7 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
         </dl>
         {servico.fator_12 && <p className="flex items-start gap-2 rounded-lg bg-revisao-fundo px-3 py-2 text-xs text-revisao">
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-          <span><b>Possível fator errado: a CEMIG pagou 20% {servico.fator_12 === 'ACIMA' ? 'acima' : 'abaixo'} do previsto.</b> Pago = devido {({ ACIMA: '× 1,2', ABAIXO: '÷ 1,2', ABAIXO_08: '× 0,8' } as Record<string, string>)[servico.fator_12]}: confira COD e zona rural.</span></p>}
+          <span><b>Possível fator errado: {servico.fator_12} o previsto.</b> Confira o despacho (CSC/COD) e a zona (urbana/rural).</span></p>}
 
         <section className="rounded-xl border border-sinal/30 bg-sinal-fundo p-3">
           <p className={rotulo}>O que aconteceu</p>

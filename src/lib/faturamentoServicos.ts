@@ -1,7 +1,7 @@
 // Conferência por serviço: consultas ao banco e exportação para negociação.
 import { supabase } from './supabase';
 import { TIPOS_TURMA_FAT } from './faturamentoPlanilhas';
-import { FATOR_ERRADO_FAT, fraseServico, MOTIVOS_FAT } from './faturamentoTexto';
+import { fraseServico, MOTIVOS_FAT } from './faturamentoTexto';
 
 export type SituacaoServicoFat = 'OK'|'A_MENOS'|'A_MAIS'|'FORA_CONTRATO'|'CONFERIDO';
 export interface ServicoFat {
@@ -12,8 +12,8 @@ export interface ServicoFat {
   situacao:SituacaoServicoFat; motivo:string|null; observacao_manual:string|null; conferido_por:string|null; conferido_em:string|null;
   revisao_desatualizada:boolean; situacao_calculo:Exclude<SituacaoServicoFat,'CONFERIDO'>; contexto:unknown[];
   tem_1ns:boolean; tem_562:boolean; multado:boolean; na_manutencao:boolean; manutencao_com_valor:boolean;
-  /** Possível fator errado: pago = devido × 1,2 (ACIMA), ÷ 1,2 (ABAIXO) ou × 0,8 (ABAIXO_08). */
-  fator_12?:'ACIMA'|'ABAIXO'|'ABAIXO_08'|null;
+  /** Possível fator errado, já em texto: "pago × 1,2", "pago ÷ 1,4", "pago 1,2 no lugar de 1,4"… */
+  fator_12?:string|null;
 }
 export interface LinhaServicoFat {
   id:string; codserv:string; tipo_serv:string; tabela:string|null; urbano:number; rural:number; creditado:number; glosa:number;
@@ -116,7 +116,7 @@ export async function exportarListaFat(filtros: FiltrosListaFat, fatura: string)
     'Situação': SITUACOES_XLSX[s.situacao] ?? s.situacao, 'Nº serviço': s.numserv, 'Tipo serv.': s.tipo_serv, 'Códigos': s.codigos.join(', '),
     'Frota': s.numvei ?? '', 'Tipo frota': TIPOS_TURMA_FAT[s.tipo_turma ?? ''] ?? s.tipo_turma ?? '', 'Cidade': s.cidade ?? '',
     'Pago (US)': s.pago_comparado, 'Devido (US)': s.devido, 'Diferença (US)': s.diferenca, 'Multa (US)': s.multas,
-    'Motivo': MOTIVOS_FAT[s.motivo ?? ''] ?? '', 'Possível fator errado': s.fator_12 ? FATOR_ERRADO_FAT[s.fator_12] : '', 'Contém 1.NS': s.tem_1ns ? 'sim' : 'não', 'Na Manutenção': s.na_manutencao ? 'sim' : 'não',
+    'Motivo': MOTIVOS_FAT[s.motivo ?? ''] ?? '', 'Possível fator errado': s.fator_12 ?? '', 'Contém 1.NS': s.tem_1ns ? 'sim' : 'não', 'Na Manutenção': s.na_manutencao ? 'sim' : 'não',
   }))), 'Conferência');
   X.writeFile(w, `conferencia-fatura-${fatura}.xlsx`);
 }
