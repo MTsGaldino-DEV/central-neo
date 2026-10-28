@@ -2,7 +2,7 @@
 // COD), 1,4 (COD rural), 0,7 (Moto)… Sem React, para testar em Node.
 
 export interface LinhaBaseFat {
-  codserv: string; tabela: string | null; urbano: number; rural: number;
+  codserv: string; tipo_serv?: string; tabela: string | null; urbano: number; rural: number;
   horas?: number | null; us_hora?: number | null;
 }
 export interface ContratoBaseFat { tabela: string; codigo: string; fator_csc: number | null }
@@ -11,7 +11,9 @@ export interface ContratoBaseFat { tabela: string; codigo: string; fator_csc: nu
 export function baseServicoFat(linhas: LinhaBaseFat[], contrato: ContratoBaseFat[], rcPorAtendimento: boolean): number | null {
   const bases = linhas.map(l => {
     if (l.horas != null && l.us_hora != null) return Number(l.horas) * Number(l.us_hora);
-    const c = contrato.find(x => x.codigo === l.codserv && x.tabela === l.tabela);
+    // Tabela 12: a linha traz o código do trabalho (1.02…); o fator é o do RC, que vem no tipo do serviço.
+    const codigo = l.tabela === '12' && l.tipo_serv ? l.tipo_serv : l.codserv;
+    const c = contrato.find(x => x.codigo === codigo && x.tabela === l.tabela);
     if (c?.fator_csc == null) return null;
     const u = Number(l.urbano), r = Number(l.rural);
     return Number(c.fator_csc) * (l.tabela === '12' ? Math.min(u, 1) + Math.min(r, 1) : u + r);

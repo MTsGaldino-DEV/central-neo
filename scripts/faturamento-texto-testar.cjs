@@ -103,6 +103,10 @@ assert.equal(Math.round(b1*1e6)/1e6,0.2);assert.equal(fatorSobreBaseFat(0.24,b1)
 // RC por atendimento: um RC, mesmo com duas linhas
 const b2=baseServicoFat([{codserv:'RC08',tabela:'12',urbano:1,rural:0},{codserv:'RC08',tabela:'12',urbano:1,rural:0}],contrato,true);
 assert.equal(b2,0.116584);assert.equal(fatorSobreBaseFat(0.139901,b2),1.2);
+// linha real do RC: código do trabalho (1.02) e o RC no tipo do serviço (246480975: RC06 rural pago como COD rural)
+const rc06=[...contrato,{tabela:'12',codigo:'RC06',fator_csc:0.113918},{tabela:'11',codigo:'1.02',fator_csc:0.066858}];
+const b4=baseServicoFat([{codserv:'1.02',tipo_serv:'RC06',tabela:'12',urbano:0,rural:1}],rc06,true);
+assert.equal(b4,0.113918);assert.equal(fatorSobreBaseFat(0.136702,b4),1.2);assert.equal(fatorSobreBaseFat(0.164041,b4),1.44);
 // homem-hora: horas × US/h
 const b3=baseServicoFat([{codserv:'1.62',tabela:'11',urbano:0,rural:0,horas:2.216667,us_hora:0.1097}],contrato,false);
 assert.equal(fatorSobreBaseFat(0.243168,b3),1);assert.equal(fatorSobreBaseFat(0.340436,b3),1.4);

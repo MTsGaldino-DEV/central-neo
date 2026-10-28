@@ -98,7 +98,8 @@ Regras do Matheus em vigor:
   Botão e etiqueta "Possível fator errado", motivo com o caso, aviso na janela, coluna na exportação.
   Na 9844: 74 (33 "÷ 1,4" = 1.62 rural; 32 "÷ 1,2"; 9 "× 1,2").
   Na 9844: 9 acima, 32 abaixo. Janela mostra **Fator pago** (pago ÷ base CSC urbano × 1,0) e o do contrato
-  (`src/lib/faturamentoFator.ts`). **Contrato rápido**: botão redondo na Conferência, painel lateral
+  (`src/lib/faturamentoFator.ts`; em tabela 12 a base é o fator do RC do `tipo_serv`, porque a linha
+  traz o código do trabalho, ex.: 246480975 RC06 rural → pago × 1,44, contrato × 1,2). **Contrato rápido**: botão redondo na Conferência, painel lateral
   (`ContratoFlutuante`) com códigos, lista do COD e Tabela 14 — Matheus disse que ajusta depois.
 - Testes de banco e de interface apagam as conferências da 9844 dentro da transação desfeita: Matheus
   já confere serviços de verdade (3 em 28/10), e elas tiram serviços dos lados e totais.
