@@ -18,6 +18,8 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  const real={};
  try{
    await sql.begin(async t=>{
+     // conferências feitas à mão mudam os totais; a interface é testada sem elas (transação desfeita)
+     await t`delete from neo_fat_conferencias_servico where fatura='9844'`;
      const [admin]=await t`select user_id from neo_acessos where papel='ADMIN' and ativo limit 1`;
      await t`select set_config('request.jwt.claim.sub',${admin.user_id},true)`;
      real.contrato=await t`select * from neo_fat_contrato`;
@@ -124,12 +126,12 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  assert.equal(await page.locator('input[type=date]').count(),0);
  await page.getByText('Pagou a menos',{exact:true}).first().waitFor();
  await page.getByText('Pagou a mais',{exact:true}).first().waitFor();
- await page.getByText('−R$ 31.535,01').first().waitFor();
+ await page.getByText('−R$ 24.901,90').first().waitFor();
  await page.getByText('1 US = R$ 2.964,33').first().waitFor();
  await page.getByText('são 5.62 pago como RC inteiro',{exact:false}).first().waitFor();
  await page.getByRole('button',{name:'US',exact:true}).click();
  await page.waitForURL(u=>u.searchParams.get('unidade')==='us');
- await page.getByText('−10,638158 US').first().waitFor();
+ await page.getByText('−8,400516 US').first().waitFor();
  await foto('painel-desktop');
  // Funil até os divergentes, explicação no "i" e resumo do gráfico no mouse
  const larguras=await page.locator('[data-etapa]').evaluateAll(l=>l.map(e=>e.getBoundingClientRect().width));
@@ -141,8 +143,8 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await page.getByText('Serviços em que a CEMIG pagou diferente do que o contrato prevê',{exact:false}).waitFor();
  await page.locator('[data-grafico-fatura="9844"]').hover();
  const balao=page.getByRole('tooltip');await balao.waitFor();
- await balao.getByText('A menos · 177').waitFor();await balao.getByText('A mais · 181').waitFor();
- assert.notEqual(await balao.getByText('A menos · 177').evaluate(e=>e.getBoundingClientRect().top),await balao.getByText('A mais · 181').evaluate(e=>e.getBoundingClientRect().top),'resumo do gráfico numa linha só');
+ await balao.getByText('A menos · 161').waitFor();await balao.getByText('A mais · 181').waitFor();
+ assert.notEqual(await balao.getByText('A menos · 161').evaluate(e=>e.getBoundingClientRect().top),await balao.getByText('A mais · 181').evaluate(e=>e.getBoundingClientRect().top),'resumo do gráfico numa linha só');
  await page.goto(urlBase+'/faturamento/painel');
  assert.equal(await page.getByRole('button',{name:'3 meses'}).getAttribute('aria-pressed'),'true');
  estado.valorUs='nenhum';await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('neo-fat:valor-us')).forEach(k=>localStorage.removeItem(k)));
@@ -227,7 +229,19 @@ const postgres=require('../../traceone/frontend/node_modules/postgres');
  await page.getByRole('button',{name:'Abrir serviço 246015779'}).click();await jan.waitFor();
  await jan.getByText('COD (lista)',{exact:true}).waitFor();
  await jan.getByText(/1\.62: 2h13 × 0,1097 US\/h × 1,[24] \(COD (rural|urbano)\)/).waitFor();
+ await jan.locator('[data-fator-pago]').getByText('× 1,0',{exact:true}).waitFor();
+ await jan.locator('[data-fator-pago]').getByText(/contrato × 1,[24]/).waitFor();
  await foto('janela-homem-hora');await page.keyboard.press('Escape');estado.lista='real';await page.reload();
+ // Fator 1,2 e contrato rápido (botão redondo)
+ await page.getByRole('button',{name:'Fator 1,2'}).first().waitFor();
+ await page.getByRole('button',{name:'Contrato rápido'}).click();
+ const painel=page.getByRole('complementary',{name:'Contrato rápido'});await painel.waitFor();
+ await painel.getByLabel('Buscar no contrato').fill('1.13');
+ await painel.locator('tr[data-codigo="1.13"]').getByText('0,137718').waitFor();
+ await painel.getByRole('button',{name:'Tabela 14'}).click();await painel.getByText('0,1753').waitFor();
+ await painel.getByRole('button',{name:'Despachados pelo COD'}).click();await painel.getByText('RC01',{exact:true}).waitFor();
+ await foto('contrato-rapido');
+ await page.keyboard.press('Escape');await painel.waitFor({state:'detached'});
  // Exportações percorrem as páginas
  estado.lista='exportar';chamadasLista.length=0;
  const [baixado]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.getByRole('button',{name:'Exportar para negociação'}).click()]);

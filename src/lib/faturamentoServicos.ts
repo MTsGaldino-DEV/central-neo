@@ -12,6 +12,8 @@ export interface ServicoFat {
   situacao:SituacaoServicoFat; motivo:string|null; observacao_manual:string|null; conferido_por:string|null; conferido_em:string|null;
   revisao_desatualizada:boolean; situacao_calculo:Exclude<SituacaoServicoFat,'CONFERIDO'>; contexto:unknown[];
   tem_1ns:boolean; tem_562:boolean; multado:boolean; na_manutencao:boolean; manutencao_com_valor:boolean;
+  /** Pago = devido × 1,2 (ACIMA) ou ÷ 1,2 (ABAIXO): fator rural/COD trocado. */
+  fator_12?:'ACIMA'|'ABAIXO'|null;
 }
 export interface LinhaServicoFat {
   id:string; codserv:string; tipo_serv:string; tabela:string|null; urbano:number; rural:number; creditado:number; glosa:number;

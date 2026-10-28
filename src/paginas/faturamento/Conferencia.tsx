@@ -19,6 +19,7 @@ import { CarregandoNeo } from '@/components/faturamento/CarregandoNeo';
 import { AjudaFat, RodapeFat } from '@/components/faturamento/AjudaFat';
 import { Pagination } from '@/components/Pagination';
 import { DetalheServico } from './DetalheServico';
+import { ContratoFlutuante } from '@/components/faturamento/ContratoFlutuante';
 import { SeloSituacao } from './SeloSituacao';
 
 const POR_PAGINA = 50;
@@ -28,6 +29,7 @@ const ROTULO_ATALHO: Record<AtalhoConferencia, string> = {
 };
 const BOTOES: { id: BotaoFat; sim: string; nao: string }[] = [
   { id: 'tem_1ns', sim: 'Contém 1.NS', nao: 'Sem 1.NS' }, { id: 'multado', sim: 'Multado', nao: 'Sem multa' }, { id: 'tem_562', sim: '5.62', nao: 'Sem 5.62' },
+  { id: 'fator_12', sim: 'Fator 1,2', nao: 'Sem fator 1,2' },
 ];
 const rotuloValor: Partial<Record<ChaveListaFat, (v: string) => string>> = {
   situacoes: v => SITUACOES_SERVICO_FAT[v] ?? v, tipos_turma: v => TIPOS_TURMA_FAT[v] ?? v, motivos: v => MOTIVOS_FAT[v] ?? v,
@@ -173,6 +175,7 @@ export default function Conferencia() {
       </section>
 
       {aberto && <DetalheServico servico={aberto} aberto onFechar={() => setAberto(null)} onAlterado={recarregar} />}
+      <ContratoFlutuante />
       <RodapeFat />
     </div>
   );
@@ -208,7 +211,7 @@ function Linha({ s, unidade, taxa, abrir }: { s: ServicoFat; unidade: 'reais' | 
   const v = (n: number | null) => valorFat(n, unidade, taxa);
   return (
     <tr onClick={abrir} className={`cursor-pointer hover:brightness-[0.97] ${fundo}`}>
-      <td className={td}><SeloSituacao situacao={s.situacao} />{s.revisao_desatualizada && <span className="mt-1 block text-[10px] font-bold text-pendente">conferência antiga: rever</span>}</td>
+      <td className={td}><SeloSituacao situacao={s.situacao} />{s.fator_12 && <span title={s.fator_12 === 'ACIMA' ? 'Pago = devido × 1,2' : 'Pago = devido ÷ 1,2'} className="mt-1 block w-fit rounded-full bg-revisao-fundo px-2 text-[10px] font-bold text-revisao">Fator 1,2</span>}{s.revisao_desatualizada && <span className="mt-1 block text-[10px] font-bold text-pendente">conferência antiga: rever</span>}</td>
       <td className={td}><button type="button" aria-label={`Abrir serviço ${s.numserv}`} onClick={x => { x.stopPropagation(); abrir(); }}
         className="font-codigo font-bold text-tinta hover:text-sinal focus-visible:outline-2 focus-visible:outline-sinal">{s.numserv}</button></td>
       <td className={td}>{s.tipo_serv}</td>

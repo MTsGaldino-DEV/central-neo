@@ -80,12 +80,13 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.ok(cod.d.servicos.some(x=>x.numserv==='242861522'));assert.ok(cod.d.servicos.every(x=>x.codigos.includes('7.15')));
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_servicos_listar('{}'::jsonb,0,1001)`),/Paginação/);
     await assert.rejects(()=>t.savepoint(x=>x`select neo_fat_servicos_listar('{}'::jsonb,-1,50)`),/Paginação/);
-    // conferido: some do lado e do total do lado; filtro "somente" mostra
+    // conferido: some do lado e do total do lado; filtro "somente" mostra (além dos já conferidos à mão)
+    const [jaConferidos]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado:'a_menos',conferidos:'somente'})},0,50) d`;
     await t`select neo_fat_conferir_servico('9844',${alvo},'conferido no teste')`;
     const [sem]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado:'a_menos'})},0,50) d`;
     assert.equal(sem.d.total,r.d.total-1);assert.equal(sem.d.lados.a_menos.servicos,v.n-1);
     const [so]=await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',lado:'a_menos',conferidos:'somente'})},0,50) d`;
-    assert.deepEqual(so.d.servicos.map(x=>x.numserv),[alvo]);
+    assert.deepEqual(so.d.servicos.map(x=>x.numserv).sort(),[...jaConferidos.d.servicos.map(x=>x.numserv),alvo].sort());
     await t`select neo_fat_desconferir_servico('9844',${alvo})`;
     // linhas do serviço (RC07: crédito dividido nas duas linhas, soma = um RC)
     const [l]=await t`select neo_fat_servico_linhas('9844','245530193') d`;

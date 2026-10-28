@@ -94,3 +94,19 @@ assert.equal(st.a_menos.pago,3);assert.equal(st.a_menos.devido,6);assert.equal(s
 assert.equal(st.a_mais.c562.servicos,3);assert.equal(st.a_mais.c562.us,3);assert.equal(st.fora_contrato,3);
 console.log('OK: valores em R$ ou US e totais por lado.');
 }
+// Fator pago sobre a base do contrato (CSC urbano × 1,0)
+{
+const {baseServicoFat,fatorSobreBaseFat}=require('../src/lib/faturamentoFator.ts');
+const contrato=[{tabela:'11',codigo:'5.14',fator_csc:0.1},{tabela:'12',codigo:'RC08',fator_csc:0.116584},{tabela:'11',codigo:'1.62',fator_csc:null}];
+const b1=baseServicoFat([{codserv:'5.14',tabela:'11',urbano:0,rural:2}],contrato,false);
+assert.equal(Math.round(b1*1e6)/1e6,0.2);assert.equal(fatorSobreBaseFat(0.24,b1),1.2);assert.equal(fatorSobreBaseFat(0.28,b1),1.4);
+// RC por atendimento: um RC, mesmo com duas linhas
+const b2=baseServicoFat([{codserv:'RC08',tabela:'12',urbano:1,rural:0},{codserv:'RC08',tabela:'12',urbano:1,rural:0}],contrato,true);
+assert.equal(b2,0.116584);assert.equal(fatorSobreBaseFat(0.139901,b2),1.2);
+// homem-hora: horas × US/h
+const b3=baseServicoFat([{codserv:'1.62',tabela:'11',urbano:0,rural:0,horas:2.216667,us_hora:0.1097}],contrato,false);
+assert.equal(fatorSobreBaseFat(0.243168,b3),1);assert.equal(fatorSobreBaseFat(0.340436,b3),1.4);
+assert.equal(baseServicoFat([{codserv:'X',tabela:'11',urbano:1,rural:0}],contrato,false),null);
+assert.equal(fatorSobreBaseFat(0,b1),0);assert.equal(fatorSobreBaseFat(1,null),null);
+console.log('OK: fator pago sobre a base do contrato.');
+}

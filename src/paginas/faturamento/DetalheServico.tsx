@@ -4,6 +4,7 @@ import { conferirServicoFat, desconferirServicoFat, historicoServicoFat, linhasS
   type EventoFat, type ItemManutencaoFat, type LinhaServicoFat, type ServicoFat } from '@/lib/faturamentoServicos';
 import { fraseServico, MOTIVOS_FAT, notaCalculo, outraUnidadeFat, usFat, valorFat } from '@/lib/faturamentoTexto';
 import { TIPOS_TURMA_FAT } from '@/lib/faturamentoPlanilhas';
+import { baseServicoFat, fatorSobreBaseFat } from '@/lib/faturamentoFator';
 import { configFat, contratosFat } from '@/lib/faturamento';
 import { traduzirErro, type ErroAmigavel } from '@/lib/erros';
 import { useDadosComCache } from '@/lib/useDadosComCache';
@@ -74,6 +75,10 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
     const qtd = [Number(l.urbano) > 0 && `${fator(l.urbano)} urbano`, Number(l.rural) > 0 && `${fator(l.rural)} rural × ${fator(rural)}`].filter(Boolean).join(' + ');
     return `${l.codserv}: fator ${servico.fator_aplicado ?? 'CSC'} ${fator(fx)} × ${qtd || '1'}${servico.moto ? ' (valor Moto)' : ''} = ${usFat(devido)} US devido · a CEMIG pagou ${usFat(l.creditado)}`;
   };
+  // Fator sobre a base CSC urbano × 1,0: quanto a CEMIG aplicou e quanto o contrato pede.
+  const base = linhas && contrato.dados ? baseServicoFat(normais, contrato.dados, servico.rc_por_atendimento) : null;
+  const fatorPago = fatorSobreBaseFat(servico.pago_comparado, base), fatorContrato = fatorSobreBaseFat(servico.devido, base);
+  const fatorTexto = (f: number | null) => f == null ? '—' : f.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
   const etiqueta = 'inline-flex items-center gap-1 rounded-full border border-linha bg-nevoa px-2.5 py-1 text-xs font-semibold text-tinta';
   const dif = servico.diferenca ?? 0;
 
@@ -92,14 +97,23 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
         {salvando && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}{conferido ? 'Desfazer conferência' : 'Marcar como conferido'}
       </button>}>
       <div className="space-y-4 text-sm">
-        <dl className="grid grid-cols-2 overflow-hidden rounded-xl border border-linha sm:grid-cols-4">
+        <dl className="grid grid-cols-2 overflow-hidden rounded-xl border border-linha sm:grid-cols-5">
           {[['Nº do serviço', servico.numserv, true], ['Tipo do serviço', servico.tipo_serv, false], ['Nº de frota', servico.numvei ?? '—', true],
             ['Tipo da frota', TIPOS_TURMA_FAT[servico.tipo_turma ?? ''] ?? 'Não identificada', false]].map(([r, v, mono]) => (
             <div key={r as string} className="border-b border-linha px-3 py-2.5 sm:border-r sm:border-b-0 sm:last:border-r-0">
               <dt className={rotulo}>{r}</dt><dd className={`mt-0.5 text-base font-extrabold text-tinta ${mono ? 'font-codigo' : ''}`}>{v}</dd>
             </div>
           ))}
+          <div className="col-span-2 px-3 py-2.5 sm:col-span-1" data-fator-pago>
+            <dt className={rotulo}>Fator pago</dt>
+            <dd className={`mt-0.5 font-codigo text-base font-extrabold ${fatorPago != null && fatorContrato != null && fatorPago !== fatorContrato ? 'text-erro' : 'text-tinta'}`}>
+              {!linhas ? '…' : Number(servico.pago_comparado) === 0 && base ? 'não pagou' : `× ${fatorTexto(fatorPago)}`}</dd>
+            {fatorContrato != null && <dd className="text-[11px] text-aco">contrato × {fatorTexto(fatorContrato)}</dd>}
+          </div>
         </dl>
+        {servico.fator_12 && <p className="flex items-start gap-2 rounded-lg bg-revisao-fundo px-3 py-2 text-xs text-revisao">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+          <span><b>{servico.fator_12 === 'ACIMA' ? 'A CEMIG pagou 20% acima do contrato.' : 'A CEMIG pagou 20% abaixo do contrato.'}</b> Pago = devido {servico.fator_12 === 'ACIMA' ? '× 1,2' : '÷ 1,2'}: confira COD e zona rural.</span></p>}
 
         <section className="rounded-xl border border-sinal/30 bg-sinal-fundo p-3">
           <p className={rotulo}>O que aconteceu</p>

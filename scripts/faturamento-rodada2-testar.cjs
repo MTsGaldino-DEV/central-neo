@@ -6,6 +6,8 @@ const sql=postgres(env.NEO_DATABASE_URL,{ssl:'require',prepare:false,onnotice:()
 const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Error('rollback');});}catch(e){if(e.message!=='rollback')throw e;}};
 (async()=>{try{
   await rollback(async t=>{
+    // conferências feitas à mão tiram serviços dos lados e dos totais; o teste parte sem elas
+    await t`delete from neo_fat_conferencias_servico where fatura='9844'`;
     const [admin]=await t`select user_id from neo_acessos where papel='ADMIN' and ativo limit 1`;
     await t`select set_config('request.jwt.claim.sub',${admin.user_id},true)`;
     await t`set local role authenticated`;
@@ -17,7 +19,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal(r.total,3);assert.ok(r.servicos.every(s=>s.tem_1ns===true));
     const s137=r.servicos.find(s=>s.numserv==='246101137');assert.ok(s137);assert.equal(s137.na_manutencao,false);
     assert.equal((await listar({lado:'todos',tem_562:'sim',situacoes:['A_MAIS']})).total,158);
-    assert.equal((await listar({lado:'a_menos',multado:'sim'})).total,73); // 72 até a 039; 74 na 039; 73 na 040 (RC com homem-hora paga os códigos)
+    assert.equal((await listar({lado:'a_menos',multado:'sim'})).total,73); // 72 até a 039; 74 na 039; 73 na 040 (RC com homem-hora paga os códigos), sem conferências à mão
     assert.equal((await listar({lado:'todos',codigos:['1.62']})).total,61);
     r=await listar({lado:'todos',cidades:['ALPERCATA'],codigos:['1.21']});
     assert.ok(r.servicos.some(s=>s.numserv==='246101137'));assert.ok(r.servicos.every(s=>s.cidade==='ALPERCATA'));
@@ -32,24 +34,24 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
 
     // revisão final: a soma do cabeçalho segue a lista filtrada (motivo incluso)
     r=await listar({lado:'a_menos',motivos:['RC_NAO_PAGO']});
-    assert.equal(r.total,32);assert.equal(Number(r.soma).toFixed(6),'-3.985038'); // até a 039: 34 e -3.998762; na 039 -4.189605 (RC08/09/11 valem COD); a 040 tira RC05/RC15 com 5.64
+    assert.equal(r.total,16);assert.equal(Number(r.soma).toFixed(6),'-1.747396'); // 34/-3,998762 até a 039; -4,189605 na 039; 32/-3,985038 na 040; a 041 zera os 16 RC com 0.06
     let v=await valores({lado:'a_menos'},'motivo');
-    assert.equal(v.find(x=>x.valor==='RC_NAO_PAGO').n,32);
+    assert.equal(v.find(x=>x.valor==='RC_NAO_PAGO').n,16);
     v=await valores({lado:'a_menos',motivos:['RC_NAO_PAGO']},'motivo');
     assert.ok(v.length>1,'a lista de valores ignora o filtro da própria coluna');
     v=await valores({lado:'a_menos',motivos:['RC_NAO_PAGO']},'cidade');
-    assert.equal(v.reduce((a,x)=>a+x.n,0),32,'as outras colunas respeitam o filtro');
+    assert.equal(v.reduce((a,x)=>a+x.n,0),16,'as outras colunas respeitam o filtro');
     v=await valores({lado:'todos'},'codigos','1.');
     assert.ok(v.length&&v.every(x=>x.valor.includes('1.')));
     await valores({lado:'todos'},'cidade','%');await valores({lado:'todos'},'cidade',"o'_");
     await rejeita(()=>valores({lado:'todos'},'senha'),/Coluna inválida/);
 
     const tot=(await t`select neo_fat_atualizar_totais('9844') d`)[0].d;
-    // Até a 039: 106 serviços, pago 5,1968, devido 12,6441, 7,4473 a menos e 88 fora (homem-hora sem regra).
-    assert.equal(tot.a_menos.servicos,177);assert.equal(tot.a_menos.com_1ns,3);
-    assert.equal(Number(tot.a_menos.pago).toFixed(4),'13.5243');assert.equal(Number(tot.a_menos.devido).toFixed(4),'24.1624');
-    assert.equal(Number(tot.a_menos.us).toFixed(4),'10.6382');
-    assert.equal(tot.a_mais.c562.servicos,158);assert.equal(tot.fora_contrato,27);
+    // Até a 039: 106 serviços, pago 5,1968, devido 12,6441, 7,4473 a menos e 88 fora (homem-hora sem regra). 0.06 zerado na 041.
+    assert.equal(tot.a_menos.servicos,161);assert.equal(tot.a_menos.com_1ns,3);
+    assert.equal(Number(tot.a_menos.pago).toFixed(4),'13.5243');assert.equal(Number(tot.a_menos.devido).toFixed(4),'21.9248');
+    assert.equal(Number(tot.a_menos.us).toFixed(4),'8.4005');
+    assert.equal(tot.a_mais.c562.servicos,158);assert.equal(tot.fora_contrato,26);
 
     let m=(await t`select neo_fat_servico_manutencao('246101137') d`)[0].d;
     assert.deepEqual(m,{existe:false,itens:[]});

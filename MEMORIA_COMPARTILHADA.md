@@ -71,7 +71,7 @@ integração for retomada.
 
 Desenho: `docs/superpowers/specs/2026-10-27-faturamento-homem-hora-cod-design.md`. Plano:
 `docs/superpowers/plans/2026-10-27-faturamento-homem-hora-cod.md`. Commits `e6d5c46`..`74998c1` na `main`; **push feito em 27/10/2026**.
-Migrations **039** e **040** aplicadas no CENTRAL-NEO pelo `scripts/migrar.cjs` (arquivos locais em
+Migrations **039**, **040** e **041** aplicadas no CENTRAL-NEO pelo `scripts/migrar.cjs` (arquivos locais em
 `supabase/`, fora do Git; nada a rodar no painel do Supabase).
 
 Regras do Matheus em vigor:
@@ -90,12 +90,21 @@ Regras do Matheus em vigor:
   5.64, não vale mais o RC por atendimento; cada linha paga o próprio código (o homem-hora
   por hora). Na 9844: 246042202 (RC15) e 246140737 (RC05); a CEMIG calculou o 5.64 por hora e glosou.
 - **CSC × COD:** a lista é o único critério (Matheus, 28/10). NEO não trabalha com linha viva nem caminhão.
+- **0.06 não paga** (28/10, migration 041): Tabela 11 com valor 0; serviço com 0.06 (inclusive RC) tem devido 0.
+  Na 9844: 17 RC fechados só com 0.06, pagos 0, passaram a conferir.
+- **Sinal Fator 1,2** (041): `neo_fat_servicos_lista.fator_12` = ACIMA (pago = devido × 1,2) ou ABAIXO
+  (÷ 1,2), tolerância 2 × 0,000001 por linha; botão rápido "Fator 1,2", etiqueta na lista e aviso na janela.
+  Na 9844: 9 acima, 32 abaixo. Janela mostra **Fator pago** (pago ÷ base CSC urbano × 1,0) e o do contrato
+  (`src/lib/faturamentoFator.ts`). **Contrato rápido**: botão redondo na Conferência, painel lateral
+  (`ContratoFlutuante`) com códigos, lista do COD e Tabela 14 — Matheus disse que ajusta depois.
+- Testes de banco e de interface apagam as conferências da 9844 dentro da transação desfeita: Matheus
+  já confere serviços de verdade (3 em 28/10), e elas tiram serviços dos lados e totais.
 - A importação grava `acionamento`, `termino` e `area` em `neo_fat_anexos` (aba `Servico`).
   A 9844 foi preenchida por `scripts/faturamento-tempo-carregar.cjs`.
 - Telas: janela do serviço mostra "COD (lista)" e a conta do homem-hora; Tabelas do contrato
   mostram a lista do COD e a Tabela 14 (só leitura, RPC `neo_fat_regras_despacho`).
 
-9844 depois: a menos 177 (10,638 US · R$ 31.535,01), a mais 181, fora 27, conferem 21.525.
+9844 depois (041, sem contar conferências à mão): a menos 161 (8,4005 US · R$ 24.901,90), a mais 181, fora 26, conferem 21.542.
 1.62: devido 9,9655 US contra 7,6662 pagos. Detalhes e transições no relatório
 (`docs/faturamento-relatorio.md`, seção de 27/10/2026).
 

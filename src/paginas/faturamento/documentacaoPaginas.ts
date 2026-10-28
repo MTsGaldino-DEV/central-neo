@@ -82,10 +82,13 @@ export const PAGINAS_DOC: PaginaDoc[] = [
       { id: 'atalhos', titulo: 'Atalhos e botões', blocos: [
         { tipo: 'texto', texto: 'Os atalhos no topo escolhem a situação: Todos, Pagou a menos, Pagou a mais, Fora do contrato, Conferem e Conferidos. Ao lado, **Contém 1.NS**, **Multado** e **5.62**: cada clique alterna entre contém, não contém e tanto faz.' },
         { tipo: 'nota', texto: 'Para separar as falhas que serão acertadas pela Manutenção, use "Pagou a menos" com "Contém 1.NS".' },
+        { tipo: 'texto', texto: '**Fator 1,2** separa os serviços em que a CEMIG pagou exatamente 20% acima (devido × 1,2) ou abaixo (devido ÷ 1,2) do contrato: costuma ser COD ou zona rural trocados. A etiqueta "Fator 1,2" aparece também na situação de cada serviço.' },
+        { tipo: 'texto', texto: 'O **botão redondo** no canto de baixo, à direita, abre o **Contrato rápido**: busca de códigos com CSC, COD e Moto, a lista dos tipos despachados pelo COD e a Tabela 14, sem sair da lista. Esc ou X fecha.' },
       ] },
       { id: 'janela', titulo: 'A janela do serviço', blocos: [
         { tipo: 'lista', itens: ['Em cima: **Nº do serviço, tipo do serviço, nº de frota e tipo da frota**.',
           '**Como o devido foi calculado**: despacho (COD quando o tipo do serviço está na lista do COD; senão CSC), zona (pela coluna cod_tip_area da Fatura Completa) e tabela, com a conta de cada código. No homem-hora a conta mostra horas × US/h × multiplicador.',
+          '**Fator pago**, ao lado do tipo da frota: quanto a CEMIG aplicou sobre o valor CSC urbano (× 1,0; × 1,2 rural ou COD; × 1,4 COD rural; × 0,7 Moto), com o fator do contrato embaixo.',
           '**O que a CEMIG pagou na fatura**: só o valor pago, código por código, com o 1.NS no fim.',
           '**Histórico**: importação e cada conferência, com quem fez.', 'Para conferir, escreva uma observação e clique em "Marcar como conferido".'] },
       ] },
@@ -121,6 +124,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
     secoes: [
       { id: 'contrato', titulo: 'Tabelas 11 e 12', blocos: [
         { tipo: 'texto', texto: 'A Tabela 11 tem o valor de cada código de fechamento; a Tabela 12, o de cada RC (atendimento). Cada código tem dois valores: **CSC/CSI** e **COD**. Só o administrador corrige um fator, e toda correção fica no histórico.' },
+        { tipo: 'texto', texto: 'O código **0.06 não paga**: está na Tabela 11 com valor 0, e o serviço fechado com ele (inclusive RC) tem devido zero.' },
         { tipo: 'texto', texto: 'Qual dos dois vale é o **despacho**: o serviço é COD quando o tipo dele (MA27, RC08, NSRI…) está na lista **Despachados pelo COD**, no fim da página; os demais são CSC/CSI.' },
       ] },
       { id: 'homem-hora', titulo: 'Homem-hora (Tabela 14)', blocos: [

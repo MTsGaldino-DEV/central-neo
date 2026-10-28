@@ -5,7 +5,7 @@ import type { ColunaFiltroFat, FiltrosListaFat } from './faturamentoServicos';
 export type AtalhoConferencia = 'a_menos' | 'a_mais' | 'fora' | 'confere' | 'conferidos' | 'todos';
 export const ATALHOS_CONFERENCIA: AtalhoConferencia[] = ['todos', 'a_menos', 'a_mais', 'fora', 'confere', 'conferidos'];
 export type ChaveListaFat = 'situacoes' | 'tipos_serv' | 'codigos' | 'frotas' | 'tipos_turma' | 'cidades' | 'motivos';
-export type BotaoFat = 'tem_1ns' | 'multado' | 'tem_562';
+export type BotaoFat = 'tem_1ns' | 'multado' | 'tem_562' | 'fator_12';
 export type ChaveFaixaFat = 'pago' | 'devido' | 'diferenca' | 'multa';
 type ColunaOrdemFat = 'situacao' | 'numserv' | 'tipo_serv' | 'codigos' | 'numvei' | 'tipo_turma' | 'cidade' | 'pago_comparado' | 'devido' | 'diferenca' | 'multas' | 'motivo';
 
@@ -34,7 +34,7 @@ export const COLUNAS_CONFERENCIA: ColunaConferencia[] = [
 ];
 const LISTAS = COLUNAS_CONFERENCIA.flatMap(c => c.lista ? [c.lista.chave] : []);
 const FAIXAS = COLUNAS_CONFERENCIA.flatMap(c => c.faixa ? [c.faixa] : []);
-const BOTOES: BotaoFat[] = ['tem_1ns', 'multado', 'tem_562'];
+const BOTOES: BotaoFat[] = ['tem_1ns', 'multado', 'tem_562', 'fator_12'];
 const ORDENS = COLUNAS_CONFERENCIA.map(c => c.id) as string[];
 
 export interface EstadoConferencia {

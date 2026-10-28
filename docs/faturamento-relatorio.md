@@ -13,6 +13,8 @@ Regras do Matheus, desenho em [2026-10-27-faturamento-homem-hora-cod-design.md](
 - **5.63/5.64:** 4 serviços por hora, 0,170316 US. **RC com homem-hora** (040, 28/10): quando o serviço RC tem 1.62/1.73/5.63/5.64, não vale o RC por atendimento; cada linha paga o seu código. Em 246042202 (RC15) e 246140737 (RC05) a CEMIG calculou o 5.64 por hora (35 e 12 min × 0,1097) e glosou o valor inteiro; o 246140737 confere e o 246042202 fica a menos 0,0128 US (rural).
 - **Situação dos serviços na 9844:** a menos 106 → 177, a mais 172 → 181, fora 88 → 27, conferem 21.544 → 21.525 (com a 040). Mudanças: 59 homem-hora fora → a menos e 2 fora → confere; 2 5.63 → a menos; 9 RC04/06/07/21/36 pagos como COD → a mais; 6 RC08 pagos como CSC → a menos; 5 serviços com área S → a menos (rural).
 - **Totais da 9844:** devido 858,175 → 869,281 US; a menos 7,447 → 10,638 US (R$ 31.535,01); a mais 17,002 → 16,774 US.
+- **0.06 (041, 28/10):** Tabela 11 com valor 0; serviço com 0.06 tem devido 0. Os 17 RC da 9844 fechados só com 0.06 (pagos 0) conferem; a menos 177 → 161 serviços (a menos sem conferências à mão: 8,4005 US), fora 27 → 26.
+- **Sinal Fator 1,2 (041):** pago = devido × 1,2 (9 serviços a mais) ou ÷ 1,2 (32 a menos); pago = devido × 0,8 não ocorre na 9844.
 - Quarteto = caminhonete cabine dupla com 4 elementos (linha de 4 da Tabela 14, 0,1753). CSC × COD só pela lista. NEO não trabalha com linha viva nem caminhão.
 - Faturas importadas antes da 039 não têm horário nem área: a 9844 foi preenchida por `scripts/faturamento-tempo-carregar.cjs`; as próximas importações já gravam tudo.
 
