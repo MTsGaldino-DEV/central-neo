@@ -120,8 +120,6 @@ rápido (contagem 1,2 s contra 1,9 s). Não verificado: login real.
 
 Pendências:
 - **Perguntar à supervisora Elen o que é `S` em `cod_tip_area`** (hoje rural; 9 serviços na 9844).
-- **Aplicar as migrations 044 e 045** (`node scripts/migrar.cjs`): testadas com `--testar` em
-  29/10/2026, mas a aplicação real foi barrada pela permissão do Claude; Matheus aplica.
 
 ## Entrega: 5.62 dentro de RC, justificativa da glosa e busca por vários serviços — 29/10/2026 (Claude)
 
@@ -141,9 +139,15 @@ Pendências:
   com o código na frente. Ex.: 245728835, glosa no 5.14 → "G.02: Reincidencia no serviço 244859969".
 - **Filtro Nº serviço** (045 + tela): vários números separados por vírgula (também `;` ou espaço);
   cada parte vale como "contém"; o chip mostra "Nº serviço: …".
-- Testes: `scripts/faturamento-562-testar.cjs` e `scripts/faturamento-busca-testar.cjs` (transação
-  desfeita; aplicam a migration se faltar). Typecheck e build passaram. Os demais testes de
-  faturamento não foram rodados com a 044 aplicada; rodar depois de aplicar e acertar números.
+- **044 e 045 aplicadas** no CENTRAL-NEO em 29/10/2026 (`scripts/migrar.cjs`, a pedido do Matheus) e
+  9844 recalculada: a mais 24, a menos 155 (8,1440 US), conferido 1, conferem 21.704, fora 26.
+  Conferências à mão: 245826051 ("cemig pagou como 8.82 corretamente") agora confere pelo cálculo;
+  ele e 245670551 ficaram com revisão desatualizada (o contexto mudou), ambos OK.
+- Testes: novos `faturamento-562-testar.cjs` e `faturamento-busca-testar.cjs`; todos os
+  `scripts/faturamento-*testar.cjs` de banco passam, com números da 044 anotados (conferência 704 → 548
+  linhas divergentes; rodada2: 5.62 a mais 158 → 2, multados a menos 73 → 67, RC_NAO_PAGO 16 → 19,
+  totais a menos 161 → 155; zero-fator: possível fator errado 74 → 76). Typecheck e build passaram.
+  Não rodados: `faturamento-ui-testar` e `faturamento-menu-testar` (navegador).
 
 ## Ajuste: total pago no Início e no Painel — 26/10/2026 (Claude)
 

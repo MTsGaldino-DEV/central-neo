@@ -18,8 +18,8 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     let r=await listar({lado:'a_menos',tem_1ns:'sim'});
     assert.equal(r.total,3);assert.ok(r.servicos.every(s=>s.tem_1ns===true));
     const s137=r.servicos.find(s=>s.numserv==='246101137');assert.ok(s137);assert.equal(s137.na_manutencao,false);
-    assert.equal((await listar({lado:'todos',tem_562:'sim',situacoes:['A_MAIS']})).total,158);
-    assert.equal((await listar({lado:'a_menos',multado:'sim'})).total,73); // 72 até a 039; 74 na 039; 73 na 040 (RC com homem-hora paga os códigos), sem conferências à mão
+    assert.equal((await listar({lado:'todos',tem_562:'sim',situacoes:['A_MAIS']})).total,2); // 044: 5.62 em RC paga o RC; ficam os 2 pagos como COD
+    assert.equal((await listar({lado:'a_menos',multado:'sim'})).total,67); // 72 até a 039; 74 na 039; 73 na 040 (RC com homem-hora paga os códigos); 67 na 044 (5.62 em RC), sem conferências à mão
     assert.equal((await listar({lado:'todos',codigos:['1.62']})).total,61);
     r=await listar({lado:'todos',cidades:['ALPERCATA'],codigos:['1.21']});
     assert.ok(r.servicos.some(s=>s.numserv==='246101137'));assert.ok(r.servicos.every(s=>s.cidade==='ALPERCATA'));
@@ -34,24 +34,24 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
 
     // revisão final: a soma do cabeçalho segue a lista filtrada (motivo incluso)
     r=await listar({lado:'a_menos',motivos:['RC_NAO_PAGO']});
-    assert.equal(r.total,16);assert.equal(Number(r.soma).toFixed(6),'-1.747396'); // 34/-3,998762 até a 039; -4,189605 na 039; 32/-3,985038 na 040; a 041 zera os 16 RC com 0.06
+    assert.equal(r.total,19);assert.equal(Number(r.soma).toFixed(6),'-2.294013'); // 34/-3,998762 até a 039; -4,189605 na 039; 32/-3,985038 na 040; a 041 zera os 16 RC com 0.06; 16/-1,747396 até a 043; a 044 traz os 3 RC + 5.62 + G.02
     let v=await valores({lado:'a_menos'},'motivo');
-    assert.equal(v.find(x=>x.valor==='RC_NAO_PAGO').n,16);
+    assert.equal(v.find(x=>x.valor==='RC_NAO_PAGO').n,19);
     v=await valores({lado:'a_menos',motivos:['RC_NAO_PAGO']},'motivo');
     assert.ok(v.length>1,'a lista de valores ignora o filtro da própria coluna');
     v=await valores({lado:'a_menos',motivos:['RC_NAO_PAGO']},'cidade');
-    assert.equal(v.reduce((a,x)=>a+x.n,0),16,'as outras colunas respeitam o filtro');
+    assert.equal(v.reduce((a,x)=>a+x.n,0),19,'as outras colunas respeitam o filtro');
     v=await valores({lado:'todos'},'codigos','1.');
     assert.ok(v.length&&v.every(x=>x.valor.includes('1.')));
     await valores({lado:'todos'},'cidade','%');await valores({lado:'todos'},'cidade',"o'_");
     await rejeita(()=>valores({lado:'todos'},'senha'),/Coluna inválida/);
 
     const tot=(await t`select neo_fat_atualizar_totais('9844') d`)[0].d;
-    // Até a 039: 106 serviços, pago 5,1968, devido 12,6441, 7,4473 a menos e 88 fora (homem-hora sem regra). 0.06 zerado na 041.
-    assert.equal(tot.a_menos.servicos,161);assert.equal(tot.a_menos.com_1ns,3);
-    assert.equal(Number(tot.a_menos.pago).toFixed(4),'13.5243');assert.equal(Number(tot.a_menos.devido).toFixed(4),'21.9248');
-    assert.equal(Number(tot.a_menos.us).toFixed(4),'8.4005');
-    assert.equal(tot.a_mais.c562.servicos,158);assert.equal(tot.fora_contrato,26);
+    // Até a 039: 106 serviços, pago 5,1968, devido 12,6441, 7,4473 a menos e 88 fora (homem-hora sem regra). 0.06 zerado na 041. Na 044 (5.62 em RC): 161 → 155, pago 13,5243 → 13,3566, devido 21,9248 → 21,5006, 8,4005 → 8,1440 US.
+    assert.equal(tot.a_menos.servicos,155);assert.equal(tot.a_menos.com_1ns,3);
+    assert.equal(Number(tot.a_menos.pago).toFixed(4),'13.3566');assert.equal(Number(tot.a_menos.devido).toFixed(4),'21.5006');
+    assert.equal(Number(tot.a_menos.us).toFixed(4),'8.1440');
+    assert.equal(tot.a_mais.c562.servicos,2);assert.equal(tot.fora_contrato,26);
 
     let m=(await t`select neo_fat_servico_manutencao('246101137') d`)[0].d;
     assert.deepEqual(m,{existe:false,itens:[]});

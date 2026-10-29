@@ -32,13 +32,13 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     // fator 1,2
     const f=await t`select fator_12,count(*)::int n from neo_fat_servicos_lista where fatura='9844' and fator_12 is not null group by 1`;
     // 1.62 rural pago sem o 1,4 do COD rural (33), sem o 1,2 (21 do 1.62 + 11 outros) e RC pagos como COD (9)
-    assert.deepEqual(Object.fromEntries(f.map(x=>[x.fator_12,x.n])),{'pago ÷ 1,4':33,'pago ÷ 1,2':32,'pago × 1,2':9});
+    assert.deepEqual(Object.fromEntries(f.map(x=>[x.fator_12,x.n])),{'pago ÷ 1,4':33,'pago ÷ 1,2':32,'pago × 1,2':11}); // 044: +246059059 e 246098036 (RC pago como COD)
     const [a]=await t`select fator_12 from neo_fat_servicos_lista where fatura='9844' and numserv='246106093'`;
     assert.equal(a.fator_12,'pago × 1,2');
     const [b]=await t`select fator_12 from neo_fat_servicos_lista where fatura='9844' and numserv='245643698'`;
     assert.equal(b.fator_12,'pago ÷ 1,2');
     const listar=async x=>(await t`select neo_fat_servicos_listar(${t.json({fatura:'9844',...x})},0,50) d`)[0].d;
-    assert.equal((await listar({lado:'todos',fator_12:'sim'})).total,74);
+    assert.equal((await listar({lado:'todos',fator_12:'sim'})).total,76);
     // listas por lado escondem os já conferidos à mão
     const [nc]=await t`select count(*) filter(where fator_12 is not null and situacao_calculo='A_MAIS')::int acima,count(*) filter(where fator_12 is not null and situacao_calculo='A_MENOS')::int abaixo
      from neo_fat_servicos_lista where fatura='9844' and situacao<>'CONFERIDO'`;
@@ -55,5 +55,5 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     await t`update neo_fat_servicos_calc set pago_comparado=round(devido*1.2/1.4,6),situacao_calculo='A_MENOS' where fatura='9844' and numserv='246015779'`;
     assert.equal((await t`select fator_12 from neo_fat_servicos_lista where fatura='9844' and numserv='246015779'`)[0].fator_12,'pago 1,2 no lugar de 1,4');
   });
-  console.log('OK: 0.06 zera o serviço (17 na 9844) e possível fator errado (1,2 / 1,4 / troca / esquecido; 74 na 9844) com filtro.');
+  console.log('OK: 0.06 zera o serviço (17 na 9844) e possível fator errado (1,2 / 1,4 / troca / esquecido; 76 na 9844) com filtro.');
 }catch(e){console.error(e);process.exitCode=1;}finally{await sql.end();}})();
