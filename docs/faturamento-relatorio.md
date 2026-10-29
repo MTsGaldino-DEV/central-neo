@@ -14,6 +14,7 @@ Regras do Matheus, desenho em [2026-10-27-faturamento-homem-hora-cod-design.md](
 - **Situação dos serviços na 9844:** a menos 106 → 177, a mais 172 → 181, fora 88 → 27, conferem 21.544 → 21.525 (com a 040). Mudanças: 59 homem-hora fora → a menos e 2 fora → confere; 2 5.63 → a menos; 9 RC04/06/07/21/36 pagos como COD → a mais; 6 RC08 pagos como CSC → a menos; 5 serviços com área S → a menos (rural).
 - **Totais da 9844:** devido 858,175 → 869,281 US; a menos 7,447 → 10,638 US (R$ 31.535,01); a mais 17,002 → 16,774 US.
 - **0.06 (041, 28/10):** Tabela 11 com valor 0; serviço com 0.06 tem devido 0. Os 17 RC da 9844 fechados só com 0.06 (pagos 0) conferem; a menos 177 → 161 serviços (a menos sem conferências à mão: 8,4005 US), fora 27 → 26.
+- **5.62 dentro de RC (044, 29/10):** informativo na nota 3 (sai da lista de transposição; a linha vale zero quando o RC é transposto para outro código). Na 9844: a mais 181 → 25, a menos 161 → 155, conferem 21.542 → 21.704. A 044 também mostra a justificativa da glosa lançada em outro código do serviço (aba Evento_Glosa); a 045 aceita vários números separados por vírgula no filtro Nº serviço.
 - **Possível fator errado (041–043):** pago = previsto × 1,2 / 1,4 / 1,44, 1,4 no lugar de 1,2 e o inverso de cada um, ou × 0,8. Só casos exatos. Na 9844: 74 serviços — 33 "÷ 1,4" (1.62 COD rural pago × 1,0), 32 "÷ 1,2" (21 do 1.62 urbano + RC08 pagos como CSC + área S) e 9 "× 1,2" (RC pagos como COD fora da lista).
 - Quarteto = caminhonete cabine dupla com 4 elementos (linha de 4 da Tabela 14, 0,1753). CSC × COD só pela lista. NEO não trabalha com linha viva nem caminhão.
 - Faturas importadas antes da 039 não têm horário nem área: a 9844 foi preenchida por `scripts/faturamento-tempo-carregar.cjs`; as próximas importações já gravam tudo.
@@ -150,7 +151,7 @@ Todos os **31 RCs** da Tabela 12 foram carregados. Faltam os valores numéricos 
 3. Como ligar uma nota **PSAP** à equipe e ao atendimento principal para aplicar 0,3, especialmente quando há mais de uma equipe?
 4. Confirmar o multiplicador **rural de Moto** (0,9 solicitado; notas sugerem combinação 0,84) e como tratar homem-hora/L/N/O.
 5. Como revisar **glosas parciais e simultâneas**? O serviço 245881140 tem crédito, glosa positiva e negativa em linhas distintas.
-6. Em 5.62 há pagamentos que parecem seguir o RC apesar da lista de transposição da nota 3. Existe exceção contratual/operacional fora destes PDFs? O sistema manteve a regra literal e deixou esses casos divergentes.
+6. ~~5.62 seguindo o RC~~ — resolvido em 29/10/2026 (migration 044): dentro de RC da Tabela 12 o 5.62 é informativo; só 5.62 paga o RC, 5.62 + código da lista paga o código. Na 9844, 158 de 158 RC só com 5.62 foram pagos pelo RC exato.
 7. Para análise física, onde obter evidências exigidas pelas notas 8 e verificar as unidades da coluna **Como lançar**?
 
 ## Verificações e limites

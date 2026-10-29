@@ -166,7 +166,7 @@ function Busca({ valor, onAplicar, onCancelar }: { valor: string; onAplicar: (q:
     <form onSubmit={e => { e.preventDefault(); onAplicar(q.trim() || null); }}>
       <label className="flex items-center gap-1.5 rounded-lg border border-linha px-2 py-1.5 focus-within:border-sinal">
         <Search className="size-3.5 text-aco-claro" aria-hidden="true" />
-        <input value={q} onChange={e => setQ(e.target.value)} inputMode="numeric" placeholder="Parte do número" aria-label="Número do serviço"
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Números separados por vírgula" aria-label="Números do serviço, separados por vírgula"
           className="min-w-0 flex-1 bg-transparent font-codigo text-xs outline-none" />
       </label>
       <Botoes onCancelar={onCancelar} onOk={() => onAplicar(q.trim() || null)} />

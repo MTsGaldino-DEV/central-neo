@@ -59,7 +59,7 @@ export function CardsLados({ totais, unidade, taxa, onVer }: {
         {outraUnidadeFat(mais.us ?? totais.pago_a_mais, unidade, taxa) && <p className="font-codigo text-xs text-aco">{outraUnidadeFat(mais.us ?? totais.pago_a_mais, unidade, taxa)}</p>}
         <p className="mt-2 text-sm text-tinta">A CEMIG pagou <b className="font-codigo">{v(mais.pago ?? 0)}</b> e o contrato prevê <b className="font-codigo">{v(mais.devido ?? 0)}</b>.</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {c562.servicos > 0 && <span className={`${etiqueta} bg-concluido-fundo text-concluido`}>{numero(c562.servicos)} são 5.62 pago como RC inteiro · {v(c562.us, true)}</span>}
+          {c562.servicos > 0 && <span className={`${etiqueta} bg-concluido-fundo text-concluido`}>{numero(c562.servicos)} com 5.62 · {v(c562.us, true)}</span>}
           {mais.servicos - c562.servicos > 0 && <span className={`${etiqueta} bg-concluido-fundo/60 text-concluido`}>{numero(mais.servicos - c562.servicos)} outros · {v((mais.us ?? 0) - c562.us, true)}</span>}
         </div>
         <button type="button" onClick={() => onVer('a_mais')} disabled={!mais.servicos}

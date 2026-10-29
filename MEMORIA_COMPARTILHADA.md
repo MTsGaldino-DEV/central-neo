@@ -120,6 +120,30 @@ rápido (contagem 1,2 s contra 1,9 s). Não verificado: login real.
 
 Pendências:
 - **Perguntar à supervisora Elen o que é `S` em `cod_tip_area`** (hoje rural; 9 serviços na 9844).
+- **Aplicar as migrations 044 e 045** (`node scripts/migrar.cjs`): testadas com `--testar` em
+  29/10/2026, mas a aplicação real foi barrada pela permissão do Claude; Matheus aplica.
+
+## Entrega: 5.62 dentro de RC, justificativa da glosa e busca por vários serviços — 29/10/2026 (Claude)
+
+- **5.62 dentro de RC da Tabela 12 é informativo** (Matheus aprovou, migration 044): não conta como
+  código remunerável na nota 3 e saiu de `neo_fat_rc_transposicao` (ativo = false). Só 5.62 → paga
+  o RC; 5.62 + código da lista (8.81…8.8D, ex.: 8.82, 8.88) → paga esse código e a linha do 5.62
+  vale zero; 5.62 + código fora da lista → RC. Fora de RC da Tabela 12, o 5.62 paga o próprio valor.
+  Evidência na 9844: 158 de 158 RC só com 5.62 pagos pelo RC exato; 246105962 (RC06, 5.62 glosado e
+  8.82 lançado pela CEMIG, justificativa "5.62 obrigatoriamente deve estar vinculado a geração de
+  uma nota de serviço programada"). Resultado (sem conferências à mão): a mais 181 → 25,
+  a menos 161 → 155, conferem 21.542 → 21.704. Ficam a mais 246059059 (RC07) e 246098036 (RC06),
+  pagos como COD fora da lista. Passam a menos 245839322, 245879192, 245992861 (RC + 5.62 + G.02):
+  a CEMIG glosou o RC pelo valor urbano CSC, como nos outros 9 RC com G.02 (RC_NAO_PAGO); antes
+  conferiam por acaso. Pendência: Matheus decidir se glosa de reincidência (G.02) pelo valor base confere.
+- **Justificativa da glosa** (044): sem evento no mesmo código, a linha com glosa mostra as
+  justificativas do serviço na aba Evento_Glosa (Evento Glosa Apropriação da Fatura Completa),
+  com o código na frente. Ex.: 245728835, glosa no 5.14 → "G.02: Reincidencia no serviço 244859969".
+- **Filtro Nº serviço** (045 + tela): vários números separados por vírgula (também `;` ou espaço);
+  cada parte vale como "contém"; o chip mostra "Nº serviço: …".
+- Testes: `scripts/faturamento-562-testar.cjs` e `scripts/faturamento-busca-testar.cjs` (transação
+  desfeita; aplicam a migration se faltar). Typecheck e build passaram. Os demais testes de
+  faturamento não foram rodados com a 044 aplicada; rodar depois de aplicar e acertar números.
 
 ## Ajuste: total pago no Início e no Painel — 26/10/2026 (Claude)
 

@@ -81,7 +81,7 @@ export default function Conferencia() {
         limpar: () => { const f = { ...e.faixas }; delete f[`${c.faixa!}_min`]; delete f[`${c.faixa!}_max`]; ir({ faixas: f }); } }];
       return [];
     }),
-    ...(e.q ? [{ id: 'Nº serviço', texto: `Nº serviço contém ${e.q}`, limpar: () => ir({ q: null }) }] : []),
+    ...(e.q ? [{ id: 'Nº serviço', texto: e.q.includes(',') ? `Nº serviço: ${e.q}` : `Nº serviço contém ${e.q}`, limpar: () => ir({ q: null }) }] : []),
     ...(e.principal ? [{ id: 'Código principal', texto: `Código principal: ${e.principal}`, limpar: () => ir({ principal: null }) }] : []),
   ];
   const semFiltros = !filtrosAtivos(e);

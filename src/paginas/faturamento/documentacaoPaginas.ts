@@ -9,7 +9,7 @@ export type BlocoDoc =
 export interface SecaoDoc { id: string; titulo: string; blocos: BlocoDoc[] }
 export interface PaginaDoc { id: string; titulo: string; grupo: 'Faturamento' | 'Referência'; atualizada: string; resumo: string; secoes: SecaoDoc[] }
 
-const HOJE = '28/10/2026';
+const HOJE = '29/10/2026';
 
 export const PAGINAS_DOC: PaginaDoc[] = [
   { id: 'visao-geral', titulo: 'Visão geral', grupo: 'Faturamento', atualizada: HOJE,
@@ -49,7 +49,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
           ['O contrato prevê', 'Soma do devido pelo fator CSC ou COD, pela zona e pelo tipo de frota.'],
           ['RC não pago, fator menor…', 'A mesma diferença separada pelo motivo.'],
           ['N com 1.NS', 'Serviços que podem ter parte do pagamento pela Manutenção.'],
-          ['N são 5.62 pago como RC inteiro', 'A CEMIG pagou o RC cheio num serviço que é só a verificação do sistema.'],
+          ['N com 5.62', 'Serviços pagos a mais que têm o código 5.62 (verificação do sistema).'],
         ] },
       ] },
       { id: 'funil', titulo: 'O funil', blocos: [
@@ -77,7 +77,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
       ] },
       { id: 'filtros', titulo: 'Filtros como no Excel', blocos: [
         { tipo: 'texto', texto: 'Cada coluna tem o botão **▾**: ordenar, pesquisar e marcar os valores que quer ver, com a quantidade de cada um. Nas colunas de valor, "maior que", "menor que" ou "entre".' },
-        { tipo: 'lista', itens: ['Os filtros ligados aparecem como etiquetas; o ✕ tira um, "Limpar todos" tira todos.', 'A lista de valores de uma coluna respeita os outros filtros, como no Excel.', 'Os filtros ficam no endereço da página: dá para voltar, recarregar ou mandar o link.'] },
+        { tipo: 'lista', itens: ['Na coluna **Nº serviço**, separe vários números por vírgula (ex.: 246101137, 246445398, 246006974). Um número só procura quem contém aquele trecho.', 'Os filtros ligados aparecem como etiquetas; o ✕ tira um, "Limpar todos" tira todos.', 'A lista de valores de uma coluna respeita os outros filtros, como no Excel.', 'Os filtros ficam no endereço da página: dá para voltar, recarregar ou mandar o link.'] },
       ] },
       { id: 'atalhos', titulo: 'Atalhos e botões', blocos: [
         { tipo: 'texto', texto: 'Os atalhos no topo escolhem a situação: Todos, Pagou a menos, Pagou a mais, Fora do contrato, Conferem e Conferidos. Ao lado, **Contém 1.NS**, **Multado** e **5.62**: cada clique alterna entre contém, não contém e tanto faz.' },
@@ -99,7 +99,9 @@ export const PAGINAS_DOC: PaginaDoc[] = [
         { tipo: 'importante', texto: 'O valor da Manutenção não entra na soma do Faturamento.' },
       ] },
       { id: '562', titulo: 'O 5.62', blocos: [
-        { tipo: 'texto', texto: 'O 5.62 é a "verificação do sistema". Em muitos serviços a CEMIG pagou o **RC inteiro** em vez de só a verificação, e eles aparecem como pagou a mais. Por isso o 5.62 tem destaque na lista e no Painel.' },
+        { tipo: 'texto', texto: 'O 5.62 é a "verificação do sistema". Dentro de um RC da Tabela 12 ele é **informativo** (vale zero), como a CEMIG paga:' },
+        { tipo: 'lista', itens: ['RC fechado **só com 5.62**: paga o RC.', 'RC com 5.62 e um código que substitui o RC (8.82, 8.85): paga só esse código; a linha do 5.62 vale zero.', 'RC com 5.62 e outro código fora dessa lista: paga o RC.', 'Serviço que não é RC da Tabela 12: o 5.62 paga o próprio valor.'] },
+        { tipo: 'exemplo', titulo: 'Exemplo · fatura 9844', linhas: [['245473715 · RC08 COD rural, só 5.62', '0,139901 × 1,2 = 0,167881 US'], ['245812418 · RC07 com 5.62 e 8.82', 'só o 8.82: 0,016340 US']] },
       ] },
       { id: 'exportar', titulo: 'Exportar', blocos: [
         { tipo: 'lista', itens: ['**Exportar para Excel**: a lista como está filtrada, todas as páginas, em US.', '**Exportar para negociação**: uma aba para pagou a menos e outra para pagou a mais, com a explicação de cada serviço, sem os conferidos.'] },
