@@ -148,6 +148,21 @@ Pendências:
   conferido 1, fora 26. Todos os testes de banco passam contra o banco real (o limite de 1,5 s da
   lista no servicos-testar estourou uma vez, 1,67 s; nas três rodadas seguintes 0,55–0,68 s).
 
+- **Glosa parcial (047, Matheus, 29/10/2026):** com código G, a CEMIG pode glosar só uma parte.
+  Glosa ≥ devido (cálculo OK) → GLOSADO; glosa < devido (cálculo A_MENOS) → fica em Pagou a menos,
+  motivo `GLOSA_PARCIAL`. Para serviço com código G a diferença na lista é pago + glosa − devido (o que
+  falta pagar). Ex.: 246310816 devido 0,004388, glosa 0,003657 → −0,000731 (R$ 2,17; antes mostrava
+  −R$ 13,01). 246309215: glosa = devido 0,062101 → Glosados. Card Glosados passa a mostrar a glosa
+  lançada (us = glosa) e "o contrato prevê". Sem código G a regra não vale: o crédito vem separado da
+  multa (somar a multa deixaria 48 dos 53 "a menos" multados positivos). Na 9844 (sem conferências à
+  mão): glosados 331 (glosa 5,9880; contrato 5,1074), a menos 155 (6,8350 US; 14 glosa parcial,
+  −0,2785). Testes: glosados, rodada2, servicos e texto atualizados; todos passam com a 047 carregada.
+  **047 aplicada** em 29/10/2026 (a pedido do Matheus); totais da 9844 na versão '047': glosados 331,
+  a menos 155 (6,8350 US; glosa parcial 14), a mais 24, conferido 1. Testes de banco passam no banco real.
+- **Possível fator errado só na coluna Motivo** (Matheus, 29/10/2026): saiu a etiqueta da coluna
+  Situação da Conferência; o Motivo já mostra "Possível fator errado: <caso>". O filtro rápido e o
+  aviso no detalhe do serviço continuam.
+
 ## Entrega: 5.62 dentro de RC, justificativa da glosa e busca por vários serviços — 29/10/2026 (Claude)
 
 - **5.62 dentro de RC da Tabela 12 é informativo** (Matheus aprovou, migration 044): não conta como

@@ -43,7 +43,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
     secoes: [
       { id: 'cards', titulo: 'Os cards', blocos: [
         { tipo: 'texto', texto: 'O card **Pagou a menos** soma os serviços em que a CEMIG pagou abaixo do contrato. O card **Pagou a mais** soma os pagos acima. Cada um diz quanto a CEMIG pagou e quanto o contrato prevê para esses serviços, e separa o valor por motivo.' },
-        { tipo: 'texto', texto: 'O card laranja **Glosados** reúne os serviços com código de glosa (G.02): a CEMIG glosou e não vai pagar, então eles não entram no pagou a menos. O valor é o que o contrato pagaria; a etiqueta mostra a glosa que a CEMIG lançou.' },
+        { tipo: 'texto', texto: 'O card laranja **Glosados** reúne os serviços com código de glosa (G.02) em que a glosa cobre o que o contrato pagaria: a CEMIG não vai pagar, então eles não entram no pagou a menos. O valor é a glosa lançada. Se a glosa foi só de uma parte, o resto continua devido e o serviço fica em **Pagou a menos**, motivo **Glosa parcial**.' },
         { tipo: 'nota', texto: 'Multa e estorno não entram nessa conta. Um serviço multado em que o crédito mais a multa fecham com o contrato aparece como "Confere".' },
         { tipo: 'tabela', cabecalho: ['No card', 'Quer dizer'], linhas: [
           ['A CEMIG pagou', 'Soma do crédito das linhas que têm fator no contrato.'],
@@ -51,7 +51,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
           ['RC não pago, fator menor…', 'A mesma diferença separada pelo motivo.'],
           ['N com 1.NS', 'Serviços que podem ter parte do pagamento pela Manutenção.'],
           ['N com 5.62', 'Serviços pagos a mais que têm o código 5.62 (verificação do sistema).'],
-          ['Glosa lançada', 'No card Glosados: a soma da glosa que a CEMIG lançou nesses serviços.'],
+          ['Glosa parcial', 'No card Pagou a menos: serviço com G.02 em que a glosa foi menor que o devido; a diferença é o que falta pagar.'],
         ] },
       ] },
       { id: 'funil', titulo: 'O funil', blocos: [
@@ -84,7 +84,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
       { id: 'atalhos', titulo: 'Atalhos e botões', blocos: [
         { tipo: 'texto', texto: 'Os atalhos no topo escolhem a situação: Todos, Pagou a menos, Pagou a mais, Glosados, Fora do contrato, Conferem e Conferidos. Ao lado, **Contém 1.NS**, **Multado** e **5.62**: cada clique alterna entre contém, não contém e tanto faz.' },
         { tipo: 'nota', texto: 'Para separar as falhas que serão acertadas pela Manutenção, use "Pagou a menos" com "Contém 1.NS".' },
-        { tipo: 'texto', texto: '**Possível fator errado** separa os serviços em que o pago é o previsto multiplicado ou dividido exatamente por um fator de zona/despacho: × 1,2 ou × 1,4 (COD rural), 1,4 no lugar de 1,2 (e o contrário), o fator esquecido (÷ 1,2, ÷ 1,4) ou × 0,8. Costuma ser COD ou zona rural trocados. Na lista, a situação ganha a etiqueta **Possível fator errado** e o motivo diz qual foi o caso.' },
+        { tipo: 'texto', texto: '**Possível fator errado** separa os serviços em que o pago é o previsto multiplicado ou dividido exatamente por um fator de zona/despacho: × 1,2 ou × 1,4 (COD rural), 1,4 no lugar de 1,2 (e o contrário), o fator esquecido (÷ 1,2, ÷ 1,4) ou × 0,8. Costuma ser COD ou zona rural trocados. Na lista, a coluna Motivo mostra **Possível fator errado** e qual foi o caso.' },
         { tipo: 'texto', texto: 'O **botão redondo** no canto de baixo, à direita, abre o **Contrato rápido**: busca de códigos com CSC, COD e Moto, a lista dos tipos despachados pelo COD e a Tabela 14, sem sair da lista. Esc ou X fecha.' },
       ] },
       { id: 'janela', titulo: 'A janela do serviço', blocos: [
@@ -154,7 +154,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
       { id: 'saldo', titulo: 'Pagou a menos e pagou a mais', blocos: [
         { tipo: 'exemplo', titulo: 'Exemplo', linhas: [['Contrato prevê', '0,023400'], ['CEMIG pagou', '0,016400'], ['Pagou a menos', '0,007000']] },
         { tipo: 'lista', itens: ['Multas e estornos ficam fora: um serviço multado em que crédito + multa = devido confere.',
-          'Serviço com **código de glosa** (G.02) vai para **Glosados**: a CEMIG não vai pagar, então não é pagou a menos nem confere.',
+          'Serviço com **código de glosa** (G.02) vai para **Glosados** quando a glosa cobre o devido: a CEMIG não vai pagar. Se a glosa é menor, fica em **Pagou a menos** (Glosa parcial) e a diferença inclui a glosa: pago + glosa − devido.',
           'Serviço **conferido** à mão sai do pagou a menos, do pagou a mais e da exportação; o atalho "Conferidos" mostra todos.', 'Código sem valor no contrato fica fora dos dois lados.'] },
       ] },
       { id: 'urbano-rural', titulo: 'Urbano e rural', blocos: [

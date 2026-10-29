@@ -15,6 +15,11 @@ assert.equal(fraseServico({...base,situacao_calculo:'OK',motivo:null,creditado:0
 assert.match(fraseServico({...base,motivo:'OUTRA'}),/^Deveria pagar 0,023400 .* e pagou 0,016400\.$/);
 assert.match(fraseServico({...base,situacao_calculo:'A_MAIS',motivo:'FATOR_MAIOR',creditado:0.03}),/acima do contrato\.$/);
 assert.match(fraseServico({...base,situacao_calculo:'FORA_CONTRATO',motivo:null,devido:null}),/fora do contrato/);
+// código de glosa (046/047): cobre o devido → glosado; menor → falta o resto (246310816)
+assert.equal(fraseServico({...base,situacao_calculo:'GLOSADO',motivo:null,creditado:0,devido:0.062101,multas:0.062101}),
+ 'Glosado pela CEMIG com código de glosa: a glosa de 0,062101 cobre o que o contrato pagaria (0,062101). O serviço não será pago.');
+assert.equal(fraseServico({...base,motivo:'GLOSA_PARCIAL',codigo_principal:'5.63',creditado:0,pago_comparado:0,devido:0.004388,multas:0.003657}),
+ 'A CEMIG glosou 0,003657 de 0,004388 (5.63) e não pagou o resto: faltam 0,000731.');
 assert.equal(notaCalculo({...base,rc_por_atendimento:true,codigo_principal:'RC07'},['5.14','7.42']),
  'RC07 pago uma vez por atendimento; os códigos 5.14 e 7.42 só indicam o trabalho feito.');
 assert.equal(notaCalculo({...base,qtd_linhas:2},['7.15','7.10']),'Pagamento por código: cada código (7.15 e 7.10) é pago na sua linha.');
@@ -32,7 +37,7 @@ assert.equal(s.funil.importados,2);
 assert.deepEqual(s.grupos.tipo_turma,[{valor:'M',servicos:2,creditado:3,devido:3,multas:0}]);
 assert.equal(somarTotais([]).servicos,0);
 assert.equal(variacao(903.33,871.05).toFixed(1),'3.7');assert.equal(variacao(1,0),null);
-assert.equal(Object.keys(MOTIVOS_FAT).length,6);assert.equal(SITUACOES_SERVICO_FAT.A_MENOS,'Pagou a menos');
+assert.equal(Object.keys(MOTIVOS_FAT).length,7);assert.equal(SITUACOES_SERVICO_FAT.GLOSADO,'Glosado');assert.equal(SITUACOES_SERVICO_FAT.A_MENOS,'Pagou a menos');
 // cache dos últimos dados: armazenamento bloqueado ou corrompido não quebra a tela
 const {lerCache,gravarCache,tempoRelativo}=require('../src/lib/cacheTela.ts');
 const mem=new Map(),arm={getItem:k=>mem.get(k)??null,setItem:(k,v)=>mem.set(k,v)};

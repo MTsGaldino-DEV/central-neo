@@ -76,10 +76,7 @@ export function CardsLados({ totais, unidade, taxa, onVer }: {
         </div>
         <p className="mt-1 font-codigo text-3xl font-extrabold text-glosa xl:text-4xl">{v(-glosados.us, true)}</p>
         {outraUnidadeFat(glosados.us, unidade, taxa) && <p className="font-codigo text-xs text-aco">{outraUnidadeFat(glosados.us, unidade, taxa)}</p>}
-        <p className="mt-2 text-sm text-tinta">Serviços com código de glosa (G.xx): a CEMIG não vai pagar. O valor é o que o contrato pagaria.</p>
-        {glosados.glosa !== 0 && <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className={`${etiqueta} bg-glosa-fundo text-glosa`}>glosa lançada {v(-Math.abs(glosados.glosa), true)}</span>
-        </div>}
+        <p className="mt-2 text-sm text-tinta">Glosa lançada pela CEMIG em serviços com código de glosa (G.xx); não serão pagos. O contrato prevê <b className="font-codigo">{v(glosados.devido)}</b>. Glosa parcial fica em Pagou a menos.</p>
         <button type="button" onClick={() => onVer('glosados')} disabled={!glosados.servicos}
           className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-glosa px-3 py-2 text-xs font-bold text-white hover:bg-glosa/90 disabled:opacity-50">
           Ver os {numero(glosados.servicos)} serviços <ArrowRight className="size-4" aria-hidden="true" />

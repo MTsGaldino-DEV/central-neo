@@ -34,7 +34,7 @@ export interface TotaisFat {
   a_menos:{servicos:number; us:number; pago:number; devido:number; com_1ns:number; por_motivo:Record<string,{us:number;servicos:number}>};
   a_mais:{servicos:number; us:number; pago:number; devido:number; c562:{servicos:number; us:number}; por_motivo:Record<string,{us:number;servicos:number}>};
   fora_contrato:number;
-  /** Serviços com código de glosa: us = o que o contrato pagaria; glosa = o que a CEMIG lançou. */
+  /** Serviços com código de glosa em que a glosa cobre o devido: us = glosa = o que a CEMIG lançou; devido = o que o contrato pagaria. */
   glosados?:{servicos:number; us:number; devido:number; glosa:number};
   funil:{importados:number; equipe_identificada:number; codigo_no_contrato:number; valor_confere:number; conferidos:number; glosados?:number};
   grupos:{tipo_turma:GrupoTotaisFat[]; codserv:GrupoTotaisFat[]; cidade:GrupoTotaisFat[]};

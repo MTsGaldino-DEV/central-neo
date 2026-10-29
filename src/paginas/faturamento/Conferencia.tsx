@@ -69,7 +69,9 @@ export default function Conferencia() {
     fora: totais?.fora_contrato, confere: totais?.funil.valor_confere, conferidos: totais?.funil.conferidos,
   };
   // Soma da diferença dos serviços filtrados (038); sem ela, cai no total do lado.
-  const somaFiltrada = r ? r.soma ?? (e.atalho === 'a_menos' ? -r.lados.a_menos.us : e.atalho === 'a_mais' ? r.lados.a_mais.us : e.atalho === 'glosados' && r.lados.glosados ? -r.lados.glosados.us : null) : null;
+  const somaFiltrada = r ? r.soma ?? (e.atalho === 'a_menos' ? -r.lados.a_menos.us : e.atalho === 'a_mais' ? r.lados.a_mais.us : null) : null;
+  // Nos glosados a diferença é quase zero (a glosa cobre o devido); o cabeçalho mostra a glosa lançada.
+  const glosaFiltrada = e.atalho === 'glosados' && r?.lados.glosados ? r.lados.glosados.us : null;
   const etiquetas = [
     ...COLUNAS_CONFERENCIA.flatMap(c => {
       const sel = c.lista && e.listas[c.lista.chave];
@@ -148,7 +150,7 @@ export default function Conferencia() {
 
       <section className="rounded-2xl border border-linha bg-white">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-linha px-4 py-2.5 text-xs text-aco">
-          <span>{r ? <><b className="text-tinta">{numero(r.total)}</b> serviços{somaFiltrada != null && <> · diferença <b className={`font-codigo ${somaFiltrada < 0 ? 'text-erro' : somaFiltrada > 0 ? 'text-concluido' : 'text-aco'}`}>{valorFat(somaFiltrada, unidade, taxa, true)}</b></>}</> : 'Carregando…'}</span>
+          <span>{r ? <><b className="text-tinta">{numero(r.total)}</b> serviços{glosaFiltrada != null ? <> · glosa <b className="font-codigo text-glosa">{valorFat(-glosaFiltrada, unidade, taxa, true)}</b></> : somaFiltrada != null && <> · diferença <b className={`font-codigo ${somaFiltrada < 0 ? 'text-erro' : somaFiltrada > 0 ? 'text-concluido' : 'text-aco'}`}>{valorFat(somaFiltrada, unidade, taxa, true)}</b></>}</> : 'Carregando…'}</span>
           <button type="button" onClick={recarregar} disabled={lista.atualizando} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-nevoa disabled:opacity-70">
             {lista.atualizando ? 'atualizando…' : lista.salvoEm ? `atualizado ${tempoRelativo(lista.salvoEm)}` : 'atualizar'}
             <RotateCw className={`size-3.5 ${lista.atualizando ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />
@@ -211,8 +213,7 @@ function Linha({ s, unidade, taxa, abrir }: { s: ServicoFat; unidade: 'reais' | 
   const v = (n: number | null) => valorFat(n, unidade, taxa);
   return (
     <tr onClick={abrir} className={`cursor-pointer hover:brightness-[0.97] ${fundo}`}>
-      <td className={td}><SeloSituacao situacao={s.situacao} />{s.fator_12 && <span title={`Possível fator errado: ${s.fator_12} o previsto`} className="mt-1 flex w-fit items-center gap-1 rounded-full border border-pendente/40 bg-pendente-fundo px-2 py-0.5 text-[11px] font-bold whitespace-nowrap text-pendente">
-        <AlertTriangle className="size-3" aria-hidden="true" />Possível fator errado</span>}{s.revisao_desatualizada && <span className="mt-1 block text-[10px] font-bold text-pendente">conferência antiga: rever</span>}</td>
+      <td className={td}><SeloSituacao situacao={s.situacao} />{s.revisao_desatualizada && <span className="mt-1 block text-[10px] font-bold text-pendente">conferência antiga: rever</span>}</td>
       <td className={td}><button type="button" aria-label={`Abrir serviço ${s.numserv}`} onClick={x => { x.stopPropagation(); abrir(); }}
         className="font-codigo font-bold text-tinta hover:text-sinal focus-visible:outline-2 focus-visible:outline-sinal">{s.numserv}</button></td>
       <td className={td}>{s.tipo_serv}</td>

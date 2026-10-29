@@ -49,9 +49,12 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal((await t`select neo_fat_recalcular('9844') d`)[0].d,false);          // já em dia: não refaz
     const [cmp]=await t`select
       (select jsonb_agg(to_jsonb(x) order by x.numserv) from (select numserv,
-        -- 046: com código de glosa (G.xx) a lista mostra GLOSADO e tira o motivo
-        case when g and situacao<>'CONFERIDO' then 'GLOSADO' else situacao end situacao,case when g then 'GLOSADO' else situacao_calculo end situacao_calculo,
-        case when g then null else motivo end motivo,diferenca,devido,codigo_principal,pago_comparado,multas,contexto
+        -- 046/047: com código de glosa (G.xx) a glosa entra na diferença; se cobre o devido, a lista
+        -- mostra GLOSADO sem motivo; se não cobre, fica A_MENOS com motivo GLOSA_PARCIAL
+        case when g and situacao_calculo<>'A_MENOS' and situacao<>'CONFERIDO' then 'GLOSADO' else situacao end situacao,
+        case when g and situacao_calculo<>'A_MENOS' then 'GLOSADO' else situacao_calculo end situacao_calculo,
+        case when g and situacao_calculo<>'A_MENOS' then null when g then 'GLOSA_PARCIAL' else motivo end motivo,
+        case when g then pago_comparado+multas-devido else diferenca end diferenca,devido,codigo_principal,pago_comparado,multas,contexto
        from (select *,exists(select 1 from unnest(codigos) c where c ~ '^G[.]') g from neo_fat_servicos where fatura='9844') y) x)
       =(select jsonb_agg(to_jsonb(x) order by x.numserv) from (select numserv,situacao,situacao_calculo,motivo,diferenca,devido,codigo_principal,pago_comparado,multas,contexto from neo_fat_servicos_lista where fatura='9844') x) igual`;
     assert.equal(cmp.igual,true);
@@ -66,7 +69,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.ok(r.d.total>0);assert.ok(r.d.servicos.length<=50);
     assert.ok(r.d.servicos.every(x=>x.situacao_calculo==='A_MENOS'));
     assert.ok(r.d.servicos.every((x,i,a)=>!i||Number(a[i-1].diferenca)<=Number(x.diferenca)));
-    const [v]=await t`select sum(-diferenca) us,count(*)::int n from neo_fat_servicos where fatura='9844' and situacao='A_MENOS' and not exists(select 1 from unnest(codigos) c where c ~ '^G[.]')`;
+    const [v]=await t`select sum(case when exists(select 1 from unnest(codigos) c where c ~ '^G[.]') then devido-pago_comparado-multas else -diferenca end) us,count(*)::int n from neo_fat_servicos where fatura='9844' and situacao='A_MENOS'`;
     assert.equal(Number(r.d.lados.a_menos.us).toFixed(6),Number(v.us).toFixed(6));
     assert.equal(r.d.lados.a_menos.servicos,v.n);
     const soma=Object.values(r.d.lados.a_menos.por_motivo).reduce((s,m)=>s+m.servicos,0);

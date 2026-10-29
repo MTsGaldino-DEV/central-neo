@@ -21,6 +21,7 @@ export function outraUnidadeFat(us: number | null | undefined, unidade: UnidadeF
 export const MOTIVOS_FAT: Record<string,string> = {
   MOTO_INDEVIDO:'Desconto de Moto indevido', RC_NAO_PAGO:'RC não pago', FATOR_MENOR:'Fator menor que o contrato',
   RC_VARIAS_LINHAS:'RC pago em várias linhas', FATOR_MAIOR:'Fator maior que o contrato', OUTRA:'Outra diferença',
+  GLOSA_PARCIAL:'Glosa parcial',
 };
 export const SITUACOES_SERVICO_FAT: Record<string,string> = {
   OK:'Confere', A_MENOS:'Pagou a menos', A_MAIS:'Pagou a mais', GLOSADO:'Glosado', FORA_CONTRATO:'Código fora do contrato', CONFERIDO:'Conferido',
@@ -46,11 +47,12 @@ export function fraseServico(s: ServicoTextoFat): string {
       frase = 'Código fora do contrato: não há fator para calcular o devido.';
       break;
     case 'GLOSADO':
-      frase = `Glosado pela CEMIG com código de glosa: o serviço não será pago. Pelo contrato valeria ${d}; a glosa lançada foi de ${usFat(s.multas)}.`;
+      frase = `Glosado pela CEMIG com código de glosa: a glosa de ${usFat(s.multas)} cobre o que o contrato pagaria (${d}). O serviço não será pago.`;
       break;
     case 'A_MENOS':
       frase = s.motivo === 'MOTO_INDEVIDO' ? `${deveria}: aplicaram o desconto de Moto 0,7 numa equipe ${TIPOS_TURMA_FAT[s.tipo_turma ?? ''] ?? 'sem tipo identificado'}.`
         : s.motivo === 'RC_NAO_PAGO' ? `${cod} deveria ser pago uma vez (${d}), mas ${s.qtd_linhas > 1 ? `nenhuma das ${s.qtd_linhas} linhas do atendimento recebeu` : 'a linha do atendimento não recebeu'} crédito.`
+        : s.motivo === 'GLOSA_PARCIAL' ? `A CEMIG glosou ${usFat(s.multas)} de ${d} (${cod}) e não pagou o resto: faltam ${usFat((s.devido ?? 0) - (s.pago_comparado ?? s.creditado) - (s.multas ?? 0))}.`
         : s.motivo === 'FATOR_MENOR' ? `${deveria}: valor abaixo do contrato.`
         : `${deveria}.`;
       break;
