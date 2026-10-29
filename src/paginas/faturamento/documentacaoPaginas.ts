@@ -41,17 +41,18 @@ export const PAGINAS_DOC: PaginaDoc[] = [
   { id: 'painel', titulo: 'Painel', grupo: 'Faturamento', atualizada: HOJE,
     resumo: 'Para a fatura ou o período escolhido, quanto a CEMIG pagou a menos e a mais do que o contrato prevê. É a primeira tela para preparar uma negociação.',
     secoes: [
-      { id: 'cards', titulo: 'Os cards', blocos: [
-        { tipo: 'texto', texto: 'O card **Pagou a menos** soma os serviços em que a CEMIG pagou abaixo do contrato. O card **Pagou a mais** soma os pagos acima. Cada um diz quanto a CEMIG pagou e quanto o contrato prevê para esses serviços, e separa o valor por motivo.' },
-        { tipo: 'texto', texto: 'O card laranja **Glosados** reúne os serviços com código de glosa (G.02) em que a glosa cobre o que o contrato pagaria: a CEMIG não vai pagar, então eles não entram no pagou a menos. O valor é a glosa lançada. Se a glosa foi só de uma parte, o resto continua devido e o serviço fica em **Pagou a menos**, motivo **Glosa parcial**.' },
-        { tipo: 'nota', texto: 'Multa e estorno não entram nessa conta. Um serviço multado em que o crédito mais a multa fecham com o contrato aparece como "Confere".' },
-        { tipo: 'tabela', cabecalho: ['No card', 'Quer dizer'], linhas: [
-          ['A CEMIG pagou', 'Soma do crédito das linhas que têm fator no contrato.'],
-          ['O contrato prevê', 'Soma do devido pelo fator CSC ou COD, pela zona e pelo tipo de frota.'],
-          ['RC não pago, fator menor…', 'A mesma diferença separada pelo motivo.'],
-          ['N com 1.NS', 'Serviços que podem ter parte do pagamento pela Manutenção.'],
-          ['N com 5.62', 'Serviços pagos a mais que têm o código 5.62 (verificação do sistema).'],
-          ['Glosa parcial', 'No card Pagou a menos: serviço com G.02 em que a glosa foi menor que o devido; a diferença é o que falta pagar.'],
+      { id: 'cards', titulo: 'O total e os cards', blocos: [
+        { tipo: 'texto', texto: 'A faixa escura no topo mostra o que a CEMIG **pagou no total**, ao lado do que o contrato prevê, das multas e do número de serviços. Clique nela para abrir todos os serviços.' },
+        { tipo: 'texto', texto: 'Embaixo, três cards: **Pagou a menos** (pagou abaixo do contrato), **Pagou a mais** (acima) e **Glosados** (laranja: serviços com código de glosa, G.02, em que a glosa cobre o que o contrato pagaria; não serão pagos). Clique num card para abrir a lista daquele grupo.' },
+        { tipo: 'texto', texto: 'A barra colorida de cada card divide o valor: no Pagou a menos, por motivo; no Pagou a mais, entre os que têm 5.62 e os outros. Passe o mouse num pedaço para ver o valor.' },
+        { tipo: 'nota', texto: 'Multa e estorno não entram nessa conta. Um serviço multado em que o crédito mais a multa fecham com o contrato aparece como "Confere". Se a glosa com G.02 foi só de uma parte, o resto continua devido: o serviço fica em Pagou a menos, motivo Glosa parcial.' },
+        { tipo: 'tabela', cabecalho: ['Na tela', 'Quer dizer'], linhas: [
+          ['Pagou no total', 'Soma do crédito da CEMIG na fatura, sem as glosas.'],
+          ['Contrato prevê', 'Soma do devido pelo fator CSC ou COD, pela zona e pelo tipo de frota.'],
+          ['Fator menor, RC não pago…', 'A diferença do Pagou a menos separada pelo motivo.'],
+          ['Glosa parcial', 'Serviço com G.02 em que a glosa foi menor que o devido; a diferença é o que falta pagar.'],
+          ['Com 5.62', 'Serviços pagos a mais que têm o código 5.62 (verificação do sistema).'],
+          ['Glosa lançada', 'No card Glosados: a glosa que a CEMIG lançou; ao lado, o que o contrato previa.'],
         ] },
       ] },
       { id: 'funil', titulo: 'O funil', blocos: [

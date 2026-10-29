@@ -1,87 +1,88 @@
-import { ArrowRight } from 'lucide-react';
 import type { TotaisFat } from '@/lib/faturamentoServicos';
-import { MOTIVOS_FAT, outraUnidadeFat, valorFat, type UnidadeFat } from '@/lib/faturamentoTexto';
+import { MOTIVOS_FAT, valorFat, type UnidadeFat } from '@/lib/faturamentoTexto';
 
 const numero = (n: number) => n.toLocaleString('pt-BR');
+type Lado = 'todos' | 'a_menos' | 'a_mais' | 'glosados';
+interface Fatia { id: string; rotulo: string; servicos: number; us: number; cor: string }
 
-/** Os cards do Painel: o que a CEMIG pagou no total, a menos (principal), a mais e o que ela glosou. */
+// Nomes curtos para a legenda da barra; o nome completo fica na dica (title).
+const CURTO: Record<string, string> = {
+  FATOR_MENOR: 'Fator menor', OUTRA: 'Outra', RC_NAO_PAGO: 'RC não pago', GLOSA_PARCIAL: 'Glosa parcial',
+  MOTO_INDEVIDO: 'Moto indevido', FATOR_MAIOR: 'Fator maior', RC_VARIAS_LINHAS: 'RC em várias linhas',
+};
+const TONS_MENOS = ['bg-erro', 'bg-erro-marca', 'bg-red-300', 'bg-red-200'];
+
+/** Painel (Matheus, 29/10/2026): faixa escura com o total e três cards de diferença com uma barra por motivo. */
 export function CardsLados({ totais, unidade, taxa, onVer }: {
-  totais: TotaisFat; unidade: UnidadeFat; taxa: number | null; onVer: (lado: 'todos' | 'a_menos' | 'a_mais' | 'glosados') => void;
+  totais: TotaisFat; unidade: UnidadeFat; taxa: number | null; onVer: (lado: Lado) => void;
 }) {
   const v = (us: number, sinal = false) => valorFat(us, unidade, taxa, sinal);
   const menos = totais.a_menos, mais = totais.a_mais;
   const glosados = totais.glosados ?? { servicos: 0, us: 0, devido: 0, glosa: 0 };
   const c562 = mais.c562 ?? { servicos: 0, us: 0 };
-  const motivos = Object.entries(menos.por_motivo).sort((a, b) => b[1].us - a[1].us);
-  const etiqueta = 'inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold';
+  let tom = 0;
+  const fatiasMenos: Fatia[] = Object.entries(menos.por_motivo).sort((a, b) => b[1].us - a[1].us).map(([m, x]) => ({
+    id: m, rotulo: CURTO[m] ?? MOTIVOS_FAT[m] ?? m, servicos: x.servicos, us: x.us,
+    cor: m === 'GLOSA_PARCIAL' ? 'bg-glosa-marca' : TONS_MENOS[Math.min(tom++, TONS_MENOS.length - 1)],
+  }));
+  const fatiasMais: Fatia[] = [
+    { id: 'c562', rotulo: 'Com 5.62', servicos: c562.servicos, us: c562.us, cor: 'bg-concluido' },
+    { id: 'outros', rotulo: 'Outros', servicos: mais.servicos - c562.servicos, us: (mais.us ?? 0) - c562.us, cor: 'bg-emerald-300' },
+  ].filter(f => f.servicos > 0);
+  const mini = 'block text-xs font-semibold text-white/70';
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <section className="rounded-2xl border-2 border-sinal bg-white p-4 sm:p-5" aria-label="Pagou no total">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-[11px] font-extrabold tracking-wide text-sinal uppercase">Pagou no total</p>
-          <p className="text-xs text-aco"><b className="text-tinta">{numero(totais.servicos)}</b> serviços</p>
-        </div>
-        <p className="mt-1 font-codigo text-3xl font-extrabold text-tinta xl:text-4xl">{v(totais.creditado)}</p>
-        {outraUnidadeFat(totais.creditado, unidade, taxa) && <p className="font-codigo text-xs text-aco">{outraUnidadeFat(totais.creditado, unidade, taxa)}</p>}
-        <p className="mt-2 text-sm text-tinta">Crédito da CEMIG na fatura, sem as glosas. O contrato prevê <b className="font-codigo">{v(totais.devido)}</b>.</p>
-        {totais.multas !== 0 && <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className={`${etiqueta} bg-nevoa text-aco`}>multas {v(-Math.abs(totais.multas), true)} · fora do saldo</span>
-        </div>}
-        <button type="button" onClick={() => onVer('todos')} disabled={!totais.servicos}
-          className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-sinal px-3 py-2 text-xs font-bold text-white hover:bg-sinal/90 disabled:opacity-50">
-          Ver os {numero(totais.servicos)} serviços <ArrowRight className="size-4" aria-hidden="true" />
-        </button>
-      </section>
+    <div className="space-y-3">
+      <button type="button" onClick={() => onVer('todos')} disabled={!totais.servicos} aria-label={`Pagou no total: ver os ${numero(totais.servicos)} serviços`}
+        className="flex w-full flex-wrap items-center justify-between gap-x-8 gap-y-3 rounded-2xl bg-noite-alto px-5 py-4 text-left text-white tabular-nums hover:bg-noite focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sinal disabled:cursor-default sm:px-6">
+        <span className="block">
+          <span className="block text-xs font-bold text-sinal-claro">Pagou no total</span>
+          <span className="block text-[28px] leading-tight font-extrabold tracking-tight">{v(totais.creditado)}</span>
+        </span>
+        <span className="flex flex-wrap gap-x-7 gap-y-2">
+          <span className="block"><span className={mini}>Contrato prevê</span><b className="text-base font-extrabold">{v(totais.devido)}</b></span>
+          <span className="block"><span className={mini}>Multas</span><b className="text-base font-extrabold">{v(-Math.abs(totais.multas), true)}</b></span>
+          <span className="block"><span className={mini}>Serviços</span><b className="text-base font-extrabold">{numero(totais.servicos)}</b></span>
+        </span>
+      </button>
 
-      <section className="rounded-2xl border-2 border-erro-marca bg-white p-4 sm:p-5" aria-label="Pagou a menos">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-[11px] font-extrabold tracking-wide text-erro uppercase">Pagou a menos</p>
-          <p className="text-xs text-aco"><b className="text-tinta">{numero(menos.servicos)}</b> serviços</p>
-        </div>
-        <p className="mt-1 font-codigo text-3xl font-extrabold text-erro xl:text-4xl">{v(-(menos.us ?? totais.saldo_a_receber), true)}</p>
-        {outraUnidadeFat(menos.us ?? totais.saldo_a_receber, unidade, taxa) && <p className="font-codigo text-xs text-aco">{outraUnidadeFat(menos.us ?? totais.saldo_a_receber, unidade, taxa)}</p>}
-        <p className="mt-2 text-sm text-tinta">A CEMIG pagou <b className="font-codigo">{v(menos.pago ?? 0)}</b> e o contrato prevê <b className="font-codigo">{v(menos.devido ?? 0)}</b>.</p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {motivos.map(([m, x]) => <span key={m} className={`${etiqueta} bg-erro-fundo text-erro`}>{numero(x.servicos)} · {MOTIVOS_FAT[m] ?? m} · {v(-x.us, true)}</span>)}
-          {(menos.com_1ns ?? 0) > 0 && <span className={`${etiqueta} bg-revisao-fundo text-revisao`}>{numero(menos.com_1ns)} com 1.NS</span>}
-        </div>
-        <button type="button" onClick={() => onVer('a_menos')} disabled={!menos.servicos}
-          className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-erro px-3 py-2 text-xs font-bold text-white hover:bg-erro/90 disabled:opacity-50">
-          Ver os {numero(menos.servicos)} serviços <ArrowRight className="size-4" aria-hidden="true" />
-        </button>
-      </section>
-
-      <section className="rounded-2xl border-2 border-concluido-marca bg-white p-4 sm:p-5" aria-label="Pagou a mais">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-[11px] font-extrabold tracking-wide text-concluido uppercase">Pagou a mais</p>
-          <p className="text-xs text-aco"><b className="text-tinta">{numero(mais.servicos)}</b> serviços</p>
-        </div>
-        <p className="mt-1 font-codigo text-3xl font-extrabold text-concluido xl:text-4xl">{v(mais.us ?? totais.pago_a_mais, true)}</p>
-        {outraUnidadeFat(mais.us ?? totais.pago_a_mais, unidade, taxa) && <p className="font-codigo text-xs text-aco">{outraUnidadeFat(mais.us ?? totais.pago_a_mais, unidade, taxa)}</p>}
-        <p className="mt-2 text-sm text-tinta">A CEMIG pagou <b className="font-codigo">{v(mais.pago ?? 0)}</b> e o contrato prevê <b className="font-codigo">{v(mais.devido ?? 0)}</b>.</p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {c562.servicos > 0 && <span className={`${etiqueta} bg-concluido-fundo text-concluido`}>{numero(c562.servicos)} com 5.62 · {v(c562.us, true)}</span>}
-          {mais.servicos - c562.servicos > 0 && <span className={`${etiqueta} bg-concluido-fundo/60 text-concluido`}>{numero(mais.servicos - c562.servicos)} outros · {v((mais.us ?? 0) - c562.us, true)}</span>}
-        </div>
-        <button type="button" onClick={() => onVer('a_mais')} disabled={!mais.servicos}
-          className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-concluido px-3 py-2 text-xs font-bold text-white hover:bg-concluido/90 disabled:opacity-50">
-          Ver os {numero(mais.servicos)} serviços <ArrowRight className="size-4" aria-hidden="true" />
-        </button>
-      </section>
-
-      <section className="rounded-2xl border-2 border-glosa-marca bg-white p-4 sm:p-5" aria-label="Glosados">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-[11px] font-extrabold tracking-wide text-glosa uppercase">Glosados</p>
-          <p className="text-xs text-aco"><b className="text-tinta">{numero(glosados.servicos)}</b> serviços</p>
-        </div>
-        <p className="mt-1 font-codigo text-3xl font-extrabold text-glosa xl:text-4xl">{v(-glosados.us, true)}</p>
-        {outraUnidadeFat(glosados.us, unidade, taxa) && <p className="font-codigo text-xs text-aco">{outraUnidadeFat(glosados.us, unidade, taxa)}</p>}
-        <p className="mt-2 text-sm text-tinta">Glosa lançada pela CEMIG em serviços com código de glosa (G.xx); não serão pagos. O contrato prevê <b className="font-codigo">{v(glosados.devido)}</b>. Glosa parcial fica em Pagou a menos.</p>
-        <button type="button" onClick={() => onVer('glosados')} disabled={!glosados.servicos}
-          className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-glosa px-3 py-2 text-xs font-bold text-white hover:bg-glosa/90 disabled:opacity-50">
-          Ver os {numero(glosados.servicos)} serviços <ArrowRight className="size-4" aria-hidden="true" />
-        </button>
-      </section>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Card rotulo="Pagou a menos" cor="text-erro" servicos={menos.servicos} valor={v(-(menos.us ?? totais.saldo_a_receber), true)}
+          fatias={fatiasMenos} v={v} onClick={() => onVer('a_menos')} />
+        <Card rotulo="Pagou a mais" cor="text-concluido" servicos={mais.servicos} valor={v(mais.us ?? totais.pago_a_mais, true)}
+          fatias={fatiasMais} v={v} onClick={() => onVer('a_mais')} />
+        <Card rotulo="Glosados" cor="text-glosa" servicos={glosados.servicos} valor={v(-glosados.us, true)}
+          fatias={glosados.servicos ? [{ id: 'glosa', rotulo: '', servicos: glosados.servicos, us: glosados.us, cor: 'bg-glosa-marca' }] : []}
+          legenda={<>Glosa lançada · contrato prevê {v(glosados.devido)}</>} v={v} onClick={() => onVer('glosados')} />
+      </div>
     </div>
+  );
+}
+
+function Card({ rotulo, cor, servicos, valor, fatias, legenda, v, onClick }: {
+  rotulo: string; cor: string; servicos: number; valor: string; fatias: Fatia[]; legenda?: React.ReactNode;
+  v: (us: number, sinal?: boolean) => string; onClick: () => void;
+}) {
+  const soma = fatias.reduce((s, f) => s + Math.abs(f.us), 0);
+  return (
+    <button type="button" onClick={onClick} disabled={!servicos} aria-label={`${rotulo}: ver os ${numero(servicos)} serviços`}
+      className="flex w-full flex-col justify-start rounded-2xl border border-linha bg-white px-5 py-4 text-left tabular-nums hover:border-aco-claro focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sinal disabled:cursor-default">
+      <span className="flex items-baseline justify-between gap-2 text-xs font-bold">
+        <span className={cor}>{rotulo}</span><span className="text-aco">{numero(servicos)} serviços</span>
+      </span>
+      <span className={`mt-1.5 mb-2.5 block text-[26px] leading-tight font-extrabold tracking-tight ${cor}`}>{valor}</span>
+      <span className="flex h-2 overflow-hidden rounded-full bg-nevoa" aria-hidden="true">
+        {soma > 0 && fatias.map(f => <span key={f.id} className={`block h-full ${f.cor}`} style={{ width: `${Math.abs(f.us) / soma * 100}%` }}
+          title={`${f.rotulo || rotulo}: ${numero(f.servicos)} serviços · ${v(f.us)}`} />)}
+      </span>
+      <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-aco">
+        {legenda ?? fatias.map(f => (
+          <span key={f.id} className="inline-flex items-center gap-1" title={`${MOTIVOS_FAT[f.id] ?? f.rotulo}: ${v(f.us)}`}>
+            <i className={`inline-block size-2 rounded-sm ${f.cor}`} aria-hidden="true" />{f.rotulo} · {numero(f.servicos)}
+          </span>
+        ))}
+        {!legenda && !fatias.length && <span>Nenhum serviço</span>}
+      </span>
+    </button>
   );
 }

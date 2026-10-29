@@ -159,6 +159,15 @@ Pendências:
   −0,2785). Testes: glosados, rodada2, servicos e texto atualizados; todos passam com a 047 carregada.
   **047 aplicada** em 29/10/2026 (a pedido do Matheus); totais da 9844 na versão '047': glosados 331,
   a menos 155 (6,8350 US; glosa parcial 14), a mais 24, conferido 1. Testes de banco passam no banco real.
+- **Painel redesenhado (Matheus, 29/10/2026, brainstorming com mockups):** reclamação: muita
+  informação, fonte (valores em JetBrains Mono) e espaçamento. Escolhido: faixa do total em cima na
+  cor Noite (`bg-noite-alto`, rótulo `text-sinal-claro`; petróleo descartado por ser a cor de ação) com
+  pago à esquerda e contrato/multas/serviços à direita; embaixo três cards brancos (Pagou a menos,
+  Pagou a mais, Glosados) com valor, quantidade e barra por motivo (5.62/outros no a mais; glosa
+  lançada + contrato nos glosados). Tudo em Manrope `tabular-nums`; sem frases, etiquetas, botões
+  "Ver os N" (faixa e cards são clicáveis) nem o valor na outra unidade; "N com 1.NS" saiu do card.
+  Funil, gráfico e grupos não mudaram. `faturamento-ui-testar` atualizado (estava parado desde antes da
+  044: −R$ 24.901,90, texto antigo do 5.62, funil com 5 etapas, gráfico 161/181) e passa inteiro.
 - **Possível fator errado só na coluna Motivo** (Matheus, 29/10/2026): saiu a etiqueta da coluna
   Situação da Conferência; o Motivo já mostra "Possível fator errado: <caso>". O filtro rápido e o
   aviso no detalhe do serviço continuam.
