@@ -42,17 +42,17 @@ export const PAGINAS_DOC: PaginaDoc[] = [
     resumo: 'Para a fatura ou o período escolhido, quanto a CEMIG pagou a menos e a mais do que o contrato prevê. É a primeira tela para preparar uma negociação.',
     secoes: [
       { id: 'cards', titulo: 'O total e os cards', blocos: [
-        { tipo: 'texto', texto: 'A faixa escura no topo mostra o que a CEMIG **pagou no total**, ao lado do que o contrato prevê, das multas e do número de serviços. Clique nela para abrir todos os serviços.' },
-        { tipo: 'texto', texto: 'Embaixo, três cards: **Pagou a menos** (pagou abaixo do contrato), **Pagou a mais** (acima) e **Glosados** (laranja: serviços com código de glosa, G.02, em que a glosa cobre o que o contrato pagaria; não serão pagos). Clique num card para abrir a lista daquele grupo.' },
+        { tipo: 'texto', texto: 'A faixa escura no topo mostra, lado a lado, o **valor pago** pela CEMIG e o que o **contrato previa**: é a comparação principal. À direita ficam as **glosas** (tudo o que a CEMIG cortou na fatura) e o número de serviços. Clique na faixa para abrir todos os serviços.' },
+        { tipo: 'texto', texto: 'Embaixo, três cards: **Pagou a menos** (pagou abaixo do contrato), **Pagou a mais** (acima) e **Possíveis glosas erradas** (laranja: glosa parcial e glosa para conferir à mão). Clique num card para abrir a lista daquele grupo.' },
         { tipo: 'texto', texto: 'A barra colorida de cada card divide o valor: no Pagou a menos, por motivo; no Pagou a mais, entre os que têm 5.62 e os outros. Passe o mouse num pedaço para ver o valor.' },
-        { tipo: 'nota', texto: 'Multa e estorno não entram nessa conta. Um serviço multado em que o crédito mais a multa fecham com o contrato aparece como "Confere". Se a glosa com G.02 foi só de uma parte, o resto continua devido: o serviço fica em Pagou a menos, motivo Glosa parcial.' },
+        { tipo: 'nota', texto: 'Quando a CEMIG pagou o serviço, a glosa é de um código que saiu e a conta é pago × contrato. Quando ela não pagou nada e glosou (G.02, 0.00, 8.75…), a conta é glosa × contrato: igual confere; menor fica em Pagou a menos (Glosa parcial).' },
         { tipo: 'tabela', cabecalho: ['Na tela', 'Quer dizer'], linhas: [
-          ['Pagou no total', 'Soma do crédito da CEMIG na fatura, sem as glosas.'],
-          ['Contrato prevê', 'Soma do devido pelo fator CSC ou COD, pela zona e pelo tipo de frota.'],
+          ['Valor pago', 'Soma do crédito da CEMIG na fatura, sem as glosas.'],
+          ['Contrato previa', 'Soma do devido pelo fator CSC ou COD, pela zona e pelo tipo de frota.'],
           ['Fator menor, RC não pago…', 'A diferença do Pagou a menos separada pelo motivo.'],
-          ['Glosa parcial', 'Serviço com G.02 em que a glosa foi menor que o devido; a diferença é o que falta pagar.'],
+          ['Glosa parcial', 'A CEMIG não pagou nada e glosou menos que o contrato; a diferença é o que falta pagar.'],
+          ['Conferir à mão', 'A CEMIG glosou e zerou a quantidade (não dá para calcular o contrato) ou glosou mais que o contrato.'],
           ['Com 5.62', 'Serviços pagos a mais que têm o código 5.62 (verificação do sistema).'],
-          ['Glosa lançada', 'No card Glosados: a glosa que a CEMIG lançou; ao lado, o que o contrato previa.'],
         ] },
       ] },
       { id: 'funil', titulo: 'O funil', blocos: [
@@ -83,7 +83,8 @@ export const PAGINAS_DOC: PaginaDoc[] = [
         { tipo: 'lista', itens: ['Na coluna **Nº serviço**, separe vários números por vírgula (ex.: 246101137, 246445398, 246006974). Um número só procura quem contém aquele trecho.', 'Os filtros ligados aparecem como etiquetas; o ✕ tira um, "Limpar todos" tira todos.', 'A lista de valores de uma coluna respeita os outros filtros, como no Excel.', 'Os filtros ficam no endereço da página: dá para voltar, recarregar ou mandar o link.'] },
       ] },
       { id: 'atalhos', titulo: 'Atalhos e botões', blocos: [
-        { tipo: 'texto', texto: 'Os atalhos no topo escolhem a situação: Todos, Pagou a menos, Pagou a mais, Glosados, Fora do contrato, Conferem e Conferidos. Ao lado, **Contém 1.NS**, **Multado** e **5.62**: cada clique alterna entre contém, não contém e tanto faz.' },
+        { tipo: 'texto', texto: 'Os atalhos no topo escolhem a situação: Todos, Pagou a menos, Pagou a mais, Possíveis glosas erradas, Fora do contrato, Conferem e Conferidos. Ao lado, **Contém 1.NS**, **Com glosa** e **5.62**: cada clique alterna entre contém, não contém e tanto faz.' },
+        { tipo: 'texto', texto: 'Acima da lista, quatro números somam **tudo o que está filtrado** (todas as páginas): **Pago**, **Contrato prevê**, **Glosa** e **Diferença**. Mudou o filtro, os números mudam junto.' },
         { tipo: 'nota', texto: 'Para separar as falhas que serão acertadas pela Manutenção, use "Pagou a menos" com "Contém 1.NS".' },
         { tipo: 'texto', texto: '**Possível fator errado** separa os serviços em que o pago é o previsto multiplicado ou dividido exatamente por um fator de zona/despacho: × 1,2 ou × 1,4 (COD rural), 1,4 no lugar de 1,2 (e o contrário), o fator esquecido (÷ 1,2, ÷ 1,4) ou × 0,8. Costuma ser COD ou zona rural trocados. Na lista, a coluna Motivo mostra **Possível fator errado** e qual foi o caso.' },
         { tipo: 'texto', texto: 'O **botão redondo** no canto de baixo, à direita, abre o **Contrato rápido**: busca de códigos com CSC, COD e Moto, a lista dos tipos despachados pelo COD e a Tabela 14, sem sair da lista. Esc ou X fecha.' },
@@ -154,8 +155,8 @@ export const PAGINAS_DOC: PaginaDoc[] = [
       ] },
       { id: 'saldo', titulo: 'Pagou a menos e pagou a mais', blocos: [
         { tipo: 'exemplo', titulo: 'Exemplo', linhas: [['Contrato prevê', '0,023400'], ['CEMIG pagou', '0,016400'], ['Pagou a menos', '0,007000']] },
-        { tipo: 'lista', itens: ['Multas e estornos ficam fora: um serviço multado em que crédito + multa = devido confere.',
-          'Serviço com **código de glosa** (G.02) vai para **Glosados** quando a glosa cobre o devido: a CEMIG não vai pagar. Se a glosa é menor, fica em **Pagou a menos** (Glosa parcial) e a diferença inclui a glosa: pago + glosa − devido.',
+        { tipo: 'lista', itens: ['Serviço pago: a glosa é de um código que saiu e a conta é pago × contrato.',
+          'Serviço **sem nada pago e com glosa**: a conta é glosa × contrato. Igual confere; menor vai para **Pagou a menos** (Glosa parcial, diferença = glosa − contrato); quantidade zerada ou glosa acima do contrato vai para **Conferir à mão**.',
           'Serviço **conferido** à mão sai do pagou a menos, do pagou a mais e da exportação; o atalho "Conferidos" mostra todos.', 'Código sem valor no contrato fica fora dos dois lados.'] },
       ] },
       { id: 'urbano-rural', titulo: 'Urbano e rural', blocos: [
@@ -171,7 +172,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
       { id: 'termos', titulo: 'Termos', blocos: [
         { tipo: 'tabela', cabecalho: ['Termo', 'O que é'], linhas: [
           ['US', 'Unidade de Serviço: a "moeda" do contrato com a CEMIG.'], ['Apostilamento', 'Valor da US em reais, definido por vigência.'],
-          ['Glosa', 'Desconto aplicado pela CEMIG (multa). Glosa positiva é estorno: valor devolvido.'], ['Glosado', 'Serviço com código de glosa (G.02): a CEMIG não vai pagar.'], ['CSC / CSI', 'Valor do código para o centro de serviço (referência principal).'],
+          ['Glosa', 'Desconto aplicado pela CEMIG (multa). Glosa positiva é estorno: valor devolvido.'], ['Possível glosa errada', 'Glosa parcial ou glosa para conferir à mão; aparece num card do Painel e num atalho da Conferência.'], ['CSC / CSI', 'Valor do código para o centro de serviço (referência principal).'],
           ['COD', 'Valor alternativo do mesmo código no contrato.'], ['RC', 'Código de atendimento (RC07, RC08…), pago uma vez por atendimento.'],
           ['Tabela 11 / 12', 'Tabela 11: códigos de fechamento. Tabela 12: RCs.'], ['1.NS', 'Código informativo: o serviço é pago pela Manutenção.'],
           ['Manutenção', 'Módulo das notas de NSIS (antigo Fechamento de Notas).'], ['Frota', 'Número do veículo que fez o serviço.'],

@@ -2,8 +2,8 @@
 // e a tradução para os filtros do banco. Sem React, para testar em Node.
 import type { ColunaFiltroFat, FiltrosListaFat } from './faturamentoServicos';
 
-export type AtalhoConferencia = 'a_menos' | 'a_mais' | 'glosados' | 'fora' | 'confere' | 'conferidos' | 'todos';
-export const ATALHOS_CONFERENCIA: AtalhoConferencia[] = ['todos', 'a_menos', 'a_mais', 'glosados', 'fora', 'confere', 'conferidos'];
+export type AtalhoConferencia = 'a_menos' | 'a_mais' | 'glosas' | 'fora' | 'confere' | 'conferidos' | 'todos';
+export const ATALHOS_CONFERENCIA: AtalhoConferencia[] = ['todos', 'a_menos', 'a_mais', 'glosas', 'fora', 'confere', 'conferidos'];
 export type ChaveListaFat = 'situacoes' | 'tipos_serv' | 'codigos' | 'frotas' | 'tipos_turma' | 'cidades' | 'motivos';
 export type BotaoFat = 'tem_1ns' | 'multado' | 'tem_562' | 'fator_12';
 export type ChaveFaixaFat = 'pago' | 'devido' | 'diferenca' | 'multa';
@@ -29,7 +29,7 @@ export const COLUNAS_CONFERENCIA: ColunaConferencia[] = [
   { id: 'pago_comparado', rotulo: 'Pago', numero: true, faixa: 'pago' },
   { id: 'devido', rotulo: 'Devido', numero: true, faixa: 'devido' },
   { id: 'diferenca', rotulo: 'Diferença', numero: true, faixa: 'diferenca' },
-  { id: 'multas', rotulo: 'Multa', numero: true, faixa: 'multa' },
+  { id: 'multas', rotulo: 'Glosa', numero: true, faixa: 'multa' },
   { id: 'motivo', rotulo: 'Motivo', lista: { chave: 'motivos', coluna: 'motivo' } },
 ];
 const LISTAS = COLUNAS_CONFERENCIA.flatMap(c => c.lista ? [c.lista.chave] : []);
@@ -60,7 +60,7 @@ export function lerNumeroBr(s: string): number | undefined {
 
 // Chaves da Conferência da rodada 1 (links salvos e o redirecionamento de /faturamento?situacao=).
 const ANTIGAS = ['lado', 'visao', 'motivo', 'situacao', 'cidade', 'codserv', 'tipo_turma', 'tipo_serv'];
-const SITUACAO_ATALHO: Record<string, AtalhoConferencia> = { FORA_CONTRATO: 'fora', CONFERIDO: 'conferidos', OK: 'confere', GLOSADO: 'glosados' };
+const SITUACAO_ATALHO: Record<string, AtalhoConferencia> = { FORA_CONTRATO: 'fora', CONFERIDO: 'conferidos', OK: 'confere', A_CONFERIR: 'glosas' };
 
 export function estadoDaUrl(p: URLSearchParams): EstadoConferencia {
   const atalho = p.get('atalho') as AtalhoConferencia | null;
@@ -102,7 +102,7 @@ export function urlDoEstado(e: EstadoConferencia, base: URLSearchParams): URLSea
 export function filtrosDoEstado(e: EstadoConferencia): FiltrosListaFat {
   const f: FiltrosListaFat = {};
   if (e.fatura) f.fatura = e.fatura;
-  f.lado = e.atalho === 'a_menos' || e.atalho === 'a_mais' || e.atalho === 'glosados' ? e.atalho : 'todos';
+  f.lado = e.atalho === 'a_menos' || e.atalho === 'a_mais' || e.atalho === 'glosas' ? e.atalho : 'todos';
   for (const [k, v] of Object.entries(e.listas)) if (v?.length) f[k] = v;
   if (e.atalho === 'fora') f.situacoes = ['FORA_CONTRATO'];
   if (e.atalho === 'confere') f.situacoes = ['OK'];

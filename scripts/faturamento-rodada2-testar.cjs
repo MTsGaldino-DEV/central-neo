@@ -34,13 +34,13 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
 
     // revisão final: a soma do cabeçalho segue a lista filtrada (motivo incluso)
     r=await listar({lado:'a_menos',motivos:['RC_NAO_PAGO']});
-    assert.equal(r.total,7);assert.equal(Number(r.soma).toFixed(6),'-0.778048'); // 34/-3,998762 até a 039; -4,189605 na 039; 32/-3,985038 na 040; a 041 zera os 16 RC com 0.06; 16/-1,747396 até a 043; 19/-2,294013 na 044; a 046 tira os 12 com G.02 (na 047 viram Glosa parcial)
+    assert.equal(r.total,5);assert.equal(Number(r.soma).toFixed(6),'-0.573024'); // 34/-3,998762 até a 039; -4,189605 na 039; 32/-3,985038 na 040; a 041 zera os 16 RC com 0.06; 16/-1,747396 até a 043; 19/-2,294013 na 044; a 046 tira os 12 com G.02 (na 047 viram Glosa parcial); na 048 os 2 RC com 0.00 viram Glosa parcial
     let v=await valores({lado:'a_menos'},'motivo');
-    assert.equal(v.find(x=>x.valor==='RC_NAO_PAGO').n,7);
+    assert.equal(v.find(x=>x.valor==='RC_NAO_PAGO').n,5);
     v=await valores({lado:'a_menos',motivos:['RC_NAO_PAGO']},'motivo');
     assert.ok(v.length>1,'a lista de valores ignora o filtro da própria coluna');
     v=await valores({lado:'a_menos',motivos:['RC_NAO_PAGO']},'cidade');
-    assert.equal(v.reduce((a,x)=>a+x.n,0),7,'as outras colunas respeitam o filtro');
+    assert.equal(v.reduce((a,x)=>a+x.n,0),5,'as outras colunas respeitam o filtro');
     v=await valores({lado:'todos'},'codigos','1.');
     assert.ok(v.length&&v.every(x=>x.valor.includes('1.')));
     await valores({lado:'todos'},'cidade','%');await valores({lado:'todos'},'cidade',"o'_");
@@ -50,8 +50,8 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     // Até a 039: 106 serviços, pago 5,1968, devido 12,6441, 7,4473 a menos e 88 fora (homem-hora sem regra). 0.06 zerado na 041. Na 044 (5.62 em RC): 161 → 155, pago 13,5243 → 13,3566, devido 21,9248 → 21,5006, 8,4005 → 8,1440 US. Na 046 os 14 com G.02 foram para Glosados (141); na 047 voltam como glosa parcial: 155, devido 21,5006, 6,8350 US (diferença com a glosa).
     assert.equal(tot.a_menos.servicos,155);assert.equal(tot.a_menos.com_1ns,3);
     assert.equal(Number(tot.a_menos.pago).toFixed(4),'13.3566');assert.equal(Number(tot.a_menos.devido).toFixed(4),'21.5006');
-    assert.equal(Number(tot.a_menos.us).toFixed(4),'6.8350');
-    assert.equal(tot.glosados.servicos,331);
+    assert.equal(Number(tot.a_menos.us).toFixed(4),'6.6677'); // 048: glosa parcial sem G (0.00) com a diferença = glosa − contrato
+    assert.equal(tot.glosas_erradas.servicos,47);
     assert.equal(tot.a_mais.c562.servicos,2);assert.equal(tot.fora_contrato,26);
 
     let m=(await t`select neo_fat_servico_manutencao('246101137') d`)[0].d;

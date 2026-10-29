@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Download, FileSpreadsheet, Loader2, RotateCw, X } from 'lucide-react';
-import { exportarListaFat, exportarNegociacaoFat, listarServicosFat, painelFat, type ServicoFat } from '@/lib/faturamentoServicos';
+import { exportarListaFat, exportarNegociacaoFat, listarServicosFat, painelFat, type ResumoListaFat, type ServicoFat } from '@/lib/faturamentoServicos';
 import { MOTIVOS_FAT, SITUACOES_SERVICO_FAT, valorFat } from '@/lib/faturamentoTexto';
 import { TIPOS_TURMA_FAT } from '@/lib/faturamentoPlanilhas';
 import { traduzirErro, type ErroAmigavel } from '@/lib/erros';
@@ -25,10 +25,10 @@ import { SeloSituacao } from './SeloSituacao';
 const POR_PAGINA = 50;
 const numero = (n: number) => n.toLocaleString('pt-BR');
 const ROTULO_ATALHO: Record<AtalhoConferencia, string> = {
-  todos: 'Todos', a_menos: 'Pagou a menos', a_mais: 'Pagou a mais', glosados: 'Glosados', fora: 'Fora do contrato', confere: 'Conferem', conferidos: 'Conferidos',
+  todos: 'Todos', a_menos: 'Pagou a menos', a_mais: 'Pagou a mais', glosas: 'Possíveis glosas erradas', fora: 'Fora do contrato', confere: 'Conferem', conferidos: 'Conferidos',
 };
 const BOTOES: { id: BotaoFat; sim: string; nao: string }[] = [
-  { id: 'tem_1ns', sim: 'Contém 1.NS', nao: 'Sem 1.NS' }, { id: 'multado', sim: 'Multado', nao: 'Sem multa' }, { id: 'tem_562', sim: '5.62', nao: 'Sem 5.62' },
+  { id: 'tem_1ns', sim: 'Contém 1.NS', nao: 'Sem 1.NS' }, { id: 'multado', sim: 'Com glosa', nao: 'Sem glosa' }, { id: 'tem_562', sim: '5.62', nao: 'Sem 5.62' },
   { id: 'fator_12', sim: 'Possível fator errado', nao: 'Sem fator errado' },
 ];
 const rotuloValor: Partial<Record<ChaveListaFat, (v: string) => string>> = {
@@ -65,13 +65,11 @@ export default function Conferencia() {
   const r = lista.dados;
   const servicos = r?.servicos ?? [];
   const contagem: Record<AtalhoConferencia, number | undefined> = {
-    todos: totais?.servicos, a_menos: totais?.a_menos.servicos, a_mais: totais?.a_mais.servicos, glosados: totais?.glosados?.servicos,
+    todos: totais?.servicos, a_menos: totais?.a_menos.servicos, a_mais: totais?.a_mais.servicos, glosas: totais?.glosas_erradas?.servicos,
     fora: totais?.fora_contrato, confere: totais?.funil.valor_confere, conferidos: totais?.funil.conferidos,
   };
   // Soma da diferença dos serviços filtrados (038); sem ela, cai no total do lado.
   const somaFiltrada = r ? r.soma ?? (e.atalho === 'a_menos' ? -r.lados.a_menos.us : e.atalho === 'a_mais' ? r.lados.a_mais.us : null) : null;
-  // Nos glosados a diferença é quase zero (a glosa cobre o devido); o cabeçalho mostra a glosa lançada.
-  const glosaFiltrada = e.atalho === 'glosados' && r?.lados.glosados ? r.lados.glosados.us : null;
   const etiquetas = [
     ...COLUNAS_CONFERENCIA.flatMap(c => {
       const sel = c.lista && e.listas[c.lista.chave];
@@ -148,9 +146,11 @@ export default function Conferencia() {
       {!fatura && painel.falha && <AvisoErro erro={painel.falha} onTentar={recarregar} />}
       {erroAcao && <AvisoErro erro={erroAcao} />}
 
+      {r?.resumo && <ResumoFiltro resumo={r.resumo} unidade={unidade} taxa={taxa} />}
+
       <section className="rounded-2xl border border-linha bg-white">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-linha px-4 py-2.5 text-xs text-aco">
-          <span>{r ? <><b className="text-tinta">{numero(r.total)}</b> serviços{glosaFiltrada != null ? <> · glosa <b className="font-codigo text-glosa">{valorFat(-glosaFiltrada, unidade, taxa, true)}</b></> : somaFiltrada != null && <> · diferença <b className={`font-codigo ${somaFiltrada < 0 ? 'text-erro' : somaFiltrada > 0 ? 'text-concluido' : 'text-aco'}`}>{valorFat(somaFiltrada, unidade, taxa, true)}</b></>}</> : 'Carregando…'}</span>
+          <span>{r ? <><b className="text-tinta">{numero(r.total)}</b> serviços{!r.resumo && somaFiltrada != null && <> · diferença <b className={`font-codigo ${somaFiltrada < 0 ? 'text-erro' : somaFiltrada > 0 ? 'text-concluido' : 'text-aco'}`}>{valorFat(somaFiltrada, unidade, taxa, true)}</b></>}</> : 'Carregando…'}</span>
           <button type="button" onClick={recarregar} disabled={lista.atualizando} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-nevoa disabled:opacity-70">
             {lista.atualizando ? 'atualizando…' : lista.salvoEm ? `atualizado ${tempoRelativo(lista.salvoEm)}` : 'atualizar'}
             <RotateCw className={`size-3.5 ${lista.atualizando ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />
@@ -169,7 +169,7 @@ export default function Conferencia() {
               <tbody>{servicos.map(s => <Linha key={`${s.fatura}-${s.numserv}`} s={s} unidade={unidade} taxa={taxa} abrir={() => setAberto(s)} />)}</tbody>
             </table>
             {r && !servicos.length && <p className="px-4 py-10 text-center text-sm text-aco">
-              {e.atalho === 'a_menos' && semFiltros ? 'Nada pago a menos nesta fatura.' : e.atalho === 'glosados' && semFiltros ? 'Nenhum serviço glosado nesta fatura.' : 'Nenhum serviço com esses filtros.'}</p>}
+              {e.atalho === 'a_menos' && semFiltros ? 'Nada pago a menos nesta fatura.' : e.atalho === 'glosas' && semFiltros ? 'Nenhuma possível glosa errada nesta fatura.' : 'Nenhum serviço com esses filtros.'}</p>}
           </div>
         )}
         {r && r.total > POR_PAGINA && <Pagination page={e.pagina} totalPages={Math.ceil(r.total / POR_PAGINA)} totalItems={r.total} pageSize={POR_PAGINA} label="serviços"
@@ -206,8 +206,35 @@ function Cabecalho({ coluna: c, e, filtros, ir, unidade, taxa, direita }: {
   );
 }
 
+/** Painel da Conferência (Matheus, 29/10/2026): soma do que está filtrado, em todas as páginas. */
+function ResumoFiltro({ resumo, unidade, taxa }: { resumo: ResumoListaFat; unidade: 'reais' | 'us'; taxa: number | null }) {
+  const dif = Number(resumo.diferenca);
+  const itens: [string, string, string][] = [
+    ['Pago', valorFat(resumo.pago, unidade, taxa), 'text-tinta'],
+    ['Contrato prevê', valorFat(resumo.contrato, unidade, taxa), 'text-tinta'],
+    ['Glosa', valorFat(-Math.abs(Number(resumo.glosa)), unidade, taxa, true), 'text-glosa'],
+    ['Diferença', valorFat(dif, unidade, taxa, true), dif < 0 ? 'text-erro' : dif > 0 ? 'text-concluido' : 'text-aco'],
+  ];
+  // A diferença é a soma das diferenças dos serviços: pago − contrato; quando a CEMIG não pagou nada e
+  // glosou, glosa − contrato. Por isso nem sempre é Pago − Contrato prevê.
+  const dica: Record<string, string> = {
+    'Diferença': 'Soma das diferenças: pago − contrato; quando a CEMIG não pagou nada e glosou, glosa − contrato.',
+    'Glosa': 'Tudo o que a CEMIG glosou nos serviços filtrados.',
+  };
+  return (
+    <dl aria-label="Soma do que está filtrado" className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-linha bg-linha tabular-nums sm:grid-cols-4">
+      {itens.map(([rotulo, valor, cor]) => (
+        <div key={rotulo} className="bg-white px-4 py-3">
+          <dt className="text-xs font-bold text-aco" title={dica[rotulo]}>{rotulo}</dt>
+          <dd className={`mt-0.5 text-lg font-extrabold tracking-tight ${cor}`}>{valor}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function Linha({ s, unidade, taxa, abrir }: { s: ServicoFat; unidade: 'reais' | 'us'; taxa: number | null; abrir: () => void }) {
-  const fundo = s.situacao === 'A_MENOS' ? 'bg-erro-fundo/60' : s.situacao === 'A_MAIS' ? 'bg-concluido-fundo/60' : s.situacao === 'GLOSADO' ? 'bg-glosa-fundo/60' : '';
+  const fundo = s.situacao === 'A_MENOS' ? 'bg-erro-fundo/60' : s.situacao === 'A_MAIS' ? 'bg-concluido-fundo/60' : s.situacao === 'A_CONFERIR' ? 'bg-glosa-fundo/60' : '';
   const td = 'border-b border-linha/70 px-2.5 py-2';
   const num = `${td} text-right font-codigo whitespace-nowrap`;
   const v = (n: number | null) => valorFat(n, unidade, taxa);

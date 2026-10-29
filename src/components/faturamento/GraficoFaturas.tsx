@@ -9,7 +9,7 @@ export interface ItemGraficoFat {
 const SERIES = [
   { chave: 'pago', rotulo: 'Pago', cor: 'bg-sinal', ponto: 'bg-sinal-claro' },
   { chave: 'devido', rotulo: 'Devido', cor: 'bg-aco-claro', ponto: 'bg-aco-claro' },
-  { chave: 'multas', rotulo: 'Multas', cor: 'bg-erro-marca', ponto: 'bg-erro-marca' },
+  { chave: 'multas', rotulo: 'Glosas', cor: 'bg-erro-marca', ponto: 'bg-erro-marca' },
 ] as const;
 const numero = (n: number) => n.toLocaleString('pt-BR');
 
@@ -60,8 +60,8 @@ export function GraficoFaturas({ itens, destaque, unidade, taxa }: { itens: Item
           ))}
         </div>
         <div className="sr-only"><table>
-          <caption>Pago, devido e multas por fatura</caption>
-          <thead><tr><th>Fatura</th><th>Pago</th><th>Devido</th><th>Multas</th><th>A menos</th><th>A mais</th></tr></thead>
+          <caption>Pago, devido e glosas por fatura</caption>
+          <thead><tr><th>Fatura</th><th>Pago</th><th>Devido</th><th>Glosas</th><th>A menos</th><th>A mais</th></tr></thead>
           <tbody>{itens.map(i => <tr key={i.fatura}><td>{i.fatura}</td><td>{v(i.pago)}</td><td>{v(i.devido)}</td><td>{v(i.multas)}</td><td>{v(-i.a_menos.us, true)}</td><td>{v(i.a_mais.us, true)}</td></tr>)}</tbody>
         </table></div>
       </>}

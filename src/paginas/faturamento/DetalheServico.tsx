@@ -65,7 +65,7 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
   const conta = (l: LinhaServicoFat) => {
     const f = contrato.dados?.find(c => c.codigo === l.codserv && c.tabela === l.tabela);
     const fx = servico.fator_aplicado === 'COD' ? f?.fator_cod : f?.fator_csc;
-    const devido = servico.moto ? (servico.fator_aplicado === 'COD' ? l.moto_cod : l.moto_csc) : (servico.fator_aplicado === 'COD' ? l.devido_cod : l.devido_csc);
+    const devido = devidoLinha(l);
     const homemHora = l.observacoes?.split('; ').find(o => o.startsWith('homem-hora'));
     if (l.horas != null && l.us_hora != null && devido != null) {
       const min = Math.round(Number(l.horas) * 60);
@@ -74,6 +74,15 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
     if (devido == null) return homemHora ? `${l.codserv}: ${homemHora}` : null;
     const qtd = [Number(l.urbano) > 0 && `${fator(l.urbano)} urbano`, Number(l.rural) > 0 && `${fator(l.rural)} rural × ${fator(rural)}`].filter(Boolean).join(' + ');
     return `${l.codserv}: fator ${servico.fator_aplicado ?? 'CSC'} ${fator(fx)} × ${qtd || '1'}${servico.moto ? ' (valor Moto)' : ''} = ${usFat(devido)} US devido · a CEMIG pagou ${usFat(l.creditado)}`;
+  };
+  // Contrato prevê na linha (Matheus, 29/10/2026): o devido da linha pelo despacho do serviço. Linha
+  // glosada com quantidade zerada não tem devido; mostra o valor de 1 unidade (despacho e área da linha).
+  const devidoLinha = (l: LinhaServicoFat) => servico.moto ? (servico.fator_aplicado === 'COD' ? l.moto_cod : l.moto_csc) : (servico.fator_aplicado === 'COD' ? l.devido_cod : l.devido_csc);
+  const umaUnidade = (l: LinhaServicoFat) => {
+    if (Number(l.glosa) >= 0 || Number(l.urbano) > 0 || Number(l.rural) > 0 || l.horas != null) return null;
+    const f = contrato.dados?.find(c => c.codigo === l.codserv && c.tabela === l.tabela);
+    const fx = (l.despacho ?? servico.fator_aplicado) === 'COD' ? f?.fator_cod : f?.fator_csc;
+    return fx == null ? null : Number(fx) * (l.area === 'RURAL' ? Number(rural) : 1);
   };
   // Fator sobre a base CSC urbano × 1,0: quanto a CEMIG aplicou e quanto o contrato pede.
   const base = linhas && contrato.dados ? baseServicoFat(normais, contrato.dados, servico.rc_por_atendimento) : null;
@@ -144,16 +153,22 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
           <p className={rotulo}>O que a CEMIG pagou na fatura</p>
           {!linhas ? (!erro && <p className="mt-2 flex items-center gap-2 text-xs text-aco"><Loader2 className="size-4 animate-spin" aria-hidden="true" />Buscando as linhas…</p>) : (
             <div className="mt-1 overflow-x-auto">
-              <table className="w-full min-w-[480px] text-left text-xs">
+              <table className="w-full min-w-[560px] text-left text-xs">
                 <thead className="text-[11px] text-aco uppercase"><tr>
                   <th className="py-1.5 pr-2">Código</th><th className="pr-2">Descrição</th><th className="pr-2">Zona</th>
-                  <th className="pr-2 text-right">Pago</th><th className="text-right">Multa / estorno</th>
+                  <th className="pr-2 text-right">Contrato prevê</th><th className="pr-2 text-right">Pago</th><th className="text-right">Glosa / estorno</th>
                 </tr></thead>
                 <tbody>
                   {normais.map(l => (
                     <tr key={l.id} className="border-t border-linha">
                       <td className="py-1.5 pr-2 font-codigo font-bold">{l.codserv}</td><td className="pr-2">{descricao(l)}</td>
                       <td className="pr-2">{({ RURAL: 'Rural', AMBAS: 'Urbana e rural' } as Record<string, string>)[zonaLinha(l)] ?? 'Urbana'}</td>
+                      <td className="pr-2 text-right font-codigo">{(() => {
+                        const u = umaUnidade(l), d = devidoLinha(l);
+                        return u != null ? <span title="A CEMIG zerou a quantidade: valor de 1 unidade pelo contrato, para conferir com a glosa">
+                          1 un. = {usFat(u)}<span className="block text-[10px] text-aco">{l.despacho ?? servico.fator_aplicado ?? 'CSC'} · {l.area === 'RURAL' ? 'rural' : 'urbano'}</span></span>
+                          : d == null ? '—' : usFat(d);
+                      })()}</td>
                       <td className={`pr-2 text-right font-codigo ${Number(l.creditado) === 0 && (servico.devido ?? 0) > 0 ? 'font-bold text-erro' : ''}`}>{usFat(l.creditado)}</td>
                       <td className={`text-right font-codigo ${Number(l.glosa) < 0 ? 'text-erro' : 'text-aco-claro'}`}>{Number(l.glosa) ? usFat(l.glosa) : '—'}</td>
                     </tr>
@@ -163,6 +178,7 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
                       <td className="py-1.5 pr-2 font-codigo font-bold text-revisao">1.NS</td>
                       <td className="pr-2">NS executada <span className="text-aco">· código informativo, valor pela Manutenção</span></td>
                       <td className="pr-2">{Number(l.rural) > 0 ? 'Rural' : 'Urbana'}</td>
+                      <td className="pr-2 text-right font-codigo text-aco-claro">—</td>
                       <td className="pr-2 text-right font-codigo text-revisao">{usFat(l.creditado)}</td>
                       <td className="text-right font-codigo text-aco-claro">{Number(l.glosa) ? usFat(l.glosa) : '—'}</td>
                     </tr>

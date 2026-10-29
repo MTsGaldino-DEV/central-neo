@@ -20,7 +20,7 @@ const volta=urlDoEstado(e,u('unidade=us&fatura=velha'));
 assert.deepEqual(estadoDaUrl(volta),e);assert.equal(volta.get('unidade'),'us');
 assert.deepEqual(urlDoEstado(estadoDaUrl(u('fatura=9844')),u('')).toString(),'fatura=9844');
 assert.equal(COLUNAS_CONFERENCIA.length,12);
-assert.deepEqual(COLUNAS_CONFERENCIA.map(c=>c.rotulo),['Situação','Nº serviço','Tipo serv.','Códigos','Frota','Tipo frota','Cidade','Pago','Devido','Diferença','Multa','Motivo']);
+assert.deepEqual(COLUNAS_CONFERENCIA.map(c=>c.rotulo),['Situação','Nº serviço','Tipo serv.','Códigos','Frota','Tipo frota','Cidade','Pago','Devido','Diferença','Glosa','Motivo']);
 // revisão final: links antigos da rodada 1 e número digitado com ponto
 assert.deepEqual(filtrosDoEstado(estadoDaUrl(u('fatura=1&lado=a_mais&motivo=FATOR_MAIOR'))),{fatura:'1',lado:'a_mais',motivos:['FATOR_MAIOR']});
 assert.deepEqual(filtrosDoEstado(estadoDaUrl(u('fatura=1&visao=todos&situacao=FORA_CONTRATO'))),{fatura:'1',lado:'todos',situacoes:['FORA_CONTRATO']});

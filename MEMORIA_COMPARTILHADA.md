@@ -121,6 +121,42 @@ rápido (contagem 1,2 s contra 1,9 s). Não verificado: login real.
 Pendências:
 - **Perguntar à supervisora Elen o que é `S` em `cod_tip_area`** (hoje rural; 9 serviços na 9844).
 
+## Entrega: regra da glosa, possíveis glosas erradas e prova real — 29/10/2026 (Claude)
+
+- **Decisões do Matheus (substituem Glosados/046 e a glosa parcial só com G/047, migration 048):**
+  "glosa é tudo"; não existe situação GLOSADO. Se a CEMIG **não pagou nada e glosou** (G.02, 0.00,
+  8.75…), compara glosa × contrato: igual → Confere (ex.: 246309215 glosa = contrato R$ 184,09);
+  menor → Pagou a menos, motivo GLOSA_PARCIAL, diferença = glosa − contrato (246310816 −R$ 2,17;
+  246327823 com 0.00: −R$ 50,20, antes −R$ 301,22); contrato zero porque a CEMIG **zerou a
+  quantidade** → situação **A_CONFERIR** ("Conferir à mão"), motivo GLOSA_SEM_QUANTIDADE, sem
+  diferença (30 na 9844: 13 com 8.75 "não condiz com a observação" e 17 com G.02; ex. 246088548,
+  5.10 NSRI COD urbano, glosa 0,498877 = 1 unidade, R$ 1.478,84); glosa acima de contrato positivo →
+  A_CONFERIR, GLOSA_ACIMA (decisão do Claude, por segurança; nenhum caso hoje). Se pagou algo, a
+  glosa é de um código que saiu e vale pago × contrato (246073073 1.72 "por vão" confere).
+  Critério técnico: `creditado = 0 and multas > 0 and devido is not null` (coluna `glosado` da lista).
+- **"Possíveis glosas erradas"** (nome do Matheus; "glosas erradas" afirmaria): glosa parcial +
+  conferir à mão. Atalho na Conferência (lado `glosas`), 3º card do Painel (valor = o que falta na
+  glosa parcial; barra por nº de serviços), etapa "Conferir à mão" no funil. Na 9844: 47 (17 parciais,
+  0,393084 US; 30 conferir à mão). A menos 155 (6,6677 US), a mais 25, conferem 21.674.
+- **"Multas" virou "Glosas"** (faixa do Painel = total bruto da glosa, −R$ 62.922,02; coluna da lista,
+  botão "Com glosa", gráfico, cartão de Faturas). Detalhe do serviço: coluna **"Contrato prevê"** por
+  linha; linha glosada com quantidade zerada mostra "1 un. = …" (despacho e área da linha).
+- **Painel da Conferência:** Pago | Contrato prevê | Glosa | Diferença, somando tudo o que está
+  filtrado (`resumo` em `neo_fat_servicos_listar`). Diferença = soma das diferenças (não é sempre
+  pago − contrato; dica no rótulo). Matheus pediu enxuto: o painel completo é o da aba Painel.
+- **Prova real** (`faturamento-prova-real-testar.cjs`, toda fatura): planilha (`neo_fat_linhas`) =
+  lista = Painel (linhas, serviços, crédito, glosa, estorno, devido), cada serviço numa situação
+  conhecida, diferença coerente com a regra, cards e funil = soma da lista, resumo da Conferência =
+  soma dos filtrados. Matheus: "não pode ter nenhuma divergência de dados".
+- Testes: `faturamento-glosados-testar` saiu, entrou `faturamento-glosa-testar`; rodada2, servicos,
+  texto, filtros e ui atualizados. Todos passam com a 048 carregada (servicos: limite de 1,5 s da lista
+  estourou uma vez, 1,97 s; depois 0,25–0,67 s). Typecheck e build OK.
+- Pendente: escolher se o painel da Conferência ganha mais métricas (Matheus achou melhor manter só
+  as quatro por enquanto).
+- **048 aplicada** no CENTRAL-NEO em 29/10/2026 (a pedido do Matheus); totais da 9844 na versão '048':
+  possíveis glosas erradas 47 (17 parciais 0,393084 US; 30 conferir à mão), a menos 155 (6,667718 US),
+  a mais 24, conferido 1. Todos os testes de banco, inclusive a prova real, passam no banco real.
+
 ## Entrega: Glosados (código G.xx) — 29/10/2026 (Claude)
 
 - **Decisão do Matheus:** serviço com código de glosa não é "pago a menos": a CEMIG glosou e não
@@ -168,6 +204,13 @@ Pendências:
   "Ver os N" (faixa e cards são clicáveis) nem o valor na outra unidade; "N com 1.NS" saiu do card.
   Funil, gráfico e grupos não mudaram. `faturamento-ui-testar` atualizado (estava parado desde antes da
   044: −R$ 24.901,90, texto antigo do 5.62, funil com 5 etapas, gráfico 161/181) e passa inteiro.
+  Ajuste (Matheus): a métrica principal da faixa é **Valor pago | Contrato previa**, lado a lado e do
+  mesmo tamanho; multas e serviços ficam menores à direita (no celular, um embaixo do outro).
+- **Multas × Glosados no Painel (explicado ao Matheus, 29/10):** "Multas" (21,2264 US) é toda glosa
+  negativa da fatura: 13,9293 US em 206 serviços sem código G (glosa de código, serviço pago), 5,9880
+  dos Glosados e 1,3090 da glosa parcial. O card Glosados (5,9880) é só a parte G.02 que cobre o devido.
+  Dos 331 Glosados, 252 têm devido 0 e glosa 0 (G.02 com 0.00/1.NS): contam no número, sem valor.
+  Sugerido renomear "Multas" para "Glosas" (sem resposta ainda).
 - **Possível fator errado só na coluna Motivo** (Matheus, 29/10/2026): saiu a etiqueta da coluna
   Situação da Conferência; o Motivo já mostra "Possível fator errado: <caso>". O filtro rápido e o
   aviso no detalhe do serviço continuam.

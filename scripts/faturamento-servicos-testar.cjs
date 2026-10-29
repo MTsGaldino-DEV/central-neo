@@ -35,7 +35,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal(Number(glosado.creditado),0);assert.equal(Number(glosado.multas).toFixed(6),Number(glosado.devido).toFixed(6));
     assert.equal(glosado.situacao,'OK');assert.equal(glosado.motivo,null);
     // revisão por serviço tira do saldo
-    const alvo=(await t`select numserv from neo_fat_servicos where fatura='9844' and situacao='A_MENOS' and not exists(select 1 from unnest(codigos) c where c ~ '^G[.]') limit 1`)[0].numserv;
+    const alvo=(await t`select numserv from neo_fat_servicos where fatura='9844' and situacao='A_MENOS' and not (creditado=0 and multas>0) limit 1`)[0].numserv;
     await t`select neo_fat_conferir_servico('9844',${alvo},'teste de conferência')`;
     const conf=await s(alvo);
     assert.equal(conf.situacao,'CONFERIDO');assert.equal(conf.situacao_calculo,'A_MENOS');assert.ok(conf.motivo);
@@ -49,13 +49,13 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal((await t`select neo_fat_recalcular('9844') d`)[0].d,false);          // já em dia: não refaz
     const [cmp]=await t`select
       (select jsonb_agg(to_jsonb(x) order by x.numserv) from (select numserv,
-        -- 046/047: com código de glosa (G.xx) a glosa entra na diferença; se cobre o devido, a lista
-        -- mostra GLOSADO sem motivo; se não cobre, fica A_MENOS com motivo GLOSA_PARCIAL
-        case when g and situacao_calculo<>'A_MENOS' and situacao<>'CONFERIDO' then 'GLOSADO' else situacao end situacao,
-        case when g and situacao_calculo<>'A_MENOS' then 'GLOSADO' else situacao_calculo end situacao_calculo,
-        case when g and situacao_calculo<>'A_MENOS' then null when g then 'GLOSA_PARCIAL' else motivo end motivo,
-        case when g then pago_comparado+multas-devido else diferenca end diferenca,devido,codigo_principal,pago_comparado,multas,contexto
-       from (select *,exists(select 1 from unnest(codigos) c where c ~ '^G[.]') g from neo_fat_servicos where fatura='9844') y) x)
+        case when situacao='CONFERIDO' then situacao else sc end situacao,sc situacao_calculo,
+        case when not g then motivo when devido=0 then 'GLOSA_SEM_QUANTIDADE' when bate then null when multas<devido then 'GLOSA_PARCIAL' else 'GLOSA_ACIMA' end motivo,
+        case when not g then diferenca when devido=0 or (not bate and multas>devido) then null else pago_comparado+multas-devido end diferenca,
+        devido,codigo_principal,pago_comparado,multas,contexto
+       from (select z.*,case when not g then situacao_calculo when devido=0 then 'A_CONFERIR' when bate then 'OK' when multas<devido then 'A_MENOS' else 'A_CONFERIR' end sc
+         -- 048: nada pago e glosa → glosa × contrato (igual confere, menor a menos, sem quantidade ou acima: conferir à mão)
+         from (select *,creditado=0 and multas>0 and devido is not null g from neo_fat_servicos where fatura='9844') z) y) x)
       =(select jsonb_agg(to_jsonb(x) order by x.numserv) from (select numserv,situacao,situacao_calculo,motivo,diferenca,devido,codigo_principal,pago_comparado,multas,contexto from neo_fat_servicos_lista where fatura='9844') x) igual`;
     assert.equal(cmp.igual,true);
     inicio=Date.now();
@@ -69,7 +69,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.ok(r.d.total>0);assert.ok(r.d.servicos.length<=50);
     assert.ok(r.d.servicos.every(x=>x.situacao_calculo==='A_MENOS'));
     assert.ok(r.d.servicos.every((x,i,a)=>!i||Number(a[i-1].diferenca)<=Number(x.diferenca)));
-    const [v]=await t`select sum(case when exists(select 1 from unnest(codigos) c where c ~ '^G[.]') then devido-pago_comparado-multas else -diferenca end) us,count(*)::int n from neo_fat_servicos where fatura='9844' and situacao='A_MENOS'`;
+    const [v]=await t`select sum(case when creditado=0 and multas>0 then devido-pago_comparado-multas else -diferenca end) us,count(*)::int n from neo_fat_servicos where fatura='9844' and situacao='A_MENOS' and not (creditado=0 and multas>0 and (devido=0 or multas>devido))`;
     assert.equal(Number(r.d.lados.a_menos.us).toFixed(6),Number(v.us).toFixed(6));
     assert.equal(r.d.lados.a_menos.servicos,v.n);
     const soma=Object.values(r.d.lados.a_menos.por_motivo).reduce((s,m)=>s+m.servicos,0);
@@ -129,7 +129,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     const [depois]=await totais(t,'calculado_em');
     assert.ok(depois.calculado_em>antes.calculado_em);
     // conferir atualiza o saldo
-    const alvo2=(await t`select numserv,-diferenca d from neo_fat_servicos where fatura='9844' and situacao='A_MENOS' and not exists(select 1 from unnest(codigos) c where c ~ '^G[.]') limit 1`)[0];
+    const alvo2=(await t`select numserv,-diferenca d from neo_fat_servicos where fatura='9844' and situacao='A_MENOS' and not (creditado=0 and multas>0) limit 1`)[0];
     await t`select neo_fat_conferir_servico('9844',${alvo2.numserv},'aceito pela equipe')`;
     const [p2]=await totais(t,'dados');
     assert.equal((Number(f.saldo_a_receber)-Number(p2.dados.saldo_a_receber)).toFixed(6),Number(alvo2.d).toFixed(6));
@@ -145,7 +145,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     // revisão final: totais guardam a impressão das entradas. Uma revisão gravada por outra
     // transação "antes" do recálculo (corrida) ainda deixa a fatura desatualizada.
     const [b4]=await t`select neo_fat_atualizar_totais('9844') d`;
-    const alvo4=(await t`select numserv,-diferenca d from neo_fat_servicos where fatura='9844' and situacao='A_MENOS' and not exists(select 1 from unnest(codigos) c where c ~ '^G[.]') order by numserv limit 1`)[0];
+    const alvo4=(await t`select numserv,-diferenca d from neo_fat_servicos where fatura='9844' and situacao='A_MENOS' and not (creditado=0 and multas>0) order by numserv limit 1`)[0];
     await t`reset role`;
     await t`insert into neo_fat_conferencias_servico(fatura,numserv,observacao,contexto,data)
       select fatura,numserv,'corrida',contexto,now()-interval '1 hour' from neo_fat_servicos where fatura='9844' and numserv=${alvo4.numserv}`;

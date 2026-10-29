@@ -108,7 +108,7 @@ export default function Painel() {
         <div className="grid gap-3 lg:grid-cols-[1fr_1.5fr]">
           <section className={cartao}>
             <FunilConferencia totais={t} unidade={unidade} taxa={taxa}
-              onEtapa={e => navegar(conferencia(e === 'fora_contrato' ? { atalho: 'fora' } : e === 'a_mais' || e === 'glosados' ? { atalho: e } : {}))} />
+              onEtapa={e => navegar(conferencia(e === 'fora_contrato' ? { atalho: 'fora' } : e === 'a_mais' ? { atalho: e } : e === 'a_conferir' ? { atalho: 'todos', situacoes: 'A_CONFERIR' } : {}))} />
           </section>
           <section className={cartao}>
             <GraficoFaturas unidade={unidade} taxa={taxa} itens={[...faturas].reverse().slice(-8).map(f => itemGraficoFat(f, rotuloPeriodo({ de: f.inicio, ate: f.fim })))}

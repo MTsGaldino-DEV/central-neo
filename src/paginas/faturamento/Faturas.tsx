@@ -132,7 +132,7 @@ function ListaFaturas() {
           <Cartao rotulo="Pago a menos · soma dos saldos" valor={usFat(soma('saldo_a_receber'))} cor="text-erro" destaque
             valores={antigas.map(f => f.saldo_a_receber)} corLinha="text-erro-marca"
             dica={maiorSaldo ? `maior saldo: ${maiorSaldo.fatura} (${usFat(maiorSaldo.saldo_a_receber)})` : ''} />
-          <Cartao rotulo={`Multas aplicadas · ${faturas.length} ${faturas.length === 1 ? 'fatura' : 'faturas'}`} valor={`−${usFat(soma('multas'))}`} cor="text-tinta"
+          <Cartao rotulo={`Glosas aplicadas · ${faturas.length} ${faturas.length === 1 ? 'fatura' : 'faturas'}`} valor={`−${usFat(soma('multas'))}`} cor="text-tinta"
             valores={antigas.map(f => f.multas)} corLinha="text-cobre"
             dica={`média de ${pct(soma('creditado') ? soma('multas') / soma('creditado') * 100 : 0)} do pago`} />
         </div>
