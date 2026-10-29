@@ -8,7 +8,7 @@ import { traduzirErro, type ErroAmigavel } from '@/lib/erros';
 import { useDadosComCache } from '@/lib/useDadosComCache';
 import { useUnidadeFat } from '@/lib/useUnidadeFat';
 import { tempoRelativo } from '@/lib/cacheTela';
-import { COLUNAS_CONFERENCIA, estadoDaUrl, filtrosAtivos, filtrosDoEstado, urlDoEstado, type AtalhoConferencia, type BotaoFat,
+import { ATALHOS_CONFERENCIA, COLUNAS_CONFERENCIA, estadoDaUrl, filtrosAtivos, filtrosDoEstado, urlDoEstado, type AtalhoConferencia, type BotaoFat,
   type ChaveListaFat, type ColunaConferencia, type EstadoConferencia } from '@/lib/filtrosConferencia';
 import { rotuloPeriodo } from '@/components/faturamento/SeletorPeriodo';
 import { PilulasPeriodo } from '@/components/faturamento/PilulasPeriodo';
@@ -25,7 +25,7 @@ import { SeloSituacao } from './SeloSituacao';
 const POR_PAGINA = 50;
 const numero = (n: number) => n.toLocaleString('pt-BR');
 const ROTULO_ATALHO: Record<AtalhoConferencia, string> = {
-  todos: 'Todos', a_menos: 'Pagou a menos', a_mais: 'Pagou a mais', fora: 'Fora do contrato', confere: 'Conferem', conferidos: 'Conferidos',
+  todos: 'Todos', a_menos: 'Pagou a menos', a_mais: 'Pagou a mais', glosados: 'Glosados', fora: 'Fora do contrato', confere: 'Conferem', conferidos: 'Conferidos',
 };
 const BOTOES: { id: BotaoFat; sim: string; nao: string }[] = [
   { id: 'tem_1ns', sim: 'Contém 1.NS', nao: 'Sem 1.NS' }, { id: 'multado', sim: 'Multado', nao: 'Sem multa' }, { id: 'tem_562', sim: '5.62', nao: 'Sem 5.62' },
@@ -65,11 +65,11 @@ export default function Conferencia() {
   const r = lista.dados;
   const servicos = r?.servicos ?? [];
   const contagem: Record<AtalhoConferencia, number | undefined> = {
-    todos: totais?.servicos, a_menos: totais?.a_menos.servicos, a_mais: totais?.a_mais.servicos,
+    todos: totais?.servicos, a_menos: totais?.a_menos.servicos, a_mais: totais?.a_mais.servicos, glosados: totais?.glosados?.servicos,
     fora: totais?.fora_contrato, confere: totais?.funil.valor_confere, conferidos: totais?.funil.conferidos,
   };
   // Soma da diferença dos serviços filtrados (038); sem ela, cai no total do lado.
-  const somaFiltrada = r ? r.soma ?? (e.atalho === 'a_menos' ? -r.lados.a_menos.us : e.atalho === 'a_mais' ? r.lados.a_mais.us : null) : null;
+  const somaFiltrada = r ? r.soma ?? (e.atalho === 'a_menos' ? -r.lados.a_menos.us : e.atalho === 'a_mais' ? r.lados.a_mais.us : e.atalho === 'glosados' && r.lados.glosados ? -r.lados.glosados.us : null) : null;
   const etiquetas = [
     ...COLUNAS_CONFERENCIA.flatMap(c => {
       const sel = c.lista && e.listas[c.lista.chave];
@@ -110,7 +110,7 @@ export default function Conferencia() {
       </header>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        {(['todos', 'a_menos', 'a_mais', 'fora', 'confere', 'conferidos'] as AtalhoConferencia[]).map(a => (
+        {ATALHOS_CONFERENCIA.map(a => (
           <button key={a} type="button" aria-pressed={e.atalho === a} onClick={() => ir({ atalho: a })}
             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${e.atalho === a ? 'border-sinal bg-sinal text-white' : 'border-linha bg-white text-tinta hover:border-sinal'}`}>
             {ROTULO_ATALHO[a]}{contagem[a] != null && <span className="font-codigo text-[11px] opacity-75">{numero(contagem[a]!)}</span>}
@@ -167,7 +167,7 @@ export default function Conferencia() {
               <tbody>{servicos.map(s => <Linha key={`${s.fatura}-${s.numserv}`} s={s} unidade={unidade} taxa={taxa} abrir={() => setAberto(s)} />)}</tbody>
             </table>
             {r && !servicos.length && <p className="px-4 py-10 text-center text-sm text-aco">
-              {e.atalho === 'a_menos' && semFiltros ? 'Nada pago a menos nesta fatura.' : 'Nenhum serviço com esses filtros.'}</p>}
+              {e.atalho === 'a_menos' && semFiltros ? 'Nada pago a menos nesta fatura.' : e.atalho === 'glosados' && semFiltros ? 'Nenhum serviço glosado nesta fatura.' : 'Nenhum serviço com esses filtros.'}</p>}
           </div>
         )}
         {r && r.total > POR_PAGINA && <Pagination page={e.pagina} totalPages={Math.ceil(r.total / POR_PAGINA)} totalItems={r.total} pageSize={POR_PAGINA} label="serviços"
@@ -205,7 +205,7 @@ function Cabecalho({ coluna: c, e, filtros, ir, unidade, taxa, direita }: {
 }
 
 function Linha({ s, unidade, taxa, abrir }: { s: ServicoFat; unidade: 'reais' | 'us'; taxa: number | null; abrir: () => void }) {
-  const fundo = s.situacao === 'A_MENOS' ? 'bg-erro-fundo/60' : s.situacao === 'A_MAIS' ? 'bg-concluido-fundo/60' : '';
+  const fundo = s.situacao === 'A_MENOS' ? 'bg-erro-fundo/60' : s.situacao === 'A_MAIS' ? 'bg-concluido-fundo/60' : s.situacao === 'GLOSADO' ? 'bg-glosa-fundo/60' : '';
   const td = 'border-b border-linha/70 px-2.5 py-2';
   const num = `${td} text-right font-codigo whitespace-nowrap`;
   const v = (n: number | null) => valorFat(n, unidade, taxa);

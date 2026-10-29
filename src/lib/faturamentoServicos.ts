@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import { TIPOS_TURMA_FAT } from './faturamentoPlanilhas';
 import { fraseServico, MOTIVOS_FAT } from './faturamentoTexto';
 
-export type SituacaoServicoFat = 'OK'|'A_MENOS'|'A_MAIS'|'FORA_CONTRATO'|'CONFERIDO';
+export type SituacaoServicoFat = 'OK'|'A_MENOS'|'A_MAIS'|'GLOSADO'|'FORA_CONTRATO'|'CONFERIDO';
 export interface ServicoFat {
   fatura:string; numserv:string; qtd_linhas:number; codigos:string[]; codigo_principal:string|null;
   tipo_serv:string; tabela:string|null; cidade:string|null; tipo_turma:string|null; numvei:string|null; ident_turma:string|null;
@@ -14,6 +14,8 @@ export interface ServicoFat {
   tem_1ns:boolean; tem_562:boolean; multado:boolean; na_manutencao:boolean; manutencao_com_valor:boolean;
   /** Possível fator errado, já em texto: "pago × 1,2", "pago ÷ 1,4", "pago 1,2 no lugar de 1,4"… */
   fator_12?:string|null;
+  /** Tem código de glosa (G.xx): a CEMIG glosou e não vai pagar (046). */
+  glosado?:boolean;
 }
 export interface LinhaServicoFat {
   id:string; codserv:string; tipo_serv:string; tabela:string|null; urbano:number; rural:number; creditado:number; glosa:number;
@@ -21,9 +23,9 @@ export interface LinhaServicoFat {
   /** Despacho pela lista do COD; área pela Fatura Completa; horas/US-h/multiplicador só no homem-hora. */
   despacho?:'CSC'|'COD'; area?:'URBANO'|'RURAL'|null; horas?:number|null; us_hora?:number|null; multiplicador?:number|null;
 }
-export type LadoFat = 'a_menos'|'a_mais'|'todos';
+export type LadoFat = 'a_menos'|'a_mais'|'glosados'|'todos';
 export interface LadoResumoFat { us:number; servicos:number; por_motivo:Record<string,{us:number;servicos:number}> }
-export interface LadosFat { a_menos:LadoResumoFat; a_mais:LadoResumoFat }
+export interface LadosFat { a_menos:LadoResumoFat; a_mais:LadoResumoFat; glosados?:{us:number; servicos:number} }
 export interface GrupoTotaisFat { valor:string|null; servicos:number; creditado:number; devido:number|null; multas:number; saldo?:number }
 export interface TotaisFat {
   fatura:string; inicio:string; fim:string; importado_em:string; calculado_em?:string;
@@ -32,7 +34,9 @@ export interface TotaisFat {
   a_menos:{servicos:number; us:number; pago:number; devido:number; com_1ns:number; por_motivo:Record<string,{us:number;servicos:number}>};
   a_mais:{servicos:number; us:number; pago:number; devido:number; c562:{servicos:number; us:number}; por_motivo:Record<string,{us:number;servicos:number}>};
   fora_contrato:number;
-  funil:{importados:number; equipe_identificada:number; codigo_no_contrato:number; valor_confere:number; conferidos:number};
+  /** Serviços com código de glosa: us = o que o contrato pagaria; glosa = o que a CEMIG lançou. */
+  glosados?:{servicos:number; us:number; devido:number; glosa:number};
+  funil:{importados:number; equipe_identificada:number; codigo_no_contrato:number; valor_confere:number; conferidos:number; glosados?:number};
   grupos:{tipo_turma:GrupoTotaisFat[]; codserv:GrupoTotaisFat[]; cidade:GrupoTotaisFat[]};
   ajustes:{debito:number; credito:number; itens:{tipo:string; observacao:string; valor:number}[]};
 }
@@ -101,7 +105,7 @@ export async function painelFat(): Promise<TotaisFat[]> {
   return data ?? [];
 }
 
-const SITUACOES_XLSX: Record<string,string> = { OK:'Confere', A_MENOS:'Pagou a menos', A_MAIS:'Pagou a mais', FORA_CONTRATO:'Fora do contrato', CONFERIDO:'Conferido' };
+const SITUACOES_XLSX: Record<string,string> = { OK:'Confere', A_MENOS:'Pagou a menos', A_MAIS:'Pagou a mais', GLOSADO:'Glosado', FORA_CONTRATO:'Fora do contrato', CONFERIDO:'Conferido' };
 /** XLSX da lista como está filtrada na Conferência (todas as páginas), valores em US. */
 export async function exportarListaFat(filtros: FiltrosListaFat, fatura: string): Promise<void> {
   const X = await import('xlsx');
@@ -121,11 +125,11 @@ export async function exportarListaFat(filtros: FiltrosListaFat, fatura: string)
   X.writeFile(w, `conferencia-fatura-${fatura}.xlsx`);
 }
 
-/** XLSX com tudo o que foi pago a menos e a mais (sem os conferidos), uma aba para cada lado. */
+/** XLSX com tudo o que foi pago a menos, a mais e glosado (sem os conferidos), uma aba para cada lado. */
 export async function exportarNegociacaoFat(fatura: string): Promise<void> {
   const X = await import('xlsx');
   const w = X.utils.book_new();
-  for (const [lado, aba] of [['a_menos','Pagou a menos'],['a_mais','Pagou a mais']] as const) {
+  for (const [lado, aba] of [['a_menos','Pagou a menos'],['a_mais','Pagou a mais'],['glosados','Glosados']] as const) {
     const lista: ServicoFat[] = [];
     for (let pagina = 0; ; pagina++) {
       const r = await listarServicosFat({ fatura, lado }, pagina, 1000);

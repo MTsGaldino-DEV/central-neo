@@ -7,7 +7,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
 (async()=>{try{
   await rollback(async t=>{
     const [{v}]=await t`select neo_fat_impressao_calc('9844')->>0 v`;
-    if(v!=='041')await t.unsafe(fs.readFileSync('supabase/migrations/041_faturamento_006_fator12.sql','utf8'));
+    if(v<'041')await t.unsafe(fs.readFileSync('supabase/migrations/041_faturamento_006_fator12.sql','utf8'));
     const [{tem08}]=await t`select pg_get_viewdef('neo_fat_servicos_lista'::regclass) like '%0.8%' tem08`;
     if(!tem08)await t.unsafe(fs.readFileSync('supabase/migrations/042_faturamento_fator_08.sql','utf8'));
     const [{tem14}]=await t`select pg_get_viewdef('neo_fat_servicos_lista'::regclass) like '%1,44%' tem14`;

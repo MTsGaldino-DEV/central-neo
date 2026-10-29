@@ -4,17 +4,18 @@ import { MOTIVOS_FAT, outraUnidadeFat, valorFat, type UnidadeFat } from '@/lib/f
 
 const numero = (n: number) => n.toLocaleString('pt-BR');
 
-/** Os três cards do Painel: o que a CEMIG pagou no total, a menos (principal) e a mais. */
+/** Os cards do Painel: o que a CEMIG pagou no total, a menos (principal), a mais e o que ela glosou. */
 export function CardsLados({ totais, unidade, taxa, onVer }: {
-  totais: TotaisFat; unidade: UnidadeFat; taxa: number | null; onVer: (lado: 'todos' | 'a_menos' | 'a_mais') => void;
+  totais: TotaisFat; unidade: UnidadeFat; taxa: number | null; onVer: (lado: 'todos' | 'a_menos' | 'a_mais' | 'glosados') => void;
 }) {
   const v = (us: number, sinal = false) => valorFat(us, unidade, taxa, sinal);
   const menos = totais.a_menos, mais = totais.a_mais;
+  const glosados = totais.glosados ?? { servicos: 0, us: 0, devido: 0, glosa: 0 };
   const c562 = mais.c562 ?? { servicos: 0, us: 0 };
   const motivos = Object.entries(menos.por_motivo).sort((a, b) => b[1].us - a[1].us);
   const etiqueta = 'inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold';
   return (
-    <div className="grid gap-3 lg:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <section className="rounded-2xl border-2 border-sinal bg-white p-4 sm:p-5" aria-label="Pagou no total">
         <div className="flex items-baseline justify-between gap-2">
           <p className="text-[11px] font-extrabold tracking-wide text-sinal uppercase">Pagou no total</p>
@@ -65,6 +66,23 @@ export function CardsLados({ totais, unidade, taxa, onVer }: {
         <button type="button" onClick={() => onVer('a_mais')} disabled={!mais.servicos}
           className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-concluido px-3 py-2 text-xs font-bold text-white hover:bg-concluido/90 disabled:opacity-50">
           Ver os {numero(mais.servicos)} serviços <ArrowRight className="size-4" aria-hidden="true" />
+        </button>
+      </section>
+
+      <section className="rounded-2xl border-2 border-glosa-marca bg-white p-4 sm:p-5" aria-label="Glosados">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-[11px] font-extrabold tracking-wide text-glosa uppercase">Glosados</p>
+          <p className="text-xs text-aco"><b className="text-tinta">{numero(glosados.servicos)}</b> serviços</p>
+        </div>
+        <p className="mt-1 font-codigo text-3xl font-extrabold text-glosa xl:text-4xl">{v(-glosados.us, true)}</p>
+        {outraUnidadeFat(glosados.us, unidade, taxa) && <p className="font-codigo text-xs text-aco">{outraUnidadeFat(glosados.us, unidade, taxa)}</p>}
+        <p className="mt-2 text-sm text-tinta">Serviços com código de glosa (G.xx): a CEMIG não vai pagar. O valor é o que o contrato pagaria.</p>
+        {glosados.glosa !== 0 && <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className={`${etiqueta} bg-glosa-fundo text-glosa`}>glosa lançada {v(-Math.abs(glosados.glosa), true)}</span>
+        </div>}
+        <button type="button" onClick={() => onVer('glosados')} disabled={!glosados.servicos}
+          className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-glosa px-3 py-2 text-xs font-bold text-white hover:bg-glosa/90 disabled:opacity-50">
+          Ver os {numero(glosados.servicos)} serviços <ArrowRight className="size-4" aria-hidden="true" />
         </button>
       </section>
     </div>

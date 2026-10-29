@@ -1,7 +1,7 @@
 import { SITUACOES_SERVICO_FAT } from '@/lib/faturamentoTexto';
 
 const CORES: Record<string, string> = {
-  OK: 'bg-nevoa text-aco', A_MENOS: 'bg-erro-fundo text-erro', A_MAIS: 'bg-concluido-fundo text-concluido',
+  OK: 'bg-nevoa text-aco', A_MENOS: 'bg-erro-fundo text-erro', A_MAIS: 'bg-concluido-fundo text-concluido', GLOSADO: 'bg-glosa-fundo text-glosa',
   FORA_CONTRATO: 'bg-pendente-fundo text-pendente', CONFERIDO: 'bg-sinal-fundo text-sinal',
 };
 

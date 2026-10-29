@@ -44,6 +44,9 @@
   --color-erro: #b91c1c;
   --color-erro-fundo: #fef2f2;
   --color-erro-marca: #ef4444;
+  --color-glosa: #c2410c;          /* serviço glosado pela CEMIG (código G.xx) */
+  --color-glosa-fundo: #fff7ed;
+  --color-glosa-marca: #f97316;
 
   /* Etapas do fechamento */
   --color-etapa-fechar: #0b7285;

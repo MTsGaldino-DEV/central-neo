@@ -121,6 +121,33 @@ rápido (contagem 1,2 s contra 1,9 s). Não verificado: login real.
 Pendências:
 - **Perguntar à supervisora Elen o que é `S` em `cod_tip_area`** (hoje rural; 9 serviços na 9844).
 
+## Entrega: Glosados (código G.xx) — 29/10/2026 (Claude)
+
+- **Decisão do Matheus:** serviço com código de glosa não é "pago a menos": a CEMIG glosou e não
+  vai pagar. Vira a situação **GLOSADO** (migration 046), separada de Confere, Pagou a menos e Pagou
+  a mais. Critério: algum código do serviço começa com `G.` (hoje só o G.02, "glosa de serviço":
+  código errado ou reincidência). Glosa em linha **sem** código G (multa, 206 serviços na 9844)
+  continua como antes: o serviço foi pago com desconto.
+- A troca é feita em `neo_fat_servicos_lista` (coluna nova `glosado`; `situacao_calculo` = GLOSADO;
+  motivo nulo). `neo_fat_servicos_calc` e o cálculo não mudam. Lado `glosados` em
+  `neo_fat_servicos_filtrar`/`neo_fat_servicos_listar` (ordem: maior perda primeiro; `lados.glosados`).
+  Totais ganham `glosados {servicos, us, devido, glosa}` e `funil.glosados`; `us` = o que o contrato
+  pagaria (pago é zero), `glosa` = o que a CEMIG lançou. `neo_fat_impressao` passou para '046'.
+- Tela: card laranja **Glosados** no Painel (token `--color-glosa`, separado do âmbar de "Fora do
+  contrato"), linha Glosados no funil, atalho "Glosados" na Conferência, selo e fundo laranja na
+  linha, aba "Glosados" na exportação para negociação, frase no detalhe e Documentação.
+- Na 9844 (sem conferências à mão): 345 glosados, 6,6949 US pelo contrato, glosa lançada 7,2971 US;
+  saem 331 de Confere e 14 de Pagou a menos (12 RC não pago, 2 outra diferença). A menos 155 → 141
+  (6,5564 US); RC_NAO_PAGO 19 → 7.
+- Testes: novo `faturamento-glosados-testar.cjs`. Ajustados: rodada2 (multados a menos 67 → 53,
+  RC_NAO_PAGO 19 → 7, totais a menos 141), servicos (comparação cálculo × lista com a troca do
+  GLOSADO; alvos "a menos" sem G.xx) e zero-fator (só reaplica a 041 se a versão for anterior; antes
+  reaplicava sobre a 044). Todos os testes de banco passam com a 046 carregada; typecheck e build OK.
+- **046 aplicada** no CENTRAL-NEO em 29/10/2026 (a pedido do Matheus). Totais da 9844 já na versão
+  '046': glosados 345 (6,6949 US; glosa 7,2971), a menos 141 (6,5564 US), a mais 24, conferem 21.373,
+  conferido 1, fora 26. Todos os testes de banco passam contra o banco real (o limite de 1,5 s da
+  lista no servicos-testar estourou uma vez, 1,67 s; nas três rodadas seguintes 0,55–0,68 s).
+
 ## Entrega: 5.62 dentro de RC, justificativa da glosa e busca por vários serviços — 29/10/2026 (Claude)
 
 - **5.62 dentro de RC da Tabela 12 é informativo** (Matheus aprovou, migration 044): não conta como
@@ -133,7 +160,7 @@ Pendências:
   a menos 161 → 155, conferem 21.542 → 21.704. Ficam a mais 246059059 (RC07) e 246098036 (RC06),
   pagos como COD fora da lista. Passam a menos 245839322, 245879192, 245992861 (RC + 5.62 + G.02):
   a CEMIG glosou o RC pelo valor urbano CSC, como nos outros 9 RC com G.02 (RC_NAO_PAGO); antes
-  conferiam por acaso. Pendência: Matheus decidir se glosa de reincidência (G.02) pelo valor base confere.
+  conferiam por acaso. (Resolvido na 046: serviço com G.02 vai para Glosados.)
 - **Justificativa da glosa** (044): sem evento no mesmo código, a linha com glosa mostra as
   justificativas do serviço na aba Evento_Glosa (Evento Glosa Apropriação da Fatura Completa),
   com o código na frente. Ex.: 245728835, glosa no 5.14 → "G.02: Reincidencia no serviço 244859969".

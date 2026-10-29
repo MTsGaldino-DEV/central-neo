@@ -23,7 +23,7 @@ export const MOTIVOS_FAT: Record<string,string> = {
   RC_VARIAS_LINHAS:'RC pago em várias linhas', FATOR_MAIOR:'Fator maior que o contrato', OUTRA:'Outra diferença',
 };
 export const SITUACOES_SERVICO_FAT: Record<string,string> = {
-  OK:'Confere', A_MENOS:'Pagou a menos', A_MAIS:'Pagou a mais', FORA_CONTRATO:'Código fora do contrato', CONFERIDO:'Conferido',
+  OK:'Confere', A_MENOS:'Pagou a menos', A_MAIS:'Pagou a mais', GLOSADO:'Glosado', FORA_CONTRATO:'Código fora do contrato', CONFERIDO:'Conferido',
 };
 
 export type ServicoTextoFat = Pick<ServicoFat,'situacao_calculo'|'motivo'|'devido'|'creditado'|'codigo_principal'|'tipo_turma'|'fator_aplicado'|'moto'|'rc_por_atendimento'|'qtd_linhas'|'parcial'>
@@ -44,6 +44,9 @@ export function fraseServico(s: ServicoTextoFat): string {
       break;
     case 'FORA_CONTRATO':
       frase = 'Código fora do contrato: não há fator para calcular o devido.';
+      break;
+    case 'GLOSADO':
+      frase = `Glosado pela CEMIG com código de glosa: o serviço não será pago. Pelo contrato valeria ${d}; a glosa lançada foi de ${usFat(s.multas)}.`;
       break;
     case 'A_MENOS':
       frase = s.motivo === 'MOTO_INDEVIDO' ? `${deveria}: aplicaram o desconto de Moto 0,7 numa equipe ${TIPOS_TURMA_FAT[s.tipo_turma ?? ''] ?? 'sem tipo identificado'}.`
@@ -87,8 +90,8 @@ const VAZIO: TotaisFat = {
   fatura:'', inicio:'', fim:'', importado_em:'', linhas:0, servicos:0, creditado:0, pago_com_fator:0, multas:0, estorno:0,
   devido:0, diferenca:0, sem_fator_servicos:0, parciais:0, saldo_a_receber:0, pago_a_mais:0,
   a_menos:{servicos:0,us:0,pago:0,devido:0,com_1ns:0,por_motivo:{}}, a_mais:{servicos:0,us:0,pago:0,devido:0,c562:{servicos:0,us:0},por_motivo:{}},
-  fora_contrato:0,
-  funil:{importados:0,equipe_identificada:0,codigo_no_contrato:0,valor_confere:0,conferidos:0},
+  fora_contrato:0, glosados:{servicos:0,us:0,devido:0,glosa:0},
+  funil:{importados:0,equipe_identificada:0,codigo_no_contrato:0,valor_confere:0,conferidos:0,glosados:0},
   grupos:{tipo_turma:[],codserv:[],cidade:[]}, ajustes:{debito:0,credito:0,itens:[]},
 };
 const NUMEROS = ['linhas','servicos','creditado','pago_com_fator','multas','estorno','devido','diferenca','sem_fator_servicos','parciais','saldo_a_receber','pago_a_mais','fora_contrato'] as const;
@@ -109,6 +112,8 @@ export function somarTotais(lista: TotaisFat[]): TotaisFat {
         pago: n0(s.a_mais.pago) + n0(t.a_mais.pago), devido: n0(s.a_mais.devido) + n0(t.a_mais.devido),
         c562: { servicos: n0(s.a_mais.c562?.servicos) + n0(t.a_mais.c562?.servicos), us: n0(s.a_mais.c562?.us) + n0(t.a_mais.c562?.us) },
         por_motivo: somarMotivos(s.a_mais.por_motivo, t.a_mais.por_motivo) },
+      glosados: { servicos: n0(s.glosados?.servicos) + n0(t.glosados?.servicos), us: n0(s.glosados?.us) + n0(t.glosados?.us),
+        devido: n0(s.glosados?.devido) + n0(t.glosados?.devido), glosa: n0(s.glosados?.glosa) + n0(t.glosados?.glosa) },
       funil: Object.fromEntries(Object.entries(s.funil).map(([k, v]) => [k, v + (t.funil[k as keyof TotaisFat['funil']] ?? 0)])) as TotaisFat['funil'],
       grupos: { tipo_turma: somarGrupos(s.grupos.tipo_turma, t.grupos.tipo_turma), codserv: somarGrupos(s.grupos.codserv, t.grupos.codserv), cidade: somarGrupos(s.grupos.cidade, t.grupos.cidade) },
       ajustes: { debito: s.ajustes.debito + t.ajustes.debito, credito: s.ajustes.credito + t.ajustes.credito, itens: [...s.ajustes.itens, ...t.ajustes.itens] },
