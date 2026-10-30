@@ -557,7 +557,8 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
     transação: totais e 21.910 serviços da 9844 idênticos; prova real e glosa passam depois de aplicar.
   - Tabela 03: só o **704128** muda (0,0669 → **0,0158**). 049 grava 0,0158 em `fator_original`
     (Contrato 2026); `fator_us` segue 0,0669 da Tabela CEMIG (Contratão). Nenhum item usa o código.
-    **Pendente:** Matheus confirmar se o pedido (fator_us) também deve ir para 0,0158.
+    **Decidido (Matheus, 30/10/2026): o pedido segue a Tabela CEMIG** (fator_us 0,0669); 0,0158 fica só
+    como Contrato 2026 (fator_original).
   - O PDF "CONSTRUREDE ATUALIZADA" difere só nas Tabelas 01/02 (construção, não usadas) e no 704128.
   - 7.18/7.19/7.20 não estão no Anexo: vieram do 1º Termo Aditivo (ver abaixo). 0.00, 6.18, V.01 e Z.*
     seguem fora do contrato (crédito zero na 9844).
