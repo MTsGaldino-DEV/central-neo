@@ -147,10 +147,14 @@ Total: **27.389 linhas**. O devido é **parcial**: 652 linhas não possuem fator
 
 Todos os **31 RCs** da Tabela 12 foram carregados. Faltam os valores numéricos de **1.62, 1.73, 5.63 e 5.64** da Tabela 11: as células remetem à **NOTA 10**, cujo texto não veio nos PDFs. Desses, 1.62 aparece em 61 linhas aplicáveis e 5.63 em duas. Outros códigos usados sem fator nos PDFs: **0.00 (209), 0.06 (1), 6.18 (2), 7.18 (34), 7.19 (320), 7.20 (7), V.01 (7), Z.22 (3), Z.23 (4), Z.38 (1), Z.41 (1)**. Essas 589 linhas, somadas às 63 da NOTA 10, permanecem `CODIGO_FORA_CONTRATO`. Não se supôs preço para elas.
 
+**30/10/2026 — Anexo VI completo (`ANEXO VI-TABELAS_abril24.pdf`, "o contrato correto" segundo Matheus):** Tabelas 11, 12 e 14 conferidas código a código, com os mesmos 219 pares CSC/COD e os mesmos US/h do banco. A NOTA 10 da Tabela 11 confirma o homem-hora pela Tabela 14. Os códigos 0.00, 6.18, 7.18, 7.19, 7.20, V.01, Z.22, Z.23, Z.38 e Z.41 **não estão** no contrato. A migration 049 corrigiu rural/moto de 18 códigos com fator 0 (lidos como 0/1; o PDF traz 1,2/0,7), sem mudança em nenhum devido ou total da 9844. Também trouxe o 704128 da Tabela 03 (Manutenção) para 0,0158 no `fator_original`.
+
+**30/10/2026 — 1º Termo Aditivo (`ADITIVO_CT_NOVOS_CODIGOS.pdf`, assinado em 30/03/2026):** inclui na Tabela 11 os códigos **7.18** (ramal monofásico), **7.19** (bifásico) e **7.20** (trifásico) direto na caixa de medição (ND-5.1), 1 por ramal: 0,126786/0,152143, 0,126786/0,152143 e 0,135182/0,162218 (CSC/COD). Sem colunas rural/moto (padrão 1,2/0,7). Migration 050: cadastra os três e passa a refazer contas e totais quando o contrato ganha código (a impressão só olhava o histórico de acertos). Fatura 9844: 362 serviços têm ramal (35 com 7.18, 320 com 7.19, 7 com 7.20); 361 passaram a comparar o ramal e **todos continuam conferindo** (a CEMIG pagou CSC, e CSC × 1,2 no rural); o outro é RC07 pago por atendimento. Contrato previa R$ 2.617.842,52 → **R$ 2.760.989,50** (+R$ 143.146,98); diferença Valor pago − Contrato −R$ 42.366,34. Nenhuma linha com crédito fica sem preço.
+
 ## Perguntas que continuam abertas
 
 1. Qual campo da origem indica que **CSC/CSI** ou **COD** acionou a equipe? A coincidência numérica é apenas diagnóstico.
-2. Fornecer a **NOTA 10** completa, os fatores dos códigos ausentes e eventual continuação da NOTA 8.
+2. ~~NOTA 10~~: resolvida pelo Anexo VI completo (homem-hora pela Tabela 14). ~~7.18, 7.19, 7.20~~: incluídos pelo 1º Termo Aditivo (migration 050).
 3. Como ligar uma nota **PSAP** à equipe e ao atendimento principal para aplicar 0,3, especialmente quando há mais de uma equipe?
 4. Confirmar o multiplicador **rural de Moto** (0,9 solicitado; notas sugerem combinação 0,84) e como tratar homem-hora/L/N/O.
 5. Como revisar **glosas parciais e simultâneas**? O serviço 245881140 tem crédito, glosa positiva e negativa em linhas distintas.

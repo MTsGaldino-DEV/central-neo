@@ -84,6 +84,12 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
     const fx = (l.despacho ?? servico.fator_aplicado) === 'COD' ? f?.fator_cod : f?.fator_csc;
     return fx == null ? null : Number(fx) * (l.area === 'RURAL' ? Number(rural) : 1);
   };
+  // QTD (Matheus, 30/10/2026): quantidade da planilha (urbano + rural); homem-hora mostra as horas.
+  const qtdLinha = (l: LinhaServicoFat) => {
+    if (l.horas != null) { const min = Math.round(Number(l.horas) * 60); return `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`; }
+    const u = Number(l.urbano) || 0, r = Number(l.rural) || 0;
+    return u > 0 && r > 0 ? `${fator(u)} + ${fator(r)}` : fator(u + r);
+  };
   // Fator sobre a base CSC urbano × 1,0: quanto a CEMIG aplicou e quanto o contrato pede.
   const base = linhas && contrato.dados ? baseServicoFat(normais, contrato.dados, servico.rc_por_atendimento) : null;
   const fatorPago = fatorSobreBaseFat(servico.pago_comparado, base), fatorContrato = fatorSobreBaseFat(servico.devido, base);
@@ -153,20 +159,22 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
           <p className={rotulo}>O que a CEMIG pagou na fatura</p>
           {!linhas ? (!erro && <p className="mt-2 flex items-center gap-2 text-xs text-aco"><Loader2 className="size-4 animate-spin" aria-hidden="true" />Buscando as linhas…</p>) : (
             <div className="mt-1 overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left text-xs">
+              <table className="w-full min-w-[600px] text-left text-xs">
                 <thead className="text-[11px] text-aco uppercase"><tr>
-                  <th className="py-1.5 pr-2">Código</th><th className="pr-2">Descrição</th><th className="pr-2">Zona</th>
+                  <th className="py-1.5 pr-2 text-right">Qtd</th><th className="pr-2">Código</th><th className="pr-2">Descrição</th><th className="pr-2">Zona</th>
                   <th className="pr-2 text-right">Contrato prevê</th><th className="pr-2 text-right">Pago</th><th className="text-right">Glosa / estorno</th>
                 </tr></thead>
                 <tbody>
                   {normais.map(l => (
                     <tr key={l.id} className="border-t border-linha">
-                      <td className="py-1.5 pr-2 font-codigo font-bold">{l.codserv}</td><td className="pr-2">{descricao(l)}</td>
+                      <td className={`py-1.5 pr-2 text-right font-codigo ${umaUnidade(l) != null ? 'font-bold text-erro' : ''}`}
+                        title={umaUnidade(l) != null ? 'A CEMIG zerou a quantidade' : Number(l.urbano) > 0 && Number(l.rural) > 0 ? 'urbano + rural' : undefined}>{qtdLinha(l)}</td>
+                      <td className="pr-2 font-codigo font-bold">{l.codserv}</td><td className="pr-2">{descricao(l)}</td>
                       <td className="pr-2">{({ RURAL: 'Rural', AMBAS: 'Urbana e rural' } as Record<string, string>)[zonaLinha(l)] ?? 'Urbana'}</td>
                       <td className="pr-2 text-right font-codigo">{(() => {
                         const u = umaUnidade(l), d = devidoLinha(l);
                         return u != null ? <span title="A CEMIG zerou a quantidade: valor de 1 unidade pelo contrato, para conferir com a glosa">
-                          1 un. = {usFat(u)}<span className="block text-[10px] text-aco">{l.despacho ?? servico.fator_aplicado ?? 'CSC'} · {l.area === 'RURAL' ? 'rural' : 'urbano'}</span></span>
+                          {usFat(u)}<span className="block text-[10px] text-aco">por unidade · {l.despacho ?? servico.fator_aplicado ?? 'CSC'} · {l.area === 'RURAL' ? 'rural' : 'urbano'}</span></span>
                           : d == null ? '—' : usFat(d);
                       })()}</td>
                       <td className={`pr-2 text-right font-codigo ${Number(l.creditado) === 0 && (servico.devido ?? 0) > 0 ? 'font-bold text-erro' : ''}`}>{usFat(l.creditado)}</td>
@@ -175,7 +183,8 @@ export function DetalheServico({ servico, aberto, onFechar, onAlterado }: {
                   ))}
                   {ns.map(l => (
                     <tr key={l.id} className="border-t border-linha bg-revisao-fundo/50">
-                      <td className="py-1.5 pr-2 font-codigo font-bold text-revisao">1.NS</td>
+                      <td className="py-1.5 pr-2 text-right font-codigo">{qtdLinha(l)}</td>
+                      <td className="pr-2 font-codigo font-bold text-revisao">1.NS</td>
                       <td className="pr-2">NS executada <span className="text-aco">· código informativo, valor pela Manutenção</span></td>
                       <td className="pr-2">{Number(l.rural) > 0 ? 'Rural' : 'Urbana'}</td>
                       <td className="pr-2 text-right font-codigo text-aco-claro">—</td>

@@ -9,7 +9,7 @@ export type BlocoDoc =
 export interface SecaoDoc { id: string; titulo: string; blocos: BlocoDoc[] }
 export interface PaginaDoc { id: string; titulo: string; grupo: 'Faturamento' | 'Referência'; atualizada: string; resumo: string; secoes: SecaoDoc[] }
 
-const HOJE = '29/10/2026';
+const HOJE = '30/10/2026';
 
 export const PAGINAS_DOC: PaginaDoc[] = [
   { id: 'visao-geral', titulo: 'Visão geral', grupo: 'Faturamento', atualizada: HOJE,
@@ -45,6 +45,11 @@ export const PAGINAS_DOC: PaginaDoc[] = [
         { tipo: 'texto', texto: 'A faixa escura no topo mostra, lado a lado, o **valor pago** pela CEMIG e o que o **contrato previa**: é a comparação principal. À direita ficam as **glosas** (tudo o que a CEMIG cortou na fatura) e o número de serviços. Clique na faixa para abrir todos os serviços.' },
         { tipo: 'texto', texto: 'Embaixo, três cards: **Pagou a menos** (pagou abaixo do contrato), **Pagou a mais** (acima) e **Possíveis glosas erradas** (laranja: glosa parcial e glosa para conferir à mão). Clique num card para abrir a lista daquele grupo.' },
         { tipo: 'texto', texto: 'A barra colorida de cada card divide o valor: no Pagou a menos, por motivo; no Pagou a mais, entre os que têm 5.62 e os outros. Passe o mouse num pedaço para ver o valor.' },
+        { tipo: 'importante', texto: 'A diferença entre **Valor pago** e **Contrato previa** não é o Pagou a mais. Ela soma o Pagou a mais e desconta o Pagou a menos e também as **glosas iguais ao contrato** (conferem, mas a CEMIG não pagou). Código pago que não tem preço no contrato também entraria só no Valor pago; na 9844 não há nenhum.' },
+        { tipo: 'exemplo', titulo: 'Exemplo · fatura 9844 · R$ 2.718.623,16 − R$ 2.760.989,50 = −R$ 42.366,34', linhas: [
+          ['Pagou a mais (24 serviços)', '+R$ 1.275,52'], ['Pago a mais já conferido à mão (1)', '+R$ 50,20'],
+          ['Pagou a menos (pagou alguma coisa)', '−R$ 18.600,09'], ['Glosa parcial (contrato dos 17, nada pago)', '−R$ 5.541,41'],
+          ['Glosa igual ao contrato (confere, mas não foi pago)', '−R$ 19.550,35'], ['Arredondamento', '−R$ 0,22']] },
         { tipo: 'nota', texto: 'Quando a CEMIG pagou o serviço, a glosa é de um código que saiu e a conta é pago × contrato. Quando ela não pagou nada e glosou (G.02, 0.00, 8.75…), a conta é glosa × contrato: igual confere; menor fica em Pagou a menos (Glosa parcial).' },
         { tipo: 'tabela', cabecalho: ['Na tela', 'Quer dizer'], linhas: [
           ['Valor pago', 'Soma do crédito da CEMIG na fatura, sem as glosas.'],
@@ -93,7 +98,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
         { tipo: 'lista', itens: ['Em cima: **Nº do serviço, tipo do serviço, nº de frota e tipo da frota**.',
           '**Como o devido foi calculado**: despacho (COD quando o tipo do serviço está na lista do COD; senão CSC), zona (pela coluna cod_tip_area da Fatura Completa) e tabela, com a conta de cada código. No homem-hora a conta mostra horas × US/h × multiplicador.',
           '**Fator pago**, ao lado do tipo da frota: quanto a CEMIG aplicou sobre o valor CSC urbano (× 1,0; × 1,2 rural ou COD; × 1,4 COD rural; × 0,7 Moto), com o fator do contrato embaixo.',
-          '**O que a CEMIG pagou na fatura**: só o valor pago, código por código, com o 1.NS no fim.',
+          '**O que a CEMIG pagou na fatura**: código por código, com a **Qtd** da planilha (urbano + rural; horas no homem-hora; 0 em vermelho quando a CEMIG zerou), o que o **contrato prevê**, o **pago** e a **glosa**. Na linha com quantidade zerada, o contrato mostra o valor **por unidade** para conferir com a glosa. O 1.NS fica no fim.',
           '**Histórico**: importação e cada conferência, com quem fez.', 'Para conferir, escreva uma observação e clique em "Marcar como conferido".'] },
       ] },
       { id: 'ns', titulo: '1.NS e a Manutenção', blocos: [
@@ -130,11 +135,12 @@ export const PAGINAS_DOC: PaginaDoc[] = [
     secoes: [
       { id: 'contrato', titulo: 'Tabelas 11 e 12', blocos: [
         { tipo: 'texto', texto: 'A Tabela 11 tem o valor de cada código de fechamento; a Tabela 12, o de cada RC (atendimento). Cada código tem dois valores: **CSC/CSI** e **COD**. Só o administrador corrige um fator, e toda correção fica no histórico.' },
+        { tipo: 'nota', texto: 'Fonte: **Anexo VI completo do contrato (abril/24)**, conferido código a código em 30/10/2026. Os 219 valores CSC e COD das Tabelas 11 e 12 e os da Tabela 14 são os do sistema. Os códigos **7.18, 7.19 e 7.20** (ramal monofásico, bifásico e trifásico direto na caixa de medição) entraram na Tabela 11 pelo **1º Termo Aditivo** (30/03/2026), por causa da norma ND-5.1: 0,126786 / 0,152143, 0,126786 / 0,152143 e 0,135182 / 0,162218 (CSC / COD), 1 por ramal. Seguem fora do contrato 0.00, 6.18, V.01, Z.22, Z.23, Z.38 e Z.41 (na 9844, todos com crédito zero).' },
         { tipo: 'texto', texto: 'O código **0.06 não paga**: está na Tabela 11 com valor 0, e o serviço fechado com ele (inclusive RC) tem devido zero.' },
         { tipo: 'texto', texto: 'Qual dos dois vale é o **despacho**: o serviço é COD quando o tipo dele (MA27, RC08, NSRI…) está na lista **Despachados pelo COD**, no fim da página; os demais são CSC/CSI.' },
       ] },
       { id: 'homem-hora', titulo: 'Homem-hora (Tabela 14)', blocos: [
-        { tipo: 'texto', texto: 'Os códigos **1.62, 1.73, 5.63 e 5.64** pagam por hora. As horas vão do acionamento (dh_aciona) ao término real (dh_terreal) da Fatura Completa, **por minuto**, sem arredondar a hora. O valor da hora vem da Tabela 14 pela equipe: dupla 0,1097, umpla 0,0922, moto 0,0366 e quarteto 0,1753 US/h.' },
+        { tipo: 'texto', texto: 'Os códigos **1.62, 1.73, 5.63 e 5.64** pagam por hora (NOTA 10 da Tabela 11: "conforme o fator por hora do tipo da equipe" da Tabela 14). As horas vão do acionamento (dh_aciona) ao término real (dh_terreal) da Fatura Completa, **por minuto**, sem arredondar a hora. O valor da hora vem da Tabela 14 pela equipe: dupla 0,1097, umpla 0,0922, moto 0,0366 e quarteto 0,1753 US/h.' },
         { tipo: 'tabela', cabecalho: ['Despacho e zona', 'Multiplicador'], linhas: [['CSC urbano', '1,0'], ['CSC rural', '1,2'], ['COD urbano', '1,2'], ['COD rural', '1,4']] },
         { tipo: 'exemplo', titulo: '1.62 · dupla, COD rural', linhas: [['2h13 × 0,1097 US/h × 1,4', '0,340436 US']] },
         { tipo: 'importante', texto: 'Dentro de um RC também: se o atendimento tem 1.62, 1.73, 5.63 ou 5.64, o RC deixa de ser pago por atendimento e cada linha vale o seu código, com o homem-hora por hora.' },

@@ -140,7 +140,18 @@ Pendências:
   0,393084 US; 30 conferir à mão). A menos 155 (6,6677 US), a mais 25, conferem 21.674.
 - **"Multas" virou "Glosas"** (faixa do Painel = total bruto da glosa, −R$ 62.922,02; coluna da lista,
   botão "Com glosa", gráfico, cartão de Faturas). Detalhe do serviço: coluna **"Contrato prevê"** por
-  linha; linha glosada com quantidade zerada mostra "1 un. = …" (despacho e área da linha).
+  linha; linha glosada com quantidade zerada mostra o valor "por unidade" (despacho e área da linha).
+  30/10: coluna própria **"Qtd"** antes do Código (urbano + rural da planilha; homem-hora em horas;
+  0 em vermelho quando a CEMIG zerou), pedido do Matheus.
+- **Dúvidas viram documentação (Matheus, 30/10/2026):** ao responder uma dúvida dele, registrar a
+  explicação na documentação (Faturamento: `documentacaoPaginas.ts`; Manutenção: ajuda da própria tela).
+  Já registrado: Valor pago − Contrato previa (9844: +R$ 143.146,98 de 7.19/7.18/7.20 sem preço no
+  contrato, +1.275,52 a mais, +50,20 conferido, −18.600,09 a menos, −5.541,41 glosa parcial,
+  −19.550,35 glosa = contrato) e, na importação do histórico da Fila, que item só com NSMP não tem
+  valor e que itens/NSIS existentes não são atualizados (importação de 30/10: 6 NSIS novas e 47 itens,
+  todos sem US pedida nem pago; 31 dessas NSIS seguem sem data de execução).
+- ~~Pendente: faixa do Painel só com pago com fator~~ — superado pela 050 (aditivo): na 9844 todo crédito
+  tem preço; Valor pago R$ 2.718.623,16 × Contrato previa R$ 2.760.989,50 (−R$ 42.366,34).
 - **Painel da Conferência:** Pago | Contrato prevê | Glosa | Diferença, somando tudo o que está
   filtrado (`resumo` em `neo_fat_servicos_listar`). Diferença = soma das diferenças (não é sempre
   pago − contrato; dica no rótulo). Matheus pediu enxuto: o painel completo é o da aba Painel.
@@ -534,3 +545,38 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
   com audio tags para Eleven v4/v3, teste de pronúncia, orientação de download e
   relação entre trechos e cenas. Áudio final recebido no v4. SSML de pausas não
   funciona no v4/v3; não misturar sintaxes. A montagem já usa os tempos do áudio real.
+
+## Entrega: Anexo VI completo como contrato — 30/10/2026 (Claude)
+
+- **Contrato correto (Matheus):** `Comparação de fatura/ANEXO VI-TABELAS_abril24.pdf` (71 páginas, Tabelas
+  01–20). Extração por posição (PyMuPDF via `uv run --with pymupdf`) e comparação com o banco:
+  - Tabelas 11/12: 219 pares CSC/COD iguais. A Tabela 14 também é igual. A NOTA 10 da T11 confirma o
+    homem-hora pela Tabela 14. 0.06 fica só no banco (decisão de 28/10).
+  - 18 códigos da T11 com fator 0 tinham rural '0' / moto '1' por erro de leitura da carga; o PDF traz
+    1,2 / 0,7 (7.39: moto 1). Corrigidos na **migration 049** (aplicada), com histórico. Teste em
+    transação: totais e 21.910 serviços da 9844 idênticos; prova real e glosa passam depois de aplicar.
+  - Tabela 03: só o **704128** muda (0,0669 → **0,0158**). 049 grava 0,0158 em `fator_original`
+    (Contrato 2026); `fator_us` segue 0,0669 da Tabela CEMIG (Contratão). Nenhum item usa o código.
+    **Pendente:** Matheus confirmar se o pedido (fator_us) também deve ir para 0,0158.
+  - O PDF "CONSTRUREDE ATUALIZADA" difere só nas Tabelas 01/02 (construção, não usadas) e no 704128.
+  - 7.18/7.19/7.20 não estão no Anexo: vieram do 1º Termo Aditivo (ver abaixo). 0.00, 6.18, V.01 e Z.*
+    seguem fora do contrato (crédito zero na 9844).
+- **Coluna Qtd, documentação das dúvidas e ajuda da importação:** typecheck ok; ainda sem commit
+  quando esta entrada foi escrita.
+
+## Entrega: 1º Termo Aditivo (ramais 7.18/7.19/7.20) — 30/10/2026 (Claude)
+
+- `Comparação de fatura/ADITIVO_CT_NOVOS_CODIGOS.pdf` (digitalizado, 3 páginas; lido por imagem): 1º Termo
+  Aditivo ao CT 4680007360-530 (CEMIG D × Engelmig), assinado em 30/03/2026, eficácia com publicação no
+  Diário Oficial. Por causa da ND-5.1 (ramal 16 mm² até 63 A direto na caixa de medição), inclui na
+  Tabela 11: **7.18** monofásico e **7.19** bifásico 0,126786 / 0,152143; **7.20** trifásico 0,135182 /
+  0,162218 (CSC / COD), 1 por ramal. Sem rural/moto (ficam nulos → padrão 1,2 / 0,7). Sem aporte financeiro.
+- **Migration 050 (aplicada):** cadastra os três e inclui o próprio `neo_fat_contrato` nas impressões
+  (`neo_fat_impressao_calc` e `neo_fat_impressao`, versão '050'): antes, código novo no contrato não
+  refazia as contas guardadas. Totais da 9844 recalculados no banco depois de aplicar.
+- **Impacto na 9844:** 362 serviços com ramal (35 com 7.18, 320 com 7.19, 7 com 7.20). 361 passaram a
+  comparar o ramal; os 362 conferem (urbano CSC exato; rural CSC × 1,2). O outro é RC07 (245945033), pago
+  por atendimento. Nenhum mudou de situação; a menos, a mais e glosas iguais. Contrato previa
+  +R$ 143.146,98 → R$ 2.760.989,50; pago com fator = crédito (nenhuma linha paga sem preço).
+- Teste novo `scripts/faturamento-aditivo-testar.cjs`; prova real, glosa, rodada2, serviços, texto e
+  zero-fator passam com a 050. Documentação (Painel e Tabelas do contrato) e relatório atualizados.

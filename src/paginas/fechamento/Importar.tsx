@@ -246,6 +246,8 @@ function AbaHistorico() {
           <p>• Linha só com o serviço e o texto vira uma NSIS "a fechar", e o texto vira a observação.</p>
           <p>• Não sobrescreve nada que já esteja na NEO. Reimportar não duplica: o item é reconhecido pelo serviço + NSMP.</p>
           <p>• O "-ok" do número da equipe é removido.</p>
+          <p>• Só muda valor no Painel o item que vier com US pedida (Lançamento Salesforce) ou valor pago. Item só com NSMP entra em "Aguardando NSPR", sem valor.</p>
+          <p>• Item que já existe é ignorado: NSPR e valor pago novos de itens antigos, e a data de execução de NSIS antigas, não são atualizados por aqui. Preencha na Fila.</p>
         </div>
       </>
     );
