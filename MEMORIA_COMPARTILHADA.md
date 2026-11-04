@@ -140,6 +140,11 @@ Pendências: nenhuma. ~~Perguntar à supervisora Elen o que é `S`~~ — resolvi
   A_CONFERIR, GLOSA_ACIMA (decisão do Claude, por segurança; nenhum caso hoje). Se pagou algo, a
   glosa é de um código que saiu e vale pago × contrato (246073073 1.72 "por vão" confere).
   Critério técnico: `creditado = 0 and multas > 0 and devido is not null` (coluna `glosado` da lista).
+- **Glosa aceita (explicado ao Matheus, 04/11/2026; nota "importante" em Pagou a menos e pagou a mais):**
+  (1) nada pago e glosa = contrato → Confere (9844: 79 serviços, 6,595199 US); (2) pago = contrato e glosa
+  em outro código → Confere, a glosa é ignorada (113 serviços, glosa 8,790524 US). Ressalvas: o sistema
+  confere valor, não o motivo (G.02 reincidência etc.), e o contrato usa as quantidades que a CEMIG deixou
+  (linha zerada vale 0 quando o serviço teve algum pagamento). Não aceitas: glosa parcial (17), conferir à mão (30).
 - **"Possíveis glosas erradas"** (nome do Matheus; "glosas erradas" afirmaria): glosa parcial +
   conferir à mão. Atalho na Conferência (lado `glosas`), 3º card do Painel (valor = o que falta na
   glosa parcial; barra por nº de serviços), etapa "Conferir à mão" no funil. Na 9844: 47 (17 parciais,

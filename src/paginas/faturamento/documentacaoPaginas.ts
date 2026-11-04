@@ -164,6 +164,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
         { tipo: 'lista', itens: ['Serviço pago: a glosa é de um código que saiu e a conta é pago × contrato.',
           'Serviço **sem nada pago e com glosa**: a conta é glosa × contrato. Igual confere; menor vai para **Pagou a menos** (Glosa parcial, diferença = glosa − contrato); quantidade zerada ou glosa acima do contrato vai para **Conferir à mão**.',
           'Serviço **conferido** à mão sai do pagou a menos, do pagou a mais e da exportação; o atalho "Conferidos" mostra todos.', 'Código sem valor no contrato fica fora dos dois lados.'] },
+        { tipo: 'importante', texto: 'A glosa é aceita em dois casos: a CEMIG não pagou nada e glosou **exatamente** o valor do contrato, ou pagou o que o contrato prevê e glosou outro código. O sistema confere o **valor**, não o **motivo** da glosa (reincidência, código errado…), e o contrato é calculado com as quantidades que a CEMIG deixou: linha que ela zerou vale zero.' },
       ] },
       { id: 'urbano-rural', titulo: 'Urbano e rural', blocos: [
         { tipo: 'texto', texto: 'A zona vem da planilha da CEMIG: as quantidades urbanas e rurais de cada linha. A quantidade rural vale **× 1,2** no devido.' },
