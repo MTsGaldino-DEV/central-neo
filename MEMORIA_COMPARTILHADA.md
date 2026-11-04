@@ -1,6 +1,6 @@
 # Memória compartilhada — Central NEO
 
-Atualizada em 28/10/2026 pelo Claude (homem-hora e despacho COD no Faturamento). Este arquivo é o ponto de continuidade entre
+Atualizada em 04/11/2026 pelo Claude (respostas do Matheus às pendências). Este arquivo é o ponto de continuidade entre
 Codex e Claude neste repositório. Guarda decisões e estado de trabalho, não o
 histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
@@ -67,6 +67,13 @@ fica fora e pode deixar os cards zerados. Matheus pretende resolver com a sincro
 com o GDIS. Não ampliar a base desses cards sem solicitação. Relembrar quando essa
 integração for retomada.
 
+Diagnóstico de 04/11/2026 (consulta só leitura): os 2.202 itens de `neo_nsis_itens` estão **todos sem
+código** (2.160 com execução; 1.692 já pagos). São descrições livres ("podado arvore tocando na mt") com o
+valor em US, sem código da Tabela 03, e nenhuma descrição casa com `neo_contrato_itens`. Os cards só somam
+itens com código **e** pagos, por isso mostram 0 em qualquer período. O formulário de item já oferece o
+código; só ninguém lançou item por ele ainda. Explicado ao Matheus; opções: (a) GDIS trazer o código,
+(b) classificar o histórico por descrição, (c) enquanto isso, comparar só Tabela CEMIG × Pago, que já tem dado.
+
 ## Última entrega: homem-hora, despacho COD e área — 27/10/2026 (Claude)
 
 Desenho: `docs/superpowers/specs/2026-10-27-faturamento-homem-hora-cod-design.md`. Plano:
@@ -78,8 +85,8 @@ Regras do Matheus em vigor:
 - **Despacho:** COD quando o `tipo_serv` está em `neo_fat_despacho_cod` (43 tipos: MA01…MA95,
   MACT, MAC1, MAB8, NSRI, RC01, RC08, RC09, RC11); senão CSC. Não se escolhe mais pelo valor
   que coincide. RC04/RC06/RC07/RC21/RC36 pagos como COD = pagos a mais (decisão do Matheus).
-- **Área:** `cod_tip_area` da aba Serviço da Fatura Completa (U urbano; R rural; **S rural,
-  provisório**). Quantidade continua nas colunas K + M. Sem área (fatura antiga) → K/M.
+- **Área:** `cod_tip_area` da aba Serviço da Fatura Completa (U urbano; R rural; **S subterrâneo,
+  conta como rural** — confirmado pelo Matheus em 04/11/2026). Quantidade continua nas colunas K + M. Sem área (fatura antiga) → K/M.
 - **Homem-hora** (1.62, 1.73, 5.63, 5.64, `neo_fat_contrato.remuneracao='HOMEM_HORA'`):
   horas de `dh_aciona` a `dh_terreal`, por minuto (como a CEMIG) × Tabela 14 pela equipe
   (`neo_fat_prontidao`: D 0,1097, U 0,0922, M 0,0366, Q 0,1753 US/h) × (1 + 0,2 COD + 0,2 rural).
@@ -100,7 +107,7 @@ Regras do Matheus em vigor:
   Na 9844: 9 acima, 32 abaixo. Janela mostra **Fator pago** (pago ÷ base CSC urbano × 1,0) e o do contrato
   (`src/lib/faturamentoFator.ts`; em tabela 12 a base é o fator do RC do `tipo_serv`, porque a linha
   traz o código do trabalho, ex.: 246480975 RC06 rural → pago × 1,44, contrato × 1,2). **Contrato rápido**: botão redondo na Conferência, painel lateral
-  (`ContratoFlutuante`) com códigos, lista do COD e Tabela 14 — Matheus disse que ajusta depois.
+  (`ContratoFlutuante`) com códigos, lista do COD e Tabela 14 — aprovado como está (Matheus, 04/11/2026: "está legalzinho").
 - Testes de banco e de interface apagam as conferências da 9844 dentro da transação desfeita: Matheus
   já confere serviços de verdade (3 em 28/10), e elas tiram serviços dos lados e totais.
 - A importação grava `acionamento`, `termino` e `area` em `neo_fat_anexos` (aba `Servico`).
@@ -118,8 +125,7 @@ typecheck, build e interface com APIs simuladas (`NEO_TEST_URL=http://localhost:
 capturas `janela-homem-hora` e `contrato-homem-hora` conferidas). Cálculo por linha ficou mais
 rápido (contagem 1,2 s contra 1,9 s). Não verificado: login real.
 
-Pendências:
-- **Perguntar à supervisora Elen o que é `S` em `cod_tip_area`** (hoje rural; 9 serviços na 9844).
+Pendências: nenhuma. ~~Perguntar à supervisora Elen o que é `S`~~ — resolvido em 04/11/2026: subterrâneo, rural.
 
 ## Entrega: regra da glosa, possíveis glosas erradas e prova real — 29/10/2026 (Claude)
 
@@ -162,7 +168,7 @@ Pendências:
 - Testes: `faturamento-glosados-testar` saiu, entrou `faturamento-glosa-testar`; rodada2, servicos,
   texto, filtros e ui atualizados. Todos passam com a 048 carregada (servicos: limite de 1,5 s da lista
   estourou uma vez, 1,97 s; depois 0,25–0,67 s). Typecheck e build OK.
-- Pendente: escolher se o painel da Conferência ganha mais métricas (Matheus achou melhor manter só
+- **Decidido (04/11/2026):** o painel da Conferência fica com as quatro métricas atuais. Antes: escolher se ganharia mais métricas (Matheus achou melhor manter só
   as quatro por enquanto).
 - **048 aplicada** no CENTRAL-NEO em 29/10/2026 (a pedido do Matheus); totais da 9844 na versão '048':
   possíveis glosas erradas 47 (17 parciais 0,393084 US; 30 conferir à mão), a menos 155 (6,667718 US),
@@ -536,7 +542,7 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
   resolução com FFprobe; 15 prévias e 12 quadros do arquivo final inspecionados;
   loudness da mixagem -16 LUFS, pico verdadeiro -4,2 dBFS; sintaxe Node/Python e
   diff sem problemas de espaço. Não testado fisicamente na TV da reunião.
-- Pendente: Matheus assistir ao vídeo e indicar eventuais ajustes criativos.
+- Matheus assistiu ao vídeo (confirmado em 04/11/2026); nenhum ajuste pedido.
   Nenhuma mudança no aplicativo ou no banco foi feita para produzir o vídeo.
 - Narração: Matheus pediu instruções práticas e pausas, além do texto bruto, e
   enviou `https://elevenlabs.io/docs/eleven-creative/playground/text-to-speech`.

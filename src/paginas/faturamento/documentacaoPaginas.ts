@@ -144,7 +144,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
         { tipo: 'tabela', cabecalho: ['Despacho e zona', 'Multiplicador'], linhas: [['CSC urbano', '1,0'], ['CSC rural', '1,2'], ['COD urbano', '1,2'], ['COD rural', '1,4']] },
         { tipo: 'exemplo', titulo: '1.62 · dupla, COD rural', linhas: [['2h13 × 0,1097 US/h × 1,4', '0,340436 US']] },
         { tipo: 'importante', texto: 'Dentro de um RC também: se o atendimento tem 1.62, 1.73, 5.63 ou 5.64, o RC deixa de ser pago por atendimento e cada linha vale o seu código, com o homem-hora por hora.' },
-        { tipo: 'nota', texto: 'A zona vem da coluna cod_tip_area: U urbano, R rural. O valor S também conta como rural até a supervisora Elen confirmar o que significa.' },
+        { tipo: 'nota', texto: 'A zona vem da coluna cod_tip_area: U urbano, R rural e S subterrâneo, que também conta como rural.' },
       ] },
       { id: 'moto', titulo: 'Valor e fator Moto', blocos: [
         { tipo: 'texto', texto: 'Equipe Moto recebe 70% do valor (fator 0,7) na maioria dos códigos. Alguns pagam o valor cheio (fator 1) e outros não pagam Moto (fator 0). A coluna **Valor Moto** já mostra a conta pronta, antes do fator.' },
