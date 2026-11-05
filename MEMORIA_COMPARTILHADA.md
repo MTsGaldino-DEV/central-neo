@@ -1,6 +1,6 @@
 # Memória compartilhada — Central NEO
 
-Atualizada em 05/11/2026 pelo Claude (1.62 × 1,0, reincidência de volta na lista e incidente da 051). Este arquivo é o ponto de continuidade entre
+Atualizada em 05/11/2026 pelo Claude (grupo Ferramentas e Cálculo de KM; antes: 1.62 × 1,0, reincidência e incidente da 051). Este arquivo é o ponto de continuidade entre
 Codex e Claude neste repositório. Guarda decisões e estado de trabalho, não o
 histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
@@ -62,6 +62,26 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 - **Testes que gravam no banco (incidente de 05/11/2026):** `faturamento-carga-testar` faz commit de verdade, e
   `faturamento-conferencia-testar` usa `sql.begin` sem desfazer. Nunca injetar migration em `sql.begin` por preload
   ou atalho. Migration nova só entra no teste dentro de transação com `throw` no fim. Conferir antes de rodar.
+
+## Entrega: grupo Ferramentas e Cálculo de KM — 05/11/2026 (Claude)
+
+- **Pedido do Matheus:** transformar o grupo "TraceOne · Medidores" em **Ferramentas**, deixar só a Lista de
+  Medidores, remover as outras abas do TraceOne e criar a aba **Cálculo de KM**, que importa até 5 PDFs de
+  Percursos do rastreador e entrega o resultado. Sem IA, só os dados.
+- **Decisões:** Lançamento, Importar, Conferências e Backup do TraceOne saíram do menu **e das rotas** da NEO
+  (para todos). Os arquivos em `src/paginas/traceone/` continuam no disco, sem uso. O Cálculo de KM não grava
+  nada, então aparece para todo acesso ativo, sem módulo novo e sem migration. Regras e números em
+  `CONTEXTO_GERAL.md` §8.
+- **Dependência nova:** `pdfjs-dist@^4.10.38` (package.json e package-lock.json). Rode `npm.cmd install` antes do
+  `npm.cmd run dev`/`build`. O pdf.js e o worker só são baixados na tela de Cálculo de KM.
+- **Método validado** contra a conferência manual de 04–05/11 (8592 = 130,7 km; 7812 = 123,5 km). Em 9477 (134,9) e
+  4052 (174,1) o resultado ficou um pouco abaixo da conta manual, porque a ferramenta achou mais 1 ponto falso
+  em cada um (velocidade 0, posição repetida). Todos os 31 descartados nos 5 PDFs têm velocidade 0.
+- **Verificações:** `tsc --noEmit` e `vite build` ok numa cópia do projeto. Tela testada no Chromium com os 5 PDFs
+  (desktop 1440 e celular 390, sem rolagem lateral), com sessão simulada: login, Supabase e Google Fonts
+  ficaram fora do teste. A planilha de auditoria baixada confere (271 posições, acumulado 174,134 km).
+- **Pendente:** commit e push. Esta sessão gravou os arquivos pela ponte de arquivos, sem terminal no PC, e não
+  conferiu `git status`. Falta abrir a tela logado na NEO real e confirmar o visual com a fonte Manrope.
 
 ## Pendência preservada da memória do Claude
 

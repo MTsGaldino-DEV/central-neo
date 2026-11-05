@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Home, LayoutDashboard, PlusCircle, UploadCloud, CheckSquare, AlarmClockCheck, DatabaseBackup,
+  Home, LayoutDashboard, Route,
   ClipboardList, FileSpreadsheet, Table2, BarChart3, Receipt, MessageSquareWarning, Scale, Users, KeyRound, LogOut, Contact,
   ChevronDown, Menu, X, type LucideIcon,
 } from 'lucide-react';
@@ -9,7 +9,6 @@ import NeoLogo from './NeoLogo';
 import { useSessao } from '@/contexto/Sessao';
 import { temModulo } from '@/lib/neo';
 import { sair as encerrarSessao, trocarMinhaSenha } from '@/lib/auth';
-import { isAdmin } from '@/lib/permissions';
 import { gravarRecolhidas, lerRecolhidas } from '@/lib/secoesRecolhidas';
 
 interface ItemNav { label: string; href: string; icon: LucideIcon; fim?: boolean }
@@ -21,25 +20,15 @@ const EM_BREVE: ItemNav[] = [
 ];
 
 export function useSecoesNav(): SecaoNav[] {
-  const { acesso, profile } = useSessao();
+  const { acesso } = useSessao();
   const secoes: SecaoNav[] = [{ titulo: '', itens: [{ label: 'Início', href: '/', icon: Home, fim: true }] }];
 
-  if (temModulo(acesso, 'traceone')) {
-    // Na NEO o TraceOne é só a ferramenta de pesquisa/edição da lista; o resto fica para o ADMIN NEO
-    const adminNeo = acesso?.papel === 'ADMIN';
-    const despachante = profile?.role === 'DESPACHANTE';
-    const itens: ItemNav[] = [{ label: 'Lista de Medidores', href: '/traceone', icon: LayoutDashboard, fim: true }];
-    if (adminNeo && !despachante) {
-      itens.push(
-        { label: 'Lançamento Manual', href: '/traceone/lancamento', icon: PlusCircle },
-        { label: 'Importar Relatório', href: '/traceone/importacao', icon: UploadCloud },
-        { label: 'Conferência', href: '/traceone/conferencia', icon: CheckSquare },
-        { label: 'Conferência +45 dias', href: '/traceone/conferencia-45dias', icon: AlarmClockCheck },
-      );
-    }
-    if (adminNeo && isAdmin(profile?.role)) itens.push({ label: 'Backup', href: '/traceone/backup', icon: DatabaseBackup });
-    secoes.push({ titulo: 'TraceOne · Medidores', itens });
-  }
+  // Ferramentas (05/11/2026): do TraceOne fica só a Lista de Medidores (quem tem o módulo); o Cálculo de KM
+  // não grava nada e lê os PDFs no navegador, então vale para todo acesso ativo na NEO.
+  const ferramentas: ItemNav[] = [];
+  if (temModulo(acesso, 'traceone')) ferramentas.push({ label: 'Lista de Medidores', href: '/traceone', icon: LayoutDashboard, fim: true });
+  ferramentas.push({ label: 'Cálculo de KM', href: '/ferramentas/calculo-km', icon: Route });
+  secoes.push({ titulo: 'Ferramentas', itens: ferramentas });
 
   if (temModulo(acesso, 'fechamento')) {
     secoes.push({

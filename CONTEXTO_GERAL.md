@@ -1,6 +1,6 @@
 # Contexto Geral — Central NEO
 
-> **Atualizado em:** 2026-10-20
+> **Atualizado em:** 2026-11-05
 > Ponto de entrada para quem (pessoa ou IA) for trabalhar na Central NEO.
 > Continuidade entre Codex e Claude: leia também `MEMORIA_COMPARTILHADA.md`.
 
@@ -10,7 +10,8 @@ Central do **NEO (Núcleo de Eficiência Operacional)**, irmã da Central NEC. R
 
 | Frente | Situação |
 |---|---|
-| Controle de medidores (TraceOne) | ✅ no MVP |
+| Controle de medidores (TraceOne) | ✅ no MVP (na NEO, só a Lista de Medidores, dentro de Ferramentas) |
+| Ferramentas: Cálculo de KM pelos PDFs de Percursos do rastreador | ✅ desde 05/11/2026 |
 | Manutenção (antigo Fechamento de Notas: controle de NSMC, aba "211 NSIS") | ✅ no MVP |
 | Faturamento | faturas, painel, conferência, importação, contrato e documentação implementados |
 | Notas de ouvidoria | em breve |
@@ -37,10 +38,14 @@ src/
                   fechamento.ts     consultas/edição do fechamento de NSIS
                   fechamentoPlanilhas.ts  leitura do relatório GDIS e da planilha de controle (puro, testável)
                   fechamentoFormato.ts    lerNumero / normalizarAP (sem dependências)
+                  calculoKm.ts      leitura do relatório de Percursos e cálculo dos km (puro, testável em Node)
+                  calculoKmPdf.ts   extrai os textos do PDF com pdf.js (pdfjs-dist, carregado só nessa tela)
   contexto/Sessao.tsx  sessão NEO + cadastro + acesso NEO + conexão/perfil TraceOne
   components/     Shell (layout), NeoLogo, fechamento/EtapaChip + copiados do TraceOne (charts, Pagination…)
   paginas/        Login, ResetSenha, Inicio, Acessos (logins e acessos), Colaboradores
-  paginas/traceone/   Lista, Lancamento, Importacao, Conferencia, Conferencia45, Backup  ← portados
+  paginas/traceone/   Lista (única tela ligada desde 05/11/2026); Lancamento, Importacao, Conferencia,
+                      Conferencia45 e Backup continuam no disco, mas sem rota nem menu  ← portados
+  paginas/ferramentas/ CalculoKm (/ferramentas/calculo-km)
                       ConectarTraceone (pede a senha do TraceOne se a conexão automática falhar)
   paginas/fechamento/ Fila, PainelNsis, Importar, TabelaValores, Painel
 supabase/migrations/       001–012 do banco central-neo (aplicar com `node scripts/migrar.cjs`)
@@ -65,7 +70,7 @@ cores `bg-[#1e3a5f]` → `bg-sinal`. Os tokens de cor (`tinta`, `sinal`, `nevoa`
 - Entra na NEO quem tem linha ativa em `neo_acessos` (`papel` ADMIN/USUARIO, `modulos` ⊂ {`traceone`, `fechamento`}). ADMIN vê tudo.
 - **Logins e acessos** (ADMIN NEO): cria login, redefine senha, bloqueia e escolhe os módulos. Criar login e trocar senha passam pela Edge Function `admin-usuarios`, que confere `neo_is_admin()` e usa a service_role.
 - A troca da própria senha (menu) muda na NEO e, se o TraceOne estiver conectado, lá também, para as duas continuarem iguais.
-- Na NEO o TraceOne é só ferramenta: quem não é ADMIN NEO vê apenas a **Lista de Medidores** (pesquisa e alterações ficam nela). Lançamento, Importar, Conferências e Backup ficam ocultos e só abrem para ADMIN NEO (menu e rotas).
+- **Grupo Ferramentas (05/11/2026, pedido do Matheus):** substituiu o grupo "TraceOne · Medidores". Tem a **Lista de Medidores** (`/traceone`, só para quem tem o módulo `traceone`) e o **Cálculo de KM** (`/ferramentas/calculo-km`, para todo acesso ativo na NEO, porque não grava nada). Lançamento, Importar, Conferências e Backup do TraceOne saíram do menu e das rotas da NEO para todos, inclusive ADMIN; seguem no TraceOne web.
 - As permissões das telas de medidores continuam vindo de `profiles.role` (RLS do TraceOne). Despachante só vê a lista, e Backup é só para ADMIN do TraceOne.
 - Primeiro admin: `matheus.galdino@engelmig.com.br`.
 
@@ -168,3 +173,18 @@ Implementado em 23/10/2026. Compara créditos e glosas da CEMIG com as Tabelas 1
 - Conferência após migrations 021/022: `neo_fat_listar` retorna linhas e total com filtros/paginação em uma RPC autenticada; `src/lib/faturamento.ts` a chama em vez de consultar a view com contagem direta pelo PostgREST. As views `neo_fat_base`, `neo_fat_calculo` e `neo_fat_conferencia` usam dono da view para evitar checagem de RLS por linha em subconsultas, com `neo_tem_modulo('faturamento')` explícito na base e na conferência. A consulta antiga continua funcional para o frontend já publicado. Teste: `node scripts/faturamento-conferencia-testar.cjs`.
 
 - Revisão visual e funcional de importação/contrato/equipe no Chrome desktop e celular; APIs do navegador simuladas com dados lidos da NEO. Importação real e testes transacionais verificados separadamente. Scripts `faturamento-planilhas-testar.cjs`, `faturamento-duas-planilhas-testar.cjs`, `faturamento-ui-testar.cjs`; extração geométrica em `faturamento-validar-pdf.py`.
+
+## 8. Ferramentas · Cálculo de KM
+
+Implementado em 05/11/2026. Quantos km uma equipe rodou, a partir do PDF "Percursos" do rastreador (colunas Data e hora, Eventos, Status, Velocidade e Coordenadas; cabeçalho com Agente "código / placa" e Intervalo). Tudo no navegador: nada vai para o banco e não há IA.
+
+- Até 5 PDFs por vez. Relatórios do mesmo agente, placa e dia (dia do início do Intervalo) viram um percurso só; posição repetida em dois relatórios (horário + coordenada) conta uma vez.
+- Leitura (`lerRelatorio`): agrupa os textos do pdf.js por página e altura (y); uma linha vale se tiver "dd/mm hh:mm:ss" e "lat ; lon". Velocidade = inteiro antes das coordenadas; evento = texto com "_"; status = o resto. O ano vem do Intervalo.
+- Limpeza (`limpar`), só pontos falsos do rastreador:
+  - **Posição presa:** velocidade 0, a mesma coordenada exata ≥ 3 vezes no dia e, em relação a um vizinho, salto > 2 km ou > 150 km/h (com > 0,5 km). Paradas reais na base ficam porque estão perto dos vizinhos.
+  - **Vai e volta:** o ponto sai e o seguinte volta para perto do anterior (anterior→seguinte < metade do menor salto), com salto > 2 km nos dois lados ou > 150 km/h. Se o ponto em movimento é seguido por um parado que repete a posição anterior (eco), sai o parado. Repete até estabilizar.
+- km = soma Haversine (raio 6.371 km) entre posições consecutivas que ficaram. Mostra também leitura bruta, linha reta início→fim e km por status (cada trecho conta para o status vigente no início dele).
+- Avisos: relatório com ≥ 200 linhas que começa > 30 min depois do Intervalo pedido (o rastreador corta a exportação em 200 linhas), lacuna > 30 min entre relatórios e trechos > 150 km/h mantidos.
+- Saídas: "Copiar resumo" (texto) e planilha de auditoria (abas Resumo e Posições, com km do trecho, acumulado e motivo de cada descarte).
+- Validação (05/11/2026, 5 PDFs reais): 8592/SHR0H56 17/09 = 130,7 km; 9477/SHQ0C04 27/09 = 134,9 km; 7812/SIG0A50 22/10 = 123,5 km; 4052/RUN3B56 24/10 (2 PDFs) = 174,1 km. Todos os descartados têm velocidade 0.
+
