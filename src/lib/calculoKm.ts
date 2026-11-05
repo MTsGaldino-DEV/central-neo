@@ -41,7 +41,25 @@ export type MotivoDescarte = 'REPETIDO' | 'PICO';
 
 export interface Descartado { ponto: PontoKm; motivo: MotivoDescarte; kmEvitados: number }
 
-export interface Trecho { de: PontoKm; ate: PontoKm; km: number; kmh: number | null }
+export interface Trecho {
+  de: PontoKm; ate: PontoKm; km: number; kmh: number | null;
+  /** Status da equipe quando o trecho começou (o último evento de status até ali). */
+  status: string;
+}
+
+/** Um acionamento: do status "A caminho" até "Trabalhando" (chegada) ou até outro status que interrompa. */
+export interface Atendimento {
+  n: number;
+  /** Ponto do evento "A caminho" e do evento que encerrou (o "Trabalhando" ou o que interrompeu). */
+  saida: PontoKm;
+  fim: PontoKm;
+  chegou: boolean;
+  /** Status que encerrou sem chegada (ex.: "DISPONÍVEL"); vazio quando chegou. */
+  interrompidoPor: string;
+  kmPercorrido: number;
+  /** Linha reta do acionamento até onde chegou. */
+  kmLinhaReta: number;
+}
 
 export type TipoAlerta = 'CORTADO' | 'LACUNA' | 'SALTO';
 export interface AlertaKm { tipo: TipoAlerta; texto: string }
@@ -61,6 +79,7 @@ export interface ResultadoKm {
   kmLimpo: number;
   kmLinhaReta: number;
   kmPorStatus: { status: string; km: number }[];
+  atendimentos: Atendimento[];
   alertas: AlertaKm[];
 }
 
@@ -239,18 +258,18 @@ function calcularGrupo(chave: string, rs: RelatorioKm[]): ResultadoKm {
   const brutos = [...unicos.values()].sort((a, b) => a.ts - b.ts);
   const { pontos, descartados } = limpar(brutos);
 
+  // O status vale do evento até o próximo evento; cada trecho fica com o status de quando começou. Os eventos vêm de
+  // todas as posições lidas: um evento num ponto descartado ainda vale para o status (só a coordenada era ruim).
+  const eventos = brutos.filter(p => p.status);
+  let ie = -1;
   const trechos: Trecho[] = pontos.slice(1).map((p, i) => {
+    while (ie + 1 < eventos.length && eventos[ie + 1].ts <= pontos[i].ts) ie++;
     const km = haversine(pontos[i], p);
-    return { de: pontos[i], ate: p, km, kmh: kmh(km, pontos[i], p) };
+    return { de: pontos[i], ate: p, km, kmh: kmh(km, pontos[i], p), status: ie >= 0 ? eventos[ie].status : SEM_STATUS };
   });
-
-  // km por status do agente: o status vale do evento até o próximo evento.
+  const atendimentos = montarAtendimentos(eventos, pontos, trechos);
   const porStatus = new Map<string, number>();
-  let status = 'Antes do primeiro status';
-  for (const t of trechos) {
-    if (t.de.status) status = t.de.status;
-    porStatus.set(status, (porStatus.get(status) ?? 0) + t.km);
-  }
+  for (const t of trechos) porStatus.set(t.status, (porStatus.get(t.status) ?? 0) + t.km);
 
   const alertas: AlertaKm[] = [];
   const ordenados = [...rs].sort((a, b) => a.pontos[0].ts - b.pontos[0].ts);
@@ -281,9 +300,65 @@ function calcularGrupo(chave: string, rs: RelatorioKm[]): ResultadoKm {
     kmLimpo: somar(pontos),
     kmLinhaReta: pontos.length > 1 ? haversine(pontos[0], pontos[pontos.length - 1]) : 0,
     kmPorStatus: [...porStatus.entries()].map(([s, km]) => ({ status: s, km })).sort((a, b) => b.km - a.km),
+    atendimentos,
     alertas,
   };
 }
+
+// ─── Atendimentos ────────────────────────────────────────────────────────────
+
+export const STATUS_ACIONADO = 'A CAMINHO';
+export const STATUS_EXECUCAO = 'TRABALHANDO';
+
+/**
+ * "A caminho" abre um atendimento; "Trabalhando" fecha com chegada. Outro status antes da chegada (Disponível,
+ * Almoçando…) fecha como interrompido. "A caminho" repetido com um aberto é ignorado (vale o primeiro).
+ */
+function montarAtendimentos(eventos: PontoKm[], pontos: PontoKm[], trechos: Trecho[]): Atendimento[] {
+  if (!pontos.length) return [];
+  const usados = new Set(pontos);
+  // Evento num ponto descartado: usa a posição boa mais próxima no tempo.
+  const posicao = (p: PontoKm) => usados.has(p) ? p
+    : pontos.reduce((m, x) => Math.abs(x.ts - p.ts) < Math.abs(m.ts - p.ts) ? x : m, pontos[0]);
+  const lista: Atendimento[] = [];
+  let aberto: PontoKm | null = null;
+  const fechar = (fim: PontoKm, chegou: boolean) => {
+    const saida = posicao(aberto!), destino = posicao(fim);
+    const kmPercorrido = trechos.reduce((s, t) => (t.de.ts >= saida.ts && t.ate.ts <= destino.ts ? s + t.km : s), 0);
+    lista.push({ n: lista.length + 1, saida, fim: destino, chegou, interrompidoPor: chegou ? '' : fim.status, kmPercorrido, kmLinhaReta: haversine(saida, destino) });
+    aberto = null;
+  };
+  for (const ev of eventos) {
+    if (ev.status === STATUS_ACIONADO) { if (!aberto) aberto = ev; continue; }
+    if (!aberto) continue;
+    fechar(ev, ev.status === STATUS_EXECUCAO);
+  }
+  return lista;
+}
+
+// ─── Contrato: km linear (cláusula 8.2.1) ────────────────────────────────────
+
+export const SEM_STATUS = 'Antes do primeiro status';
+
+/**
+ * Cláusula 8.2.1 do contrato CEMIG, equipes em caminhonete em dupla, quarteto (caminhão) e motos: quando a soma das
+ * distâncias lineares para os serviços acionados pelo COD passa de 100 km na jornada, cada km excedente vale
+ * 0,002803 US. (Trios, quartetos e quintetos em caminhonete seguem a 8.2.2, base → serviço, que não se aplica aqui.)
+ */
+export const KM_LINEAR_FRANQUIA = 100;
+export const KM_LINEAR_FATOR_US = 0.002803;
+
+/** km dos trechos cujo status está na seleção. */
+export const kmDosStatus = (r: ResultadoKm, status: ReadonlySet<string>) =>
+  r.trechos.reduce((s, t) => (status.has(t.status) ? s + t.km : s), 0);
+
+export function kmLinearExcedente(km: number) {
+  const excedente = Math.max(0, km - KM_LINEAR_FRANQUIA);
+  return { km, excedente, us: excedente * KM_LINEAR_FATOR_US };
+}
+
+export const formatarUs = (us: number) =>
+  us.toLocaleString('pt-BR', { minimumFractionDigits: 6, maximumFractionDigits: 6 });
 
 // ─── Formatação ─────────────────────────────────────────────────────────────
 
@@ -301,8 +376,10 @@ export const NOME_MOTIVO: Record<MotivoDescarte, string> = {
 };
 
 /** Linhas da planilha de auditoria: todos os pontos lidos, com o que entrou e o que foi descartado. */
-export function linhasAuditoria(r: ResultadoKm) {
+export function linhasAuditoria(r: ResultadoKm, statusSelecionados?: ReadonlySet<string>) {
   const descartes = new Map(r.descartados.map(d => [d.ponto, d]));
+  // Status do trecho que termina em cada ponto (o mesmo usado no km por status).
+  const statusAte = new Map(r.trechos.map(t => [t.ate, t.status]));
   const todos = [...r.pontos, ...r.descartados.map(d => d.ponto)].sort((a, b) => a.ts - b.ts);
   let anterior: PontoKm | null = null, acumulado = 0;
   return todos.map(p => {
@@ -321,6 +398,8 @@ export function linhasAuditoria(r: ResultadoKm) {
       'km evitados': d ? +d.kmEvitados.toFixed(3) : '',
       'km do trecho': trecho == null ? '' : +trecho.toFixed(3),
       'km acumulado': d ? '' : +acumulado.toFixed(3),
+      'Status do trecho': d || !statusAte.has(p) ? '' : statusAte.get(p)!,
+      'Entra no km linear': d || !statusAte.has(p) || !statusSelecionados ? '' : statusSelecionados.has(statusAte.get(p)!) ? 'SIM' : 'NÃO',
       'Arquivo': p.arquivo,
     };
   });

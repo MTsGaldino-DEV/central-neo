@@ -63,6 +63,19 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
   `faturamento-conferencia-testar` usa `sql.begin` sem desfazer. Nunca injetar migration em `sql.begin` por preload
   ou atalho. Migration nova só entra no teste dentro de transação com `throw` no fim. Conferir antes de rodar.
 
+## Entrega: Cálculo de KM — zoom, status e km linear do contrato — 05/11/2026 (Claude)
+
+- **Pedido do Matheus:** zoom no mapa, escolher os status que entram na conta, destacar acionamento ("A caminho") e
+  chegada ("Trabalhando") e aplicar a regra do contrato. Equipes = **caminhonete em dupla** → cláusula **8.2.1**:
+  acima de 100 km na jornada, 0,002803 US por km linear excedente.
+- **Decisão do Matheus:** os status não são confiáveis; os acionamentos ficam **opcionais** (chave desligada por padrão)
+  e não entram em cálculo. O km linear usa os status marcados, todos por padrão. Detalhes em `CONTEXTO_GERAL.md` §8.
+- Conferido nos PDFs: 4052 = 174,1 km → 74,1 km excedentes = 0,207797 US (todos os status); só "A caminho" = 138,9 km
+  → 0,109004 US; 11 acionamentos, 9 com chegada. 7812 = 123,5 km → 0,065740 US.
+- Verificações: `tsc`, `vite build`, tela no Chromium (desktop e 390 px, sem rolagem lateral), zoom por botão, rodinha e
+  arraste, foco de acionamento, com sessão simulada. Pendente: commit/push (rodar
+  `.tmp-faturamento/commit-calculo-km.cmd`) e conferir na Vercel.
+
 ## Entrega: grupo Ferramentas e Cálculo de KM — 05/11/2026 (Claude)
 
 - **Pedido do Matheus:** transformar o grupo "TraceOne · Medidores" em **Ferramentas**, deixar só a Lista de
