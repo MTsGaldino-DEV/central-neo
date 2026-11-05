@@ -80,8 +80,10 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 - **Verificações:** `tsc --noEmit` e `vite build` ok numa cópia do projeto. Tela testada no Chromium com os 5 PDFs
   (desktop 1440 e celular 390, sem rolagem lateral), com sessão simulada: login, Supabase e Google Fonts
   ficaram fora do teste. A planilha de auditoria baixada confere (271 posições, acumulado 174,134 km).
-- **Pendente:** commit e push. Esta sessão gravou os arquivos pela ponte de arquivos, sem terminal no PC, e não
-  conferiu `git status`. Falta abrir a tela logado na NEO real e confirmar o visual com a fonte Manrope.
+- **Publicado:** commit `fc1e380` no `main` (feito pelo Matheus no PC, 05/11/2026 14:00) e deploy da Vercel concluído.
+  Esta sessão não tinha terminal no PC: gravou os arquivos pela ponte e deixou o script
+  `.tmp-faturamento/commit-calculo-km.cmd` (commit + pull --rebase + push). Pendente: abrir a tela logado na NEO
+  publicada e confirmar o visual com a fonte Manrope.
 
 ## Pendência preservada da memória do Claude
 
