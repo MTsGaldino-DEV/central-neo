@@ -84,6 +84,11 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
   Esta sessão não tinha terminal no PC: gravou os arquivos pela ponte e deixou o script
   `.tmp-faturamento/commit-calculo-km.cmd` (commit + pull --rebase + push). Pendente: abrir a tela logado na NEO
   publicada e confirmar o visual com a fonte Manrope.
+- **Tela branca depois do deploy (05/11/2026):** abas abertas antes do deploy pediam arquivos de tela antigos; o
+  `vercel.json` reescrevia tudo para `index.html`, então o arquivo vinha como HTML e a tela ficava branca (na aba
+  anônima funcionava). Correção: `src/main.tsx` recarrega a página uma vez no `vite:preloadError` (no máximo a cada
+  10 s, guardado em sessionStorage) e a reescrita do `vercel.json` não pega mais `/assets/` (arquivo antigo dá 404).
+  Testado com build de produção: arquivo apagado com a aba aberta → 1 recarga, sem loop.
 
 ## Pendência preservada da memória do Claude
 
