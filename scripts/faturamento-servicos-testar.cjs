@@ -8,6 +8,7 @@ const totais=async(t,c)=>{await t`reset role`;const r=await t`select ${t(c)} fro
 const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Error('rollback');});}catch(e){if(e.message!=='rollback')throw e;}};
 (async()=>{try{
   await rollback(async t=>{
+    if((await t`select neo_fat_impressao_calc('9844')->>0 v`)[0].v<'052')await t.unsafe(fs.readFileSync('supabase/migrations/052_faturamento_reincidencia_guardada.sql','utf8'));
     const [admin]=await t`select user_id from neo_acessos where papel='ADMIN' and ativo limit 1`;
     await t`select set_config('request.jwt.claim.sub',${admin.user_id},true)`;
     await t`set local role authenticated`;
@@ -50,12 +51,12 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     const [cmp]=await t`select
       (select jsonb_agg(to_jsonb(x) order by x.numserv) from (select numserv,
         case when situacao='CONFERIDO' then situacao else sc end situacao,sc situacao_calculo,
-        case when not g then motivo when devido=0 then 'GLOSA_SEM_QUANTIDADE' when bate then null when multas<devido then 'GLOSA_PARCIAL' else 'GLOSA_ACIMA' end motivo,
-        case when not g then diferenca when devido=0 or (not bate and multas>devido) then null else pago_comparado+multas-devido end diferenca,
+        case when ri and sc0='OK' then 'GLOSA_REINCIDENCIA' when not g then motivo when devido=0 then 'GLOSA_SEM_QUANTIDADE' when bate then null when multas<devido then 'GLOSA_PARCIAL' else 'GLOSA_ACIMA' end motivo,
+        case when ri and sc0='OK' then null when not g then diferenca when devido=0 or (not bate and multas>devido) then null else pago_comparado+multas-devido end diferenca,
         devido,codigo_principal,pago_comparado,multas,contexto
-       from (select z.*,case when not g then situacao_calculo when devido=0 then 'A_CONFERIR' when bate then 'OK' when multas<devido then 'A_MENOS' else 'A_CONFERIR' end sc
+       from (select w.*,case when ri and sc0='OK' then 'A_CONFERIR' else sc0 end sc from (select z.*,case when not g then situacao_calculo when devido=0 then 'A_CONFERIR' when bate then 'OK' when multas<devido then 'A_MENOS' else 'A_CONFERIR' end sc0
          -- 048: nada pago e glosa → glosa × contrato (igual confere, menor a menos, sem quantidade ou acima: conferir à mão)
-         from (select *,creditado=0 and multas>0 and devido is not null g from neo_fat_servicos where fatura='9844') z) y) x)
+         from (select v.*,creditado=0 and multas>0 and devido is not null g,multas>0 and exists(select 1 from neo_fat_anexos a where a.fatura=v.fatura and a.aba='Evento_Glosa' and a.dados->>'numserv'=v.numserv and a.dados->>'justificativa' ilike '%reincid%') ri from neo_fat_servicos v where fatura='9844') z) w) y) x)
       =(select jsonb_agg(to_jsonb(x) order by x.numserv) from (select numserv,situacao,situacao_calculo,motivo,diferenca,devido,codigo_principal,pago_comparado,multas,contexto from neo_fat_servicos_lista where fatura='9844') x) igual`;
     assert.equal(cmp.igual,true);
     inicio=Date.now();
@@ -176,6 +177,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     console.table(await t`select situacao,motivo,count(*)::int n,round(sum(abs(diferenca)),6) us from neo_fat_servicos where fatura='9844' group by 1,2 order by 1,2`);
   });
   await rollback(async t=>{
+    if((await t`select neo_fat_impressao_calc('9844')->>0 v`)[0].v<'052')await t.unsafe(fs.readFileSync('supabase/migrations/052_faturamento_reincidencia_guardada.sql','utf8'));
     await t`select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000000',true)`;
     await t`set local role authenticated`;
     const [r]=await t`select count(*)::int n from neo_fat_servicos`;

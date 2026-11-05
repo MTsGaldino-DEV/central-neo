@@ -53,7 +53,7 @@ export default function Contrato() {
       </section>
       <section className="bg-white border border-linha rounded-2xl p-4 space-y-2">
         <h3 className="font-extrabold">Tabela 14 · homem-hora</h3>
-        <p className="text-sm text-aco">1.62, 1.73, 5.63 e 5.64 pagam as horas entre o acionamento e o término (por minuto) × US/h da equipe × 1,0 CSC urbano · 1,2 CSC rural ou COD urbano · 1,4 COD rural.</p>
+        <p className="text-sm text-aco">1.62, 1.73, 5.63 e 5.64 pagam as horas entre o acionamento e o término (por minuto) × US/h da equipe × 1,0 CSC urbano · 1,2 CSC rural ou COD urbano · 1,4 COD rural. O 1.62 paga sempre × 1,0, mesmo COD ou rural.</p>
         <table className="w-full text-sm text-left"><thead className="text-xs text-aco uppercase"><tr><th className="py-1.5">Equipe</th><th>Elementos</th><th>Veículo</th><th className="text-right">US/h</th></tr></thead>
           <tbody>{regras.prontidao.map(p=><tr key={p.tipo_turma} className="border-t border-linha"><td className="py-1.5">{TIPOS_TURMA_FAT[p.tipo_turma]??p.tipo_turma}</td><td>{p.elementos}</td><td>{p.veiculo}</td><td className="text-right font-codigo">{Number(p.us_hora).toLocaleString('pt-BR',{minimumFractionDigits:4})}</td></tr>)}</tbody></table>
       </section>

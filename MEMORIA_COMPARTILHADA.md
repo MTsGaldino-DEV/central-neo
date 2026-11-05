@@ -1,6 +1,6 @@
 # Memória compartilhada — Central NEO
 
-Atualizada em 04/11/2026 pelo Claude (respostas do Matheus às pendências). Este arquivo é o ponto de continuidade entre
+Atualizada em 05/11/2026 pelo Claude (1.62 × 1,0, reincidência de volta na lista e incidente da 051). Este arquivo é o ponto de continuidade entre
 Codex e Claude neste repositório. Guarda decisões e estado de trabalho, não o
 histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
@@ -58,6 +58,10 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 - Faturamento: acesso por `neo_tem_modulo('faturamento')`; acertos do contrato só ADMIN.
 - No PowerShell usar `npm.cmd run typecheck` e `npm.cmd run build`.
 - Scripts de banco dependem atualmente de `../traceone/frontend/node_modules/postgres`.
+
+- **Testes que gravam no banco (incidente de 05/11/2026):** `faturamento-carga-testar` faz commit de verdade, e
+  `faturamento-conferencia-testar` usa `sql.begin` sem desfazer. Nunca injetar migration em `sql.begin` por preload
+  ou atalho. Migration nova só entra no teste dentro de transação com `throw` no fim. Conferir antes de rodar.
 
 ## Pendência preservada da memória do Claude
 
@@ -127,6 +131,44 @@ rápido (contagem 1,2 s contra 1,9 s). Não verificado: login real.
 
 Pendências: nenhuma. ~~Perguntar à supervisora Elen o que é `S`~~ — resolvido em 04/11/2026: subterrâneo, rural.
 
+## Entrega: 1.62 × 1,0 e reincidência de volta na lista — 05/11/2026 (Claude)
+
+**Decisões do Matheus (05/11):** "1.62 não tem diferença de fator, sempre paga fator 1,0, mesmo se for COD ou
+rural"; glosa com reincidência "ainda deve ser estudada, volte para a lista se estiver fora". Exemplo 1 (nada pago
+e glosa = contrato) confirmado por ele como aceito.
+
+- **Migration 051:** coluna `neo_fat_contrato.homem_hora_adicional` (false só no 1.62; 1.73, 5.63 e 5.64 seguem
+  1,0 / 1,2 / 1,4). Serviço que conferiria e tem "reincid" na justificativa (aba Evento_Glosa) vira A_CONFERIR, motivo
+  `GLOSA_REINCIDENCIA`, sem diferença, em Possíveis glosas erradas (`glosas_erradas.reincidencia`).
+- **Migration 052 (escrita, NÃO aplicada):** grava a marca em `neo_fat_servicos_calc.reincidencia`. Na 051 a lista fica
+  cerca de 10× mais lenta logo depois de um recálculo (1,2–5,8 s contra 0,13–0,37 s); na 052, 100–230 ms, com os
+  21.910 serviços idênticos.
+- **9844 (com as conferências à mão):** Contrato previa 931,404228 → 929,006639 US (R$ 2.760.989,50 → R$ 2.753.882,25);
+  a menos 155 → 96 (6,6677 → 4,3684 US); a mais 24 → 29 (0,4303 → 0,5286 US); possíveis glosas erradas 47 → 125
+  (17 parciais, 78 reincidências com 6,573259 US de glosa, 30 conferir à mão); conferem 21.674 → 21.650; possível
+  fator errado 76 → 22. Transições: 78 OK → reincidência; 54 de 1.62 a menos → OK; 5 de 1.62 a menos → a mais.
+  Dos 94 serviços com reincidência, 16 já estavam na lista (11 parciais, 5 conferir à mão). Só 246140737 segue como glosa = contrato.
+- **Evidência do 1.62:** as 61 linhas foram pagas com fator 1,0. As 2 com pago zero têm 0 hora.
+
+**Incidente (05/11/2026, erro do Claude):** um preload de teste carregava a 051 em todo `sql.begin`, e o
+`faturamento-carga-testar` não desfaz. **A 051 foi gravada no banco real sem autorização**, às 08:19 de 05/11. Ficou
+fora de `neo_interno.migracoes`, gerou 10 linhas iguais em `neo_fat_contrato_historico` (1.62) e `neo_fat_calc_estado`
+e `neo_fat_totais` foram refeitos. Conferências à mão preservadas. Lista, Painel e carga funcionam. O site publicado
+segue com o front antigo: conta certa, mas sem o texto de reincidência e com o card somando 17 + 30 de 125. Migrations
+ficam só em `supabase/` local (fora do Git). **Rodar `migrar.cjs` hoje reaplicaria a 051 e criaria mais uma linha no histórico.**
+
+Verificado: todos os `faturamento-*testar` de banco e `faturamento-ui-testar` passam (capturas `painel-desktop` e
+`janela-homem-hora` conferidas); typecheck e build. `faturamento-162-reincidencia-testar` é novo. **Falha:** o limite de
+1,5 s do `servicos-testar`, na 1ª chamada da lista (2,8–5,7 s; repetições ~160 ms), causa não encontrada; limite mantido,
+o resto do teste passa numa cópia sem ele. `homem-hora-testar` recarregava a 040 e desfazia as regras novas; corrigido.
+Não verificado: login real.
+
+Pendências (decisão do Matheus):
+- Manter a 051 (registrar em `neo_interno.migracoes`, aplicar a 052, push) ou desfazê-la.
+- O que fazer com as 9 linhas repetidas no histórico do contrato (é registro de auditoria, nada foi apagado).
+- **1.62 de umpla:** 5 serviços pagos pela hora da dupla (0,1097, não 0,0922): 245548821, 245587114, 245686549,
+  245779309, 245869875; +0,098291 US (~R$ 291), em Pagou a mais. Pagamento a mais ou o 1.62 usa sempre 0,1097?
+
 ## Entrega: regra da glosa, possíveis glosas erradas e prova real — 29/10/2026 (Claude)
 
 - **Decisões do Matheus (substituem Glosados/046 e a glosa parcial só com G/047, migration 048):**
@@ -141,10 +183,10 @@ Pendências: nenhuma. ~~Perguntar à supervisora Elen o que é `S`~~ — resolvi
   glosa é de um código que saiu e vale pago × contrato (246073073 1.72 "por vão" confere).
   Critério técnico: `creditado = 0 and multas > 0 and devido is not null` (coluna `glosado` da lista).
 - **Glosa aceita (explicado ao Matheus, 04/11/2026; nota "importante" em Pagou a menos e pagou a mais):**
-  (1) nada pago e glosa = contrato → Confere (9844: 79 serviços, 6,595199 US); (2) pago = contrato e glosa
-  em outro código → Confere, a glosa é ignorada (113 serviços, glosa 8,790524 US). Ressalvas: o sistema
-  confere valor, não o motivo (G.02 reincidência etc.), e o contrato usa as quantidades que a CEMIG deixou
-  (linha zerada vale 0 quando o serviço teve algum pagamento). Não aceitas: glosa parcial (17), conferir à mão (30).
+  (1) nada pago e glosa = contrato → Confere; (2) pago = contrato e glosa em outro código → Confere, a glosa é
+  ignorada (113 serviços, glosa 8,790524 US). Reincidência não é aceita (051; dos 79 do caso 1, 78 eram reincidência).
+  Ressalva: fora a reincidência, o sistema confere valor, não motivo, e o contrato usa as quantidades que a CEMIG
+  deixou (linha zerada vale 0 quando o serviço teve algum pagamento). Não aceitas: glosa parcial (17), conferir à mão (30).
 - **"Possíveis glosas erradas"** (nome do Matheus; "glosas erradas" afirmaria): glosa parcial +
   conferir à mão. Atalho na Conferência (lado `glosas`), 3º card do Painel (valor = o que falta na
   glosa parcial; barra por nº de serviços), etapa "Conferir à mão" no funil. Na 9844: 47 (17 parciais,

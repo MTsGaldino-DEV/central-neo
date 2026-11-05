@@ -18,6 +18,8 @@ assert.match(fraseServico({...base,situacao_calculo:'FORA_CONTRATO',motivo:null,
 // glosa com nada pago (048): menor que o contrato → falta o resto (246310816); quantidade zerada → conferir à mão
 assert.equal(fraseServico({...base,situacao_calculo:'A_CONFERIR',motivo:'GLOSA_SEM_QUANTIDADE',creditado:0,devido:0,multas:0.498877}),
  'A CEMIG glosou 0,498877 e zerou a quantidade: não dá para calcular o contrato. Confira à mão pela linha do código.');
+assert.equal(fraseServico({...base,situacao_calculo:'A_CONFERIR',motivo:'GLOSA_REINCIDENCIA',creditado:0,devido:0.062101,multas:0.062101}),
+ 'A CEMIG glosou 0,062101 por reincidência, o valor do contrato. Ainda deve ser estudado: confira à mão se houve mesmo reincidência.');
 assert.equal(fraseServico({...base,situacao_calculo:'A_CONFERIR',motivo:'GLOSA_ACIMA',creditado:0,devido:0.01,multas:0.02}),
  'A CEMIG glosou 0,020000, mais que o contrato (0,010000). Confira à mão.');
 assert.equal(fraseServico({...base,motivo:'GLOSA_PARCIAL',codigo_principal:'5.63',creditado:0,pago_comparado:0,devido:0.004388,multas:0.003657}),
@@ -39,7 +41,7 @@ assert.equal(s.funil.importados,2);
 assert.deepEqual(s.grupos.tipo_turma,[{valor:'M',servicos:2,creditado:3,devido:3,multas:0}]);
 assert.equal(somarTotais([]).servicos,0);
 assert.equal(variacao(903.33,871.05).toFixed(1),'3.7');assert.equal(variacao(1,0),null);
-assert.equal(Object.keys(MOTIVOS_FAT).length,9);assert.equal(SITUACOES_SERVICO_FAT.A_CONFERIR,'Conferir à mão');assert.equal(SITUACOES_SERVICO_FAT.A_MENOS,'Pagou a menos');
+assert.equal(Object.keys(MOTIVOS_FAT).length,10);assert.equal(SITUACOES_SERVICO_FAT.A_CONFERIR,'Conferir à mão');assert.equal(SITUACOES_SERVICO_FAT.A_MENOS,'Pagou a menos');
 // cache dos últimos dados: armazenamento bloqueado ou corrompido não quebra a tela
 const {lerCache,gravarCache,tempoRelativo}=require('../src/lib/cacheTela.ts');
 const mem=new Map(),arm={getItem:k=>mem.get(k)??null,setItem:(k,v)=>mem.set(k,v)};

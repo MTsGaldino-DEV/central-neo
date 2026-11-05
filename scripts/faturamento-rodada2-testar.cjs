@@ -48,10 +48,10 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
 
     const tot=(await t`select neo_fat_atualizar_totais('9844') d`)[0].d;
     // Até a 039: 106 serviços, pago 5,1968, devido 12,6441, 7,4473 a menos e 88 fora (homem-hora sem regra). 0.06 zerado na 041. Na 044 (5.62 em RC): 161 → 155, pago 13,5243 → 13,3566, devido 21,9248 → 21,5006, 8,4005 → 8,1440 US. Na 046 os 14 com G.02 foram para Glosados (141); na 047 voltam como glosa parcial: 155, devido 21,5006, 6,8350 US (diferença com a glosa).
-    assert.equal(tot.a_menos.servicos,155);assert.equal(tot.a_menos.com_1ns,3);
-    assert.equal(Number(tot.a_menos.pago).toFixed(4),'13.3566');assert.equal(Number(tot.a_menos.devido).toFixed(4),'21.5006');
-    assert.equal(Number(tot.a_menos.us).toFixed(4),'6.6677'); // 048: glosa parcial sem G (0.00) com a diferença = glosa − contrato
-    assert.equal(tot.glosas_erradas.servicos,47);
+    assert.equal(tot.a_menos.servicos,96);assert.equal(tot.a_menos.com_1ns,3); // 051: 59 serviços de 1.62 saem do a menos
+    assert.equal(Number(tot.a_menos.pago).toFixed(4),'5.6903');assert.equal(Number(tot.a_menos.devido).toFixed(4),'11.5350');
+    assert.equal(Number(tot.a_menos.us).toFixed(4),'4.3684'); // 048: glosa parcial sem G (0.00) com a diferença = glosa − contrato
+    assert.equal(tot.glosas_erradas.servicos,125);
     assert.equal(tot.a_mais.c562.servicos,2);assert.equal(tot.fora_contrato,26);
 
     let m=(await t`select neo_fat_servico_manutencao('246101137') d`)[0].d;

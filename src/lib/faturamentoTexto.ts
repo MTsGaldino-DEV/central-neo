@@ -21,7 +21,7 @@ export function outraUnidadeFat(us: number | null | undefined, unidade: UnidadeF
 export const MOTIVOS_FAT: Record<string,string> = {
   MOTO_INDEVIDO:'Desconto de Moto indevido', RC_NAO_PAGO:'RC não pago', FATOR_MENOR:'Fator menor que o contrato',
   RC_VARIAS_LINHAS:'RC pago em várias linhas', FATOR_MAIOR:'Fator maior que o contrato', OUTRA:'Outra diferença',
-  GLOSA_PARCIAL:'Glosa parcial', GLOSA_SEM_QUANTIDADE:'Glosa sem quantidade', GLOSA_ACIMA:'Glosa maior que o contrato',
+  GLOSA_PARCIAL:'Glosa parcial', GLOSA_SEM_QUANTIDADE:'Glosa sem quantidade', GLOSA_ACIMA:'Glosa maior que o contrato', GLOSA_REINCIDENCIA:'Glosa por reincidência',
 };
 export const SITUACOES_SERVICO_FAT: Record<string,string> = {
   OK:'Confere', A_MENOS:'Pagou a menos', A_MAIS:'Pagou a mais', A_CONFERIR:'Conferir à mão', FORA_CONTRATO:'Código fora do contrato', CONFERIDO:'Conferido',
@@ -47,7 +47,9 @@ export function fraseServico(s: ServicoTextoFat): string {
       frase = 'Código fora do contrato: não há fator para calcular o devido.';
       break;
     case 'A_CONFERIR':
-      frase = s.motivo === 'GLOSA_SEM_QUANTIDADE'
+      frase = s.motivo === 'GLOSA_REINCIDENCIA'
+        ? `A CEMIG glosou ${usFat(s.multas)} por reincidência, o valor do contrato. Ainda deve ser estudado: confira à mão se houve mesmo reincidência.`
+        : s.motivo === 'GLOSA_SEM_QUANTIDADE'
         ? `A CEMIG glosou ${usFat(s.multas)} e zerou a quantidade: não dá para calcular o contrato. Confira à mão pela linha do código.`
         : `A CEMIG glosou ${usFat(s.multas)}, mais que o contrato (${d}). Confira à mão.`;
       break;

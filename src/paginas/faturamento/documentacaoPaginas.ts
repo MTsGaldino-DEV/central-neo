@@ -43,19 +43,20 @@ export const PAGINAS_DOC: PaginaDoc[] = [
     secoes: [
       { id: 'cards', titulo: 'O total e os cards', blocos: [
         { tipo: 'texto', texto: 'A faixa escura no topo mostra, lado a lado, o **valor pago** pela CEMIG e o que o **contrato previa**: é a comparação principal. À direita ficam as **glosas** (tudo o que a CEMIG cortou na fatura) e o número de serviços. Clique na faixa para abrir todos os serviços.' },
-        { tipo: 'texto', texto: 'Embaixo, três cards: **Pagou a menos** (pagou abaixo do contrato), **Pagou a mais** (acima) e **Possíveis glosas erradas** (laranja: glosa parcial e glosa para conferir à mão). Clique num card para abrir a lista daquele grupo.' },
+        { tipo: 'texto', texto: 'Embaixo, três cards: **Pagou a menos** (pagou abaixo do contrato), **Pagou a mais** (acima) e **Possíveis glosas erradas** (laranja: glosa parcial, glosa por reincidência e glosa para conferir à mão). Clique num card para abrir a lista daquele grupo.' },
         { tipo: 'texto', texto: 'A barra colorida de cada card divide o valor: no Pagou a menos, por motivo; no Pagou a mais, entre os que têm 5.62 e os outros. Passe o mouse num pedaço para ver o valor.' },
-        { tipo: 'importante', texto: 'A diferença entre **Valor pago** e **Contrato previa** não é o Pagou a mais. Ela soma o Pagou a mais e desconta o Pagou a menos e também as **glosas iguais ao contrato** (conferem, mas a CEMIG não pagou). Código pago que não tem preço no contrato também entraria só no Valor pago; na 9844 não há nenhum.' },
-        { tipo: 'exemplo', titulo: 'Exemplo · fatura 9844 · R$ 2.718.623,16 − R$ 2.760.989,50 = −R$ 42.366,34', linhas: [
-          ['Pagou a mais (24 serviços)', '+R$ 1.275,52'], ['Pago a mais já conferido à mão (1)', '+R$ 50,20'],
-          ['Pagou a menos (pagou alguma coisa)', '−R$ 18.600,09'], ['Glosa parcial (contrato dos 17, nada pago)', '−R$ 5.541,41'],
-          ['Glosa igual ao contrato (confere, mas não foi pago)', '−R$ 19.550,35'], ['Arredondamento', '−R$ 0,22']] },
-        { tipo: 'nota', texto: 'Quando a CEMIG pagou o serviço, a glosa é de um código que saiu e a conta é pago × contrato. Quando ela não pagou nada e glosou (G.02, 0.00, 8.75…), a conta é glosa × contrato: igual confere; menor fica em Pagou a menos (Glosa parcial).' },
+        { tipo: 'importante', texto: 'A diferença entre **Valor pago** e **Contrato previa** não é o Pagou a mais. Ela soma o Pagou a mais e desconta o Pagou a menos e também as **glosas iguais ao contrato** (a CEMIG não pagou nada). Código pago que não tem preço no contrato também entraria só no Valor pago; na 9844 não há nenhum.' },
+        { tipo: 'exemplo', titulo: 'Exemplo · fatura 9844 · R$ 2.718.623,16 − R$ 2.753.882,25 = −R$ 35.259,09', linhas: [
+          ['Pagou a mais (29 serviços)', '+R$ 1.566,89'], ['Pago a mais já conferido à mão (1)', '+R$ 50,20'],
+          ['Pagou a menos (pagou alguma coisa)', '−R$ 11.784,21'], ['Glosa parcial (contrato dos 17, nada pago)', '−R$ 5.541,41'],
+          ['Glosa por reincidência (78, a estudar)', '−R$ 19.485,31'], ['Glosa igual ao contrato (1, confere)', '−R$ 65,04'], ['Arredondamento', '−R$ 0,21']] },
+        { tipo: 'nota', texto: 'Quando a CEMIG pagou o serviço, a glosa é de um código que saiu e a conta é pago × contrato. Quando ela não pagou nada e glosou (G.02, 0.00, 8.75…), a conta é glosa × contrato: igual confere, exceto se a justificativa for reincidência, que ainda deve ser estudada; menor fica em Pagou a menos (Glosa parcial).' },
         { tipo: 'tabela', cabecalho: ['Na tela', 'Quer dizer'], linhas: [
           ['Valor pago', 'Soma do crédito da CEMIG na fatura, sem as glosas.'],
           ['Contrato previa', 'Soma do devido pelo fator CSC ou COD, pela zona e pelo tipo de frota.'],
           ['Fator menor, RC não pago…', 'A diferença do Pagou a menos separada pelo motivo.'],
           ['Glosa parcial', 'A CEMIG não pagou nada e glosou menos que o contrato; a diferença é o que falta pagar.'],
+          ['Reincidência', 'A CEMIG glosou o valor do contrato com justificativa de reincidência. Ainda deve ser estudado: confira à mão se houve mesmo reincidência.'],
           ['Conferir à mão', 'A CEMIG glosou e zerou a quantidade (não dá para calcular o contrato) ou glosou mais que o contrato.'],
           ['Com 5.62', 'Serviços pagos a mais que têm o código 5.62 (verificação do sistema).'],
         ] },
@@ -142,7 +143,8 @@ export const PAGINAS_DOC: PaginaDoc[] = [
       { id: 'homem-hora', titulo: 'Homem-hora (Tabela 14)', blocos: [
         { tipo: 'texto', texto: 'Os códigos **1.62, 1.73, 5.63 e 5.64** pagam por hora (NOTA 10 da Tabela 11: "conforme o fator por hora do tipo da equipe" da Tabela 14). As horas vão do acionamento (dh_aciona) ao término real (dh_terreal) da Fatura Completa, **por minuto**, sem arredondar a hora. O valor da hora vem da Tabela 14 pela equipe: dupla 0,1097, umpla 0,0922, moto 0,0366 e quarteto 0,1753 US/h.' },
         { tipo: 'tabela', cabecalho: ['Despacho e zona', 'Multiplicador'], linhas: [['CSC urbano', '1,0'], ['CSC rural', '1,2'], ['COD urbano', '1,2'], ['COD rural', '1,4']] },
-        { tipo: 'exemplo', titulo: '1.62 · dupla, COD rural', linhas: [['2h13 × 0,1097 US/h × 1,4', '0,340436 US']] },
+        { tipo: 'importante', texto: 'O **1.62 não tem diferença de fator**: paga sempre × 1,0, mesmo COD ou rural. O multiplicador da tabela vale para 1.73, 5.63 e 5.64.' },
+        { tipo: 'exemplo', titulo: '1.62 · dupla, COD rural', linhas: [['2h13 × 0,1097 US/h × 1,0', '0,243168 US']] },
         { tipo: 'importante', texto: 'Dentro de um RC também: se o atendimento tem 1.62, 1.73, 5.63 ou 5.64, o RC deixa de ser pago por atendimento e cada linha vale o seu código, com o homem-hora por hora.' },
         { tipo: 'nota', texto: 'A zona vem da coluna cod_tip_area: U urbano, R rural e S subterrâneo, que também conta como rural.' },
       ] },
@@ -162,9 +164,9 @@ export const PAGINAS_DOC: PaginaDoc[] = [
       { id: 'saldo', titulo: 'Pagou a menos e pagou a mais', blocos: [
         { tipo: 'exemplo', titulo: 'Exemplo', linhas: [['Contrato prevê', '0,023400'], ['CEMIG pagou', '0,016400'], ['Pagou a menos', '0,007000']] },
         { tipo: 'lista', itens: ['Serviço pago: a glosa é de um código que saiu e a conta é pago × contrato.',
-          'Serviço **sem nada pago e com glosa**: a conta é glosa × contrato. Igual confere; menor vai para **Pagou a menos** (Glosa parcial, diferença = glosa − contrato); quantidade zerada ou glosa acima do contrato vai para **Conferir à mão**.',
+          'Serviço **sem nada pago e com glosa**: a conta é glosa × contrato. Igual confere, exceto reincidência; menor vai para **Pagou a menos** (Glosa parcial, diferença = glosa − contrato); quantidade zerada, glosa acima do contrato ou justificativa de reincidência vai para **Conferir à mão**.',
           'Serviço **conferido** à mão sai do pagou a menos, do pagou a mais e da exportação; o atalho "Conferidos" mostra todos.', 'Código sem valor no contrato fica fora dos dois lados.'] },
-        { tipo: 'importante', texto: 'A glosa é aceita em dois casos: a CEMIG não pagou nada e glosou **exatamente** o valor do contrato, ou pagou o que o contrato prevê e glosou outro código. O sistema confere o **valor**, não o **motivo** da glosa (reincidência, código errado…), e o contrato é calculado com as quantidades que a CEMIG deixou: linha que ela zerou vale zero.' },
+        { tipo: 'importante', texto: 'A glosa é aceita em dois casos: a CEMIG não pagou nada e glosou **exatamente** o valor do contrato, ou pagou o que o contrato prevê e glosou outro código. Nos dois, a **reincidência** não é aceita: ainda deve ser estudada e fica em Possíveis glosas erradas. Fora ela, o sistema confere o **valor**, não o **motivo** da glosa, e o contrato é calculado com as quantidades que a CEMIG deixou: linha que ela zerou vale zero.' },
       ] },
       { id: 'urbano-rural', titulo: 'Urbano e rural', blocos: [
         { tipo: 'texto', texto: 'A zona vem da planilha da CEMIG: as quantidades urbanas e rurais de cada linha. A quantidade rural vale **× 1,2** no devido.' },
@@ -179,7 +181,7 @@ export const PAGINAS_DOC: PaginaDoc[] = [
       { id: 'termos', titulo: 'Termos', blocos: [
         { tipo: 'tabela', cabecalho: ['Termo', 'O que é'], linhas: [
           ['US', 'Unidade de Serviço: a "moeda" do contrato com a CEMIG.'], ['Apostilamento', 'Valor da US em reais, definido por vigência.'],
-          ['Glosa', 'Desconto aplicado pela CEMIG (multa). Glosa positiva é estorno: valor devolvido.'], ['Possível glosa errada', 'Glosa parcial ou glosa para conferir à mão; aparece num card do Painel e num atalho da Conferência.'], ['CSC / CSI', 'Valor do código para o centro de serviço (referência principal).'],
+          ['Glosa', 'Desconto aplicado pela CEMIG (multa). Glosa positiva é estorno: valor devolvido.'], ['Possível glosa errada', 'Glosa parcial, glosa por reincidência ou glosa para conferir à mão; aparece num card do Painel e num atalho da Conferência.'], ['CSC / CSI', 'Valor do código para o centro de serviço (referência principal).'],
           ['COD', 'Valor alternativo do mesmo código no contrato.'], ['RC', 'Código de atendimento (RC07, RC08…), pago uma vez por atendimento.'],
           ['Tabela 11 / 12', 'Tabela 11: códigos de fechamento. Tabela 12: RCs.'], ['1.NS', 'Código informativo: o serviço é pago pela Manutenção.'],
           ['Manutenção', 'Módulo das notas de NSIS (antigo Fechamento de Notas).'], ['Frota', 'Número do veículo que fez o serviço.'],

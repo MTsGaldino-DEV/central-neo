@@ -36,8 +36,8 @@ export interface TotaisFat {
   a_menos:{servicos:number; us:number; pago:number; devido:number; com_1ns:number; por_motivo:Record<string,{us:number;servicos:number}>};
   a_mais:{servicos:number; us:number; pago:number; devido:number; c562:{servicos:number; us:number}; por_motivo:Record<string,{us:number;servicos:number}>};
   fora_contrato:number;
-  /** Possíveis glosas erradas (048): glosa parcial (us = o que falta pagar) e glosa para conferir à mão. */
-  glosas_erradas?:{servicos:number; glosa:number; parcial:{servicos:number; us:number}; conferir:{servicos:number; glosa:number}};
+  /** Possíveis glosas erradas: glosa parcial (us = o que falta pagar), reincidência a estudar (051) e glosa para conferir à mão. */
+  glosas_erradas?:{servicos:number; glosa:number; parcial:{servicos:number; us:number}; reincidencia?:{servicos:number; glosa:number}; conferir:{servicos:number; glosa:number}};
   funil:{importados:number; equipe_identificada:number; codigo_no_contrato:number; valor_confere:number; conferidos:number; a_conferir?:number};
   grupos:{tipo_turma:GrupoTotaisFat[]; codserv:GrupoTotaisFat[]; cidade:GrupoTotaisFat[]};
   ajustes:{debito:number; credito:number; itens:{tipo:string; observacao:string; valor:number}[]};

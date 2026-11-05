@@ -17,7 +17,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
       assert.equal(c[k].fator_csc,csc,k);assert.equal(c[k].fator_original,csc,k);assert.equal(c[k].fator_cod,cod,k);assert.equal(c[k].fator_cod_original,cod,k);
       assert.equal(c[k].rural,null);assert.equal(c[k].moto,null);}
     const tot=(await t`select neo_fat_atualizar_totais('9844') d`)[0].d;
-    assert.equal(Number(tot.devido).toFixed(6),'931.404228','contrato previa com os ramais');
+    assert.equal(Number(tot.devido).toFixed(6),'929.006639','contrato previa com os ramais'); // 051: 931,404228 → 929,006639 (1.62 × 1,0)
     assert.equal(Number(tot.pago_com_fator).toFixed(6),Number(tot.creditado).toFixed(6),'todo crédito tem preço no contrato');
     const [r]=await t`select count(*)::int n,count(*) filter(where situacao_calculo='OK')::int ok from neo_fat_servicos_lista
       where fatura='9844' and codigos && array['7.18','7.19','7.20']`;

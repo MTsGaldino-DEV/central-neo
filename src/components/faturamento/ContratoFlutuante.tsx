@@ -63,7 +63,7 @@ export function ContratoFlutuante() {
           <span key={t} className="rounded-full border border-linha bg-nevoa px-2 py-0.5 font-codigo text-xs font-bold">{t}</span>)}</div>
       </div>}
       {aba === 'tabela14' && <div className="flex-1 overflow-auto p-4">
-        <p className="text-sm text-aco">1.62, 1.73, 5.63 e 5.64: horas do acionamento ao término (por minuto) × US/h × 1,0 / 1,2 / 1,4.</p>
+        <p className="text-sm text-aco">1.62, 1.73, 5.63 e 5.64: horas do acionamento ao término (por minuto) × US/h × 1,0 / 1,2 / 1,4. O 1.62 paga sempre × 1,0.</p>
         <table className="mt-2 w-full text-left text-sm"><thead className="text-xs text-aco uppercase"><tr><th className="py-1.5">Equipe</th><th>Elementos</th><th className="text-right">US/h</th></tr></thead>
           <tbody>{(regras.dados?.prontidao ?? []).map(p => <tr key={p.tipo_turma} className="border-t border-linha">
             <td className="py-1.5">{TIPOS_TURMA_FAT[p.tipo_turma] ?? p.tipo_turma}<span className="block text-[11px] text-aco">{p.veiculo}</span></td><td>{p.elementos}</td>

@@ -11,7 +11,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
   await rollback(async t=>{
     const [{aplicada}]=await t`select exists(select 1 from information_schema.columns where table_name='neo_fat_base' and column_name='despacho') aplicada`;
     if(!aplicada)await t.unsafe(fs.readFileSync('supabase/migrations/039_faturamento_homem_hora_cod.sql','utf8'));
-    const [{v040}]=await t`select neo_fat_impressao_calc('9844')->>0='040' v040`;
+    const [{v040}]=await t`select neo_fat_impressao_calc('9844')->>0>='040' v040`; // recarregar a 040 sobre versão nova desfaria as regras seguintes
     if(!v040)await t.unsafe(fs.readFileSync('supabase/migrations/040_faturamento_rc_homem_hora.sql','utf8'));
     const [admin]=await t`select user_id from neo_acessos where papel='ADMIN' and ativo limit 1`;
     await t`select set_config('request.jwt.claim.sub',${admin.user_id},true)`;
@@ -26,9 +26,9 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     assert.equal(l162.filter(l=>l.devido!==null).length,61);
     assert.equal(l162.filter(l=>l.area==='RURAL').length,39);
     assert.ok(l162.every(l=>l.despacho==='COD'));
-    perto(l162.reduce((s,l)=>s+Number(l.devido),0),9.9655);
+    perto(l162.reduce((s,l)=>s+Number(l.devido),0),7.5679); // 051: o 1.62 paga sempre × 1,0 (antes 9,9655)
     for(const l of l162){
-      assert.ok([1.2,1.4].includes(Number(l.multiplicador)),l.numserv);
+      assert.equal(Number(l.multiplicador),1,l.numserv);
       perto(l.devido_cod,Math.round(Number(l.horas)*Number(l.us_hora)*Number(l.multiplicador)*1e6)/1e6,0.0000011);
     }
     perto(l162.find(l=>l.numserv==='246015779').horas,2.216667,0.000001);

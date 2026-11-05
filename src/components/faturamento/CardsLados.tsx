@@ -58,11 +58,12 @@ export function CardsLados({ totais, unidade, taxa, onVer }: {
           fatias={fatiasMenos} v={v} onClick={() => onVer('a_menos')} />
         <Card rotulo="Pagou a mais" cor="text-concluido" servicos={mais.servicos} valor={v(mais.us ?? totais.pago_a_mais, true)}
           fatias={fatiasMais} v={v} onClick={() => onVer('a_mais')} />
-        {/* Valor = o que falta pagar na glosa parcial; os "conferir à mão" não têm diferença calculável,
+        {/* Valor = o que falta pagar na glosa parcial; reincidência e "conferir à mão" não têm diferença calculável,
             por isso a barra deste card divide por número de serviços. */}
         <Card rotulo="Possíveis glosas erradas" cor="text-glosa" servicos={glosas.servicos} valor={v(-glosas.parcial.us, true)} porServicos
           fatias={[
             { id: 'GLOSA_PARCIAL', rotulo: 'Glosa parcial', servicos: glosas.parcial.servicos, us: -glosas.parcial.us, cor: 'bg-glosa-marca' },
+            { id: 'GLOSA_REINCIDENCIA', rotulo: 'Reincidência', servicos: glosas.reincidencia?.servicos ?? 0, us: -(glosas.reincidencia?.glosa ?? 0), cor: 'bg-glosa' },
             { id: 'A_CONFERIR', rotulo: 'Conferir à mão', servicos: glosas.conferir.servicos, us: -glosas.conferir.glosa, cor: 'bg-orange-300' },
           ].filter(f => f.servicos > 0)} v={v} onClick={() => onVer('glosas')} />
       </div>

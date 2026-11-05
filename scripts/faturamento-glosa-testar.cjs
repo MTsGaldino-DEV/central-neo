@@ -20,8 +20,9 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
       assert.equal(s.situacao,situacao,n);assert.equal(s.motivo,motivo,n);
       if(dif===null)assert.equal(s.diferenca,null,n);else assert.equal(Number(s.diferenca).toFixed(6),dif,n);};
 
-    // nada pago e glosa = contrato: confere (G.02, 0.00)
-    await conf('246309215','OK',null,'0.000000');await conf('245588785','OK',null,'0.000000');await conf('245722442','OK',null,'0.000000');
+    // nada pago e glosa = contrato: confere; com justificativa de reincidência, ainda deve ser estudado (051)
+    await conf('246140737','OK',null,'0.000000');
+    await conf('246309215','A_CONFERIR','GLOSA_REINCIDENCIA',null);await conf('245588785','A_CONFERIR','GLOSA_REINCIDENCIA',null);await conf('245722442','A_CONFERIR','GLOSA_REINCIDENCIA',null);
     // nada pago e glosa < contrato: a menos, diferença = glosa − contrato (com G.02 e com 0.00)
     await conf('246310816','A_MENOS','GLOSA_PARCIAL','-0.000731');   // R$ 13,01 − 10,84
     await conf('245839322','A_MENOS','GLOSA_PARCIAL','-0.036990');
@@ -35,23 +36,23 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     await conf('245663748','OK',null,'0.000000');                    // glosou e devolveu
     await conf('245962803','A_MENOS','FATOR_MENOR','-0.000463');      // 6.07 glosado, 7.89 pago a menos
 
-    // possíveis glosas erradas: 17 glosas parciais (14 G.02 + 3 com 0.00) e 30 para conferir à mão
+    // possíveis glosas erradas: 17 glosas parciais (14 G.02 + 3 com 0.00), 78 reincidências a estudar e 30 para conferir à mão
     const r=await listar({lado:'glosas'});
-    assert.equal(r.total,47);
-    assert.ok(r.servicos.every(s=>['GLOSA_PARCIAL','GLOSA_SEM_QUANTIDADE','GLOSA_ACIMA'].includes(s.motivo)&&Number(s.pago_comparado)===0));
+    assert.equal(r.total,125);
+    assert.ok(r.servicos.every(s=>['GLOSA_PARCIAL','GLOSA_SEM_QUANTIDADE','GLOSA_ACIMA','GLOSA_REINCIDENCIA'].includes(s.motivo)&&Number(s.pago_comparado)===0));
     assert.equal(r.servicos.filter(s=>s.motivo==='GLOSA_PARCIAL').length,17);
-    assert.equal(r.servicos.filter(s=>s.situacao==='A_CONFERIR').length,30);
+    assert.equal(r.servicos.filter(s=>s.situacao==='A_CONFERIR').length,108);assert.equal(r.servicos.filter(s=>s.motivo==='GLOSA_REINCIDENCIA').length,78);
     assert.equal(r.servicos[0].diferenca,null,'conferir à mão primeiro');
     assert.equal(Number(r.resumo.diferenca).toFixed(6),'-0.393084');assert.equal(Number(r.resumo.pago),0);
     assert.equal((await listar({lado:'todos',situacoes:['GLOSADO']})).total,0,'não existe mais GLOSADO');
 
     const tot=(await t`select neo_fat_atualizar_totais('9844') d`)[0].d;
-    assert.equal(tot.glosas_erradas.servicos,47);
+    assert.equal(tot.glosas_erradas.servicos,125);assert.equal(tot.glosas_erradas.reincidencia.servicos,78);assert.equal(Number(tot.glosas_erradas.reincidencia.glosa).toFixed(6),'6.573259');
     assert.equal(tot.glosas_erradas.parcial.servicos,17);assert.equal(Number(tot.glosas_erradas.parcial.us).toFixed(6),'0.393084');
-    assert.equal(tot.glosas_erradas.conferir.servicos,30);assert.equal(tot.funil.a_conferir,30);
-    assert.equal(tot.a_menos.servicos,155);assert.equal(Number(tot.a_menos.us).toFixed(4),'6.6677');
+    assert.equal(tot.glosas_erradas.conferir.servicos,30);assert.equal(tot.funil.a_conferir,108);
+    assert.equal(tot.a_menos.servicos,96);assert.equal(Number(tot.a_menos.us).toFixed(4),'4.3684');
     assert.equal(tot.a_menos.por_motivo.GLOSA_PARCIAL.servicos,17);assert.equal(tot.a_menos.por_motivo.RC_NAO_PAGO.servicos,5);
-    assert.equal(tot.a_mais.servicos,25);assert.equal(tot.funil.valor_confere,21674);
+    assert.equal(tot.a_mais.servicos,30);assert.equal(tot.funil.valor_confere,21650);
     assert.equal(Number(tot.multas).toFixed(6),'21.226389');          // "Glosas" da faixa: total bruto
     console.log('glosas erradas',tot.glosas_erradas,'a menos',tot.a_menos.servicos,Number(tot.a_menos.us).toFixed(4));
 
@@ -60,7 +61,7 @@ const rollback=async f=>{try{await sql.begin(async t=>{await f(t);throw new Erro
     await t`rollback to savepoint s`;
     // conferido à mão sai das possíveis glosas erradas
     await t`select neo_fat_conferir_servico('9844','246088548','conferido pela linha do 5.10')`;
-    assert.equal((await listar({lado:'glosas'})).total,46);
+    assert.equal((await listar({lado:'glosas'})).total,124);
   });
   console.log('OK: glosa × contrato quando nada foi pago; glosa parcial e conferir à mão em Possíveis glosas erradas.');
 }catch(e){console.error(e);process.exitCode=1;}finally{await sql.end();}})();

@@ -37,7 +37,7 @@ const igual=(a,b,msg)=>assert.equal(Number(a).toFixed(6),Number(b).toFixed(6),ms
           case
            when situacao_calculo not in ('OK','A_MENOS','A_MAIS','FORA_CONTRATO','A_CONFERIR') then false
            when situacao_calculo='FORA_CONTRATO' then devido is null and diferenca is null
-           when situacao_calculo='A_CONFERIR' then glosado and diferenca is null and motivo in ('GLOSA_SEM_QUANTIDADE','GLOSA_ACIMA')
+           when situacao_calculo='A_CONFERIR' then diferenca is null and multas>0 and (motivo='GLOSA_REINCIDENCIA' or glosado and motivo in ('GLOSA_SEM_QUANTIDADE','GLOSA_ACIMA'))
            when glosado then diferenca=pago_comparado+multas-devido and (situacao_calculo<>'A_MENOS' or motivo='GLOSA_PARCIAL')
            else diferenca=pago_comparado-devido and motivo is distinct from 'GLOSA_PARCIAL' end)`;
       assert.deepEqual([...ruins],[],`${fatura}: serviços fora da regra`);
@@ -49,14 +49,14 @@ const igual=(a,b,msg)=>assert.equal(Number(a).toFixed(6),Number(b).toFixed(6),ms
       const [sl]=await t`select
         count(*) filter(where situacao='A_MENOS')::int menos,coalesce(sum(-diferenca) filter(where situacao='A_MENOS'),0) us_menos,
         count(*) filter(where situacao='A_MAIS')::int mais,coalesce(sum(diferenca) filter(where situacao='A_MAIS'),0) us_mais,
-        count(*) filter(where situacao<>'CONFERIDO' and motivo in ('GLOSA_PARCIAL','GLOSA_SEM_QUANTIDADE','GLOSA_ACIMA'))::int glosas,
+        count(*) filter(where situacao<>'CONFERIDO' and motivo in ('GLOSA_PARCIAL','GLOSA_SEM_QUANTIDADE','GLOSA_ACIMA','GLOSA_REINCIDENCIA'))::int glosas,
         count(*) filter(where situacao='CONFERIDO')::int conferidos,
         count(*) filter(where tipo_turma is not null and situacao_calculo='OK')::int confere
         from neo_fat_servicos_lista where fatura=${fatura}`;
       assert.equal(tot.a_menos.servicos,sl.menos);igual(tot.a_menos.us,sl.us_menos,`${fatura}: card Pagou a menos`);
       assert.equal(tot.a_mais.servicos,sl.mais);igual(tot.a_mais.us,sl.us_mais,`${fatura}: card Pagou a mais`);
       assert.equal(tot.glosas_erradas.servicos,sl.glosas);
-      assert.equal(tot.glosas_erradas.parcial.servicos+tot.glosas_erradas.conferir.servicos,tot.glosas_erradas.servicos);
+      assert.equal(tot.glosas_erradas.parcial.servicos+tot.glosas_erradas.reincidencia.servicos+tot.glosas_erradas.conferir.servicos,tot.glosas_erradas.servicos);
       assert.equal(tot.funil.valor_confere,sl.confere);assert.equal(tot.funil.conferidos,sl.conferidos);
       igual(Object.values(tot.a_menos.por_motivo).reduce((s,m)=>s+Number(m.us),0),tot.a_menos.us,`${fatura}: motivos do a menos`);
 
