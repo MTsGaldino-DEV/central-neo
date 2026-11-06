@@ -14,7 +14,7 @@ Central do **NEO (Núcleo de Eficiência Operacional)**, irmã da Central NEC. R
 | Ferramentas: Cálculo de KM pelos PDFs de Percursos do rastreador | ✅ desde 05/11/2026 |
 | Manutenção (antigo Fechamento de Notas: controle de NSMC, aba "211 NSIS") | ✅ no MVP |
 | Faturamento | faturas, painel, conferência, importação, contrato e documentação implementados |
-| Disponibilidade da frota: conferência diária e custo de equipe parada | código pronto em 06/11/2026; depende das migrations 054 e 055 (§9) |
+| Disponibilidade da frota: conferência diária e custo de equipe parada | publicada em 06/11/2026, migrations 054 e 055 aplicadas (§9) |
 | Notas de ouvidoria | em breve |
 | Conciliação: o que foi enviado para pagamento × o que a CEMIG pagou | em breve (o fechamento já traz o comparativo por fatura) |
 

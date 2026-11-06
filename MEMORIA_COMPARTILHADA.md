@@ -65,9 +65,9 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
 ## Entrega: Disponibilidade da frota — 06/11/2026 (Claude)
 
-**Estado: código com commit local, sem push. Migrations 054 e 055 NÃO aplicadas.** Ordem para publicar: (1) Matheus autoriza e roda
-`node .tmp-faturamento/aplicar-054-055.cjs` (aplica e registra só as duas; `migrar.cjs` segue proibido); (2) push; (3) dar o módulo
-`disponibilidade` em Logins e acessos (ADMIN já vê). Se o push vier antes da migration, os ADMIN veem o menu novo e a tela dá erro.
+**Estado: push feito em 06/11/2026; migrations 054 e 055 aplicadas por Matheus.** Conferido só com leitura no banco: as duas registradas em
+`neo_interno.migracoes`, 62 frotas, 13.826 lançamentos, 1.031 ocorrências, 274 multáveis, R$ 236.736, valor R$ 864 e meta R$ 30.000.
+Falta dar o módulo `disponibilidade` em Logins e acessos a quem vai usar (ADMIN já vê). `migrar.cjs` segue proibido.
 
 - **Desenho:** `docs/superpowers/specs/2026-11-06-disponibilidade-design.md`, com as decisões do Matheus e as do Claude a confirmar pelo uso.
   **Plano:** `docs/superpowers/plans/2026-11-06-disponibilidade.md`. **Levantamento da planilha:** `docs/disponibilidade-frota-analise.md`.
@@ -80,7 +80,7 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 - **Verificado:** `disponibilidade-banco-testar` (054 e 055 em transação desfeita: totais por mês, RLS, meta, dia futuro; não deixou nada no banco);
   `disponibilidade-ui-testar` (1440, 1920 e 390 px, Supabase simulado; capturas `disp-*` conferidas); `sessao-aba-testar`; `manutencao-ui-testar`;
   `faturamento-ui-testar` (rodar com `NEO_TEST_URL=http://localhost:5173`); typecheck e build.
-- **Não verificado:** gravação com banco real e login real; só é possível depois de aplicar as migrations.
+- **Não verificado:** gravação com banco real e login real; falta testar com o login de Matheus na tela publicada.
 - **Pendências:** horários da grade parecem desatualizados em 6 frotas (a correção é por migration; não há tela de frotas); o painel mostra só o ano atual;
   confirmar quem pode marcar (hoje, quem tem o módulo).
 
