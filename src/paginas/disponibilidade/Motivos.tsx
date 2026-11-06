@@ -20,8 +20,8 @@ export function Motivos({ valor, causa, observacao, onEscolher, onLimpar }: {
         <div className="flex flex-wrap gap-1.5">{MULTAVEIS.map(c => chip(c, 'border-[#ffc7ce] text-[#9c0006] hover:bg-[#ffc7ce]', 'bg-[#ffc7ce]'))}</div>
       </div>
       <div>
-        <h4 className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-[#006100]">Contestável <span className="font-semibold normal-case tracking-normal opacity-80">· R$ 0</span></h4>
-        <div className="flex flex-wrap gap-1.5">{CONTESTAVEIS.map(c => chip(c, 'border-[#c6efce] text-[#006100] hover:bg-[#c6efce]', 'bg-[#c6efce]'))}</div>
+        <h4 className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-[#7a4600]">Contestável <span className="font-semibold normal-case tracking-normal opacity-80">· R$ 0</span></h4>
+        <div className="flex flex-wrap gap-1.5">{CONTESTAVEIS.map(c => chip(c, 'border-[#f5d76e] text-[#7a4600] hover:bg-[#ffeb9c]', 'bg-[#ffeb9c]'))}</div>
       </div>
       <Input value={obs} onChange={e => setObs(e.target.value)} aria-label="Observação" maxLength={500}
         placeholder="Observação (opcional): escreva antes de escolher o motivo" className="bg-white text-sm" />

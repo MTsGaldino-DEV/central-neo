@@ -72,7 +72,7 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
         <ItemResumo largo rotulo="Dias conferidos" valor={`${conferidos} de ${validos.length}`} barra={validos.length ? conferidos / validos.length : 0} />
         <ItemResumo rotulo="Total do mês" valor={brlNegativo(multaveis * valor)} cor="text-erro" nota={`${multaveis} ${multaveis === 1 ? 'ocorrência multável' : 'ocorrências multáveis'}`} />
         <ItemResumo rotulo="Frotas com multa" valor={comMulta.size} nota={`de ${visiveis.length} frotas`} />
-        <ItemResumo rotulo="Contestáveis" valor={contestaveis} cor="text-concluido" nota="R$ 0 na conta" />
+        <ItemResumo rotulo="Contestáveis" valor={contestaveis} cor="text-pendente" nota="R$ 0 na conta" />
       </FaixaResumo>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -217,7 +217,7 @@ function HistoricoFrota({ frota: f, chaves, mes, valor, ler }: { frota: Frota; c
             <div key={k} className="border-t border-[#edf2f3] py-2 text-[13px]">
               <div className="flex items-center justify-between gap-2">
                 <span className="whitespace-nowrap tabular-nums">{curta(d)} <span className="text-aco">{d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}</span></span>
-                <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-bold ${m ? 'border-[#ffc7ce] bg-[#ffc7ce]/25 text-[#9c0006]' : 'border-[#c6efce] bg-[#c6efce]/30 text-[#006100]'}`}>{l?.causa} <small className="font-semibold opacity-85">{m ? brlNegativo(valor) : 'R$ 0'}</small></span>
+                <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-bold ${m ? 'border-[#ffc7ce] bg-[#ffc7ce]/25 text-[#9c0006]' : 'border-[#f5d76e] bg-[#ffeb9c]/40 text-[#7a4600]'}`}>{l?.causa} <small className="font-semibold opacity-85">{m ? brlNegativo(valor) : 'R$ 0'}</small></span>
               </div>
               {l?.observacao && <p className="mt-1 text-xs text-aco">{l.observacao}</p>}
             </div>

@@ -40,7 +40,7 @@ export function ListaDia({ dia, frotas, valor, ler, gravar, desmarcar, sup, setS
         <ItemResumo largo rotulo="Conferidas" valor={`${feitas} de ${frotas.length}`} barra={frotas.length ? feitas / frotas.length : 0} />
         <ItemResumo rotulo="Cadastraram" valor={cadastraram} nota="sem ocorrência" />
         <ItemResumo rotulo="Multáveis" valor={brlNegativo(multaveis * valor)} cor="text-erro" nota={`${multaveis} ${multaveis === 1 ? 'ocorrência' : 'ocorrências'}`} />
-        <ItemResumo rotulo="Contestáveis" valor={contestaveis} cor="text-concluido" nota="R$ 0 na conta" />
+        <ItemResumo rotulo="Contestáveis" valor={contestaveis} cor="text-pendente" nota="R$ 0 na conta" />
       </FaixaResumo>
 
       <div className="mb-3.5 flex flex-wrap items-center gap-2">
@@ -80,7 +80,7 @@ export function ListaDia({ dia, frotas, valor, ler, gravar, desmarcar, sup, setS
                   <div className="col-span-2 mt-1.5 flex flex-wrap items-center gap-1.5 lg:col-span-1 lg:mt-0 lg:justify-end">
                     {l?.situacao === 'OCORRENCIA' && !estaAberto ? (
                       <>
-                        <span title={l.observacao ?? undefined} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1.5 text-[12.5px] font-bold ${multa ? 'border-[#ffc7ce] bg-[#ffc7ce]/25 text-[#9c0006]' : 'border-[#c6efce] bg-[#c6efce]/30 text-[#006100]'}`}>
+                        <span title={l.observacao ?? undefined} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1.5 text-[12.5px] font-bold ${multa ? 'border-[#ffc7ce] bg-[#ffc7ce]/25 text-[#9c0006]' : 'border-[#f5d76e] bg-[#ffeb9c]/40 text-[#7a4600]'}`}>
                           {l.causa} <small className="font-semibold opacity-85">{multa ? brlNegativo(valor) : 'R$ 0'}</small>
                         </span>
                         <Button variant="outline" size="sm" onClick={() => setAberto(f.frota)}>Trocar</Button>

@@ -180,10 +180,10 @@ export default function PainelDisp() {
                     <TableRow key={c.nome}><TableCell className="whitespace-normal">{c.nome}</TableCell><TableCell className="text-right tabular-nums">{c.qtd}</TableCell><TableCell className="text-right tabular-nums">{totalCausas ? Math.round(c.qtd / totalCausas * 100) : 0}%</TableCell>
                       <TableCell className={celulaBarra} aria-hidden="true"><Barrinha fracao={c.qtd / maxCausa} cor="bg-erro-marca" /></TableCell><TableCell><SeloEstado estado={c.estado} /></TableCell></TableRow>
                   ))}
-                  <TableRow className="border-0 hover:bg-transparent"><TableCell colSpan={5} className="pb-0.5 text-[11px] font-extrabold uppercase tracking-wider text-[#006100]">Contestável</TableCell></TableRow>
+                  <TableRow className="border-0 hover:bg-transparent"><TableCell colSpan={5} className="pb-0.5 text-[11px] font-extrabold uppercase tracking-wider text-[#7a4600]">Contestável</TableCell></TableRow>
                   {r.causasContestaveis.map(c => (
                     <TableRow key={c.nome}><TableCell className="whitespace-normal">{c.nome}</TableCell><TableCell className="text-right tabular-nums">{c.qtd}</TableCell><TableCell className="text-right tabular-nums">{totalCausas ? Math.round(c.qtd / totalCausas * 100) : 0}%</TableCell>
-                      <TableCell className={celulaBarra} aria-hidden="true"><Barrinha fracao={c.qtd / maxCausa} cor="bg-concluido-marca" /></TableCell><TableCell className="text-aco">R$ 0</TableCell></TableRow>
+                      <TableCell className={celulaBarra} aria-hidden="true"><Barrinha fracao={c.qtd / maxCausa} cor="bg-pendente-marca" /></TableCell><TableCell className="text-aco">R$ 0</TableCell></TableRow>
                   ))}
                   <TableRow className="font-extrabold"><TableCell>Total</TableCell><TableCell className="text-right tabular-nums">{totalCausas}</TableCell><TableCell className="text-right tabular-nums">{totalCausas ? '100%' : '0%'}</TableCell><TableCell className={celulaBarra} /><TableCell /></TableRow>
                 </TableBody>
