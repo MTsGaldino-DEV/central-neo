@@ -1,6 +1,14 @@
 /* Grade do mês da disponibilidade: precisa de colunas fixas e cabeçalho preso na mesma caixa de rolagem. */
 .disp-rolo { overflow: auto; max-height: calc(100vh - 7.5rem); min-height: 420px; background: #fff; border: 1px solid var(--color-linha); border-radius: 12px; }
+.disp-grade-caixa { position: relative; min-width: 1010px; }
 .disp-grade { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: 100%; min-width: 1010px; font-size: 12px; }
+/* Cruz: duas faixas que só deslizam por cima das células, sem repintar a grade. Ficam abaixo do que é preso na rolagem. */
+.disp-grade-caixa { --cruz: rgb(15 23 30 / .1); }
+.disp-cruz-h, .disp-cruz-v { position: absolute; top: 0; left: 0; z-index: 1; background: var(--cruz); pointer-events: none; opacity: 0; transition: opacity .1s; will-change: transform; }
+.disp-cruz-h { width: 100%; }
+.disp-cruz-v { height: 100%; }
+.com-cruz > .disp-cruz-h, .com-cruz > .disp-cruz-v { opacity: 1; }
+.disp-grade thead th.disp-cruz, .disp-grade tbody td.disp-cruz, .disp-grade tfoot td.disp-cruz { background-image: linear-gradient(var(--cruz), var(--cruz)); }
 .disp-grade th, .disp-grade td { padding: 0; border-bottom: 1px solid #edf2f3; border-right: 1px solid #f1f5f6; text-align: center; }
 .disp-grade thead th { position: sticky; top: 0; z-index: 3; background: #fbfcfc; border-bottom: 1px solid var(--color-linha); height: 40px; color: var(--color-aco); font-weight: 600; }
 .disp-grade thead button { display: block; width: 100%; height: 39px; line-height: 1.15; font-weight: 700; color: var(--color-tinta); font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; }
@@ -24,12 +32,13 @@
 .disp-cel.c, .disp-sigla.c { background: #c6efce; color: #006100; }
 .disp-cel.p, .disp-sigla.p { background: var(--color-pendente-fundo); box-shadow: inset 0 0 0 1px #fbd38d; }
 .disp-cel.p:hover { box-shadow: inset 0 0 0 2px var(--color-sinal); }
-.disp-cel:disabled { cursor: default; background: repeating-linear-gradient(135deg, #f4f7f8 0 4px, #fff 4px 8px); }
+.disp-cel:disabled { cursor: default; pointer-events: none; background: repeating-linear-gradient(135deg, #f4f7f8 0 4px, #fff 4px 8px); }
 .disp-grade tfoot td { position: sticky; bottom: 0; z-index: 2; background: #fbfcfc; border-top: 1px solid var(--color-linha); border-bottom: 0; height: 30px; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 11.5px; }
 .disp-grade tfoot .disp-fixa { z-index: 5; background: #fbfcfc; font-size: 10.5px; color: var(--color-aco); }
 .disp-grade tfoot .disp-valor { z-index: 5; background: #fbfcfc; }
 .disp-sigla { font: 700 10.5px var(--font-codigo); border-radius: 4px; padding: 1px 4px; }
-.disp-dica { position: fixed; z-index: 50; background: var(--color-noite); color: #fff; font-size: 12px; padding: 6px 9px; border-radius: 7px; pointer-events: none; white-space: nowrap; max-width: 320px; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 6px 16px rgb(0 0 0 / .25); }
+.disp-dica { position: fixed; top: 0; left: 0; z-index: 50; visibility: hidden; will-change: transform; background: var(--color-noite); color: #fff; font-size: 12px; padding: 6px 9px; border-radius: 7px; pointer-events: none; white-space: nowrap; max-width: 320px; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 6px 16px rgb(0 0 0 / .25); }
+.disp-dica.visivel { visibility: visible; }
 /* Ponto de situação no mini calendário: --ponto vem do modificador do dia. */
 .disp-dia-ponto { position: relative; }
 .disp-dia-ponto::after { content: ''; position: absolute; left: 50%; bottom: 2px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--ponto); box-shadow: 0 0 0 1px #fff; pointer-events: none; }

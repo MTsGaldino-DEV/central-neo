@@ -9,6 +9,7 @@ import {
 import { FaixaResumo, ItemResumo, Pilula } from './Comuns';
 import type { PropsVisao } from './ListaDia';
 import { Motivos } from './Motivos';
+import { useCruz } from './useCruz';
 
 const LETRA_SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const curta = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
@@ -18,10 +19,12 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
 }) {
   const dias = useMemo(() => diasDoMes(ano, mes), [ano, mes]);
   const chaves = useMemo(() => dias.map(chaveDia), [dias]);
+  // toLocaleDateString é lento: uma vez por dia do mês, não uma vez por célula.
+  const datas = useMemo(() => dias.map(curta), [dias]);
   const [alvo, setAlvo] = useState<{ frota: number; dia: string; rect: DOMRect } | null>(null);
   const [historico, setHistorico] = useState<Frota | null>(null);
-  const [dica, setDica] = useState<{ texto: string; x: number; y: number } | null>(null);
   const ancora = useRef({ getBoundingClientRect: () => new DOMRect() });
+  const cruz = useCruz();
 
   const foraDoPeriodo = (k: string) => k < INICIO_CONTROLE || k > hoje;
   const visiveis = frotas.filter(f => sup === 'T' || f.supervisor === sup);
@@ -54,13 +57,9 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
     if (frota && dia) {
       const rect = alvoEl.getBoundingClientRect();
       ancora.current = { getBoundingClientRect: () => rect };
-      setDica(null);
+      cruz.esconderDica();
       setAlvo({ frota: Number(frota), dia, rect });
     }
-  }
-  function mover(e: MouseEvent) {
-    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-dica]');
-    setDica(el ? { texto: el.dataset.dica!, x: Math.min(e.clientX + 12, innerWidth - 330), y: e.clientY + 14 } : null);
   }
 
   const lancAlvo = alvo ? ler(alvo.dia, alvo.frota) : undefined;
@@ -94,7 +93,10 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
 
       <div className="disp-rolo">
         {grupos.length === 0 ? <div className="p-8 text-center text-aco">Nenhuma frota nesta seleção.</div> : (
-          <table className="disp-grade" onClick={clicar} onMouseMove={mover} onMouseLeave={() => setDica(null)}>
+          <div className="disp-grade-caixa" ref={cruz.caixa}>
+          <div className="disp-cruz-h" ref={cruz.linha} aria-hidden="true" />
+          <div className="disp-cruz-v" ref={cruz.coluna} aria-hidden="true" />
+          <table className="disp-grade" onClick={clicar} onMouseMove={cruz.mover} onMouseLeave={cruz.sair}>
             <colgroup><col style={{ width: 60 }} />{dias.map(d => <col key={d.getDate()} />)}<col style={{ width: 84 }} /></colgroup>
             <thead>
               <tr>
@@ -116,7 +118,7 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
                     let v = 0;
                     const celulas = dias.map((d, i) => {
                       const k = chaves[i], l = ler(k, f.frota), fora = foraDoPeriodo(k);
-                      const inicio = `${f.frota} · ${curta(d)} · `;
+                      const inicio = `${f.frota} · ${datas[i]} · `;
                       let cl = '', sigla = '', dicaTxt = inicio + 'fora do período';
                       if (!fora) {
                         if (!l) { cl = 'p'; dicaTxt = inicio + 'falta conferir'; }
@@ -154,10 +156,11 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
               </tr>
             </tfoot>
           </table>
+          </div>
         )}
       </div>
 
-      {dica && <div className="disp-dica" style={{ left: dica.x, top: dica.y }}>{dica.texto}</div>}
+      <div className="disp-dica" ref={cruz.dica} />
 
       <Popover open={!!alvo} onOpenChange={aberto => { if (!aberto) setAlvo(null); }}>
         <PopoverAnchor virtualRef={ancora} />

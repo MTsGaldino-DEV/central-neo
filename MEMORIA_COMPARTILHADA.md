@@ -81,6 +81,7 @@ Falta dar o módulo `disponibilidade` em Logins e acessos a quem vai usar (ADMIN
   `disponibilidade-ui-testar` (1440, 1920 e 390 px, Supabase simulado; capturas `disp-*` conferidas); `sessao-aba-testar`; `manutencao-ui-testar`;
   `faturamento-ui-testar` (rodar com `NEO_TEST_URL=http://localhost:5173`); typecheck e build.
 - **Não verificado:** gravação com banco real e login real; falta testar com o login de Matheus na tela publicada.
+- **Grade do mês liso + cruz (06/11/2026, pedido de Matheus):** o movimento do mouse não passa mais por estado do React; cruz e dica mexem direto no DOM (`useCruz.ts`). Não recolocar `setState` no `mousemove`: redesenha quase 2 mil células. A cruz só escurece linha e coluna, sem traço, como Matheus desenhou. Build de produção com CPU 4x mais lenta: 869 ms para 1,8 ms de script por movimento; clique até abrir os motivos, 1.795 ms para 530 ms. Verificado por `disponibilidade-cruz-testar` e `disponibilidade-ui-testar` (navegador headless); falta Matheus sentir com o mouse real.
 - **Pendências:** horários da grade parecem desatualizados em 6 frotas (a correção é por migration; não há tela de frotas); o painel mostra só o ano atual;
   confirmar quem pode marcar (hoje, quem tem o módulo).
 
