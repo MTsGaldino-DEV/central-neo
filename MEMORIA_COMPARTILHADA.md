@@ -1,6 +1,6 @@
 # Memória compartilhada — Central NEO
 
-Atualizada em 05/11/2026 pelo Claude (grupo Ferramentas e Cálculo de KM; antes: 1.62 × 1,0, reincidência e incidente da 051). Este arquivo é o ponto de continuidade entre
+Atualizada em 06/11/2026 pelo Claude (lançamento de vários códigos na Fila; registros do Codex sobre colaboradores preservados). Este arquivo é o ponto de continuidade entre
 Codex e Claude neste repositório. Guarda decisões e estado de trabalho, não o
 histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
@@ -62,6 +62,87 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 - **Testes que gravam no banco (incidente de 05/11/2026):** `faturamento-carga-testar` faz commit de verdade, e
   `faturamento-conferencia-testar` usa `sql.begin` sem desfazer. Nunca injetar migration em `sql.begin` por preload
   ou atalho. Migration nova só entra no teste dentro de transação com `throw` no fim. Conferir antes de rodar.
+
+## Fila de NSIS: vários códigos, fator e janela no meio — 06/11/2026 (Claude)
+
+**Estado: migration 053 aplicada no CENTRAL-NEO pelo Matheus em 06/11/2026; commit local feito; push pendente da confirmação dele.**
+Ele rodou `.tmp-faturamento/aplicar-053.cjs`, que aplica e registra só a 053 (2.217 itens, pedido 254,5856 US e pago 208,96 US
+iguais antes e depois; todos com fator 1,0), e `manutencao-fator-testar` passou no banco real. **`migrar.cjs` segue proibido:**
+reaplicaria a 051 e a 052 (ver incidente abaixo), que continuam fora de `neo_interno.migracoes`.
+
+- **Pedido do Matheus:** lançar mais de um código em "O que deve ser cobrado?", trocar a caixinha de área rural por um
+  campo de fator (1,0 / 1,2 / 1,4, COD soma 20% como rural) e abrir a NSIS numa janela no meio, como na Conferência.
+- **Decisão do Matheus:** todos os códigos do lançamento saem numa NSMP só.
+- **Decisões do Claude, a confirmar pelo uso:** um fator por lançamento (a edição de um item pode mudá-lo só naquele item);
+  fator abre pela zona (rural 1,2, senão 1,0) e o COD é ajustado à mão; valor pago é digitado no total da NSMP e dividido na
+  proporção do pedido, com a sobra do arredondamento no último código; item sem código não leva fator; depois da NSMP gerada,
+  um código novo abre outro lançamento; substituição virou botão que inclui a retirada na lista.
+- **Modelo:** cada código segue como linha de `neo_nsis_itens`; não há tabela de lançamento. Lançamento = itens da NSIS com a
+  mesma NSMP, NSPR e AP (`agruparLancamentos`, `src/lib/fechamentoCobranca.ts`); sem NSMP ficam juntos. Etapa e fila não mudaram.
+  Na tela, NSPR ou AP diferentes na mesma NSMP aparecem em cartões separados, para não esconder o dado.
+- **Migration 053 (local, em `supabase/`):** coluna `fator` com check e `neo_vw_itens.valor_contrato` usando o fator. A coluna
+  `rural` fica sem uso pela tela. Hoje nenhum dos 2.217 itens tem código ou rural; os valores atuais não mudam.
+- **Defeitos corrigidos no caminho:** o botão "=" do valor pago arredondava para 3 casas e criava divergência falsa; voltar
+  à busca de código em menos de 150 ms fazia o Enter não adicionar nada; Enter com a busca vazia escolhia o 1º código da tabela.
+- **Verificado:** `manutencao-lancamento-testar` (regras), `manutencao-fator-testar` (053 em transação desfeita, inclusive a RLS
+  da confirmação da NSPR), `manutencao-ui-testar` (Chrome com API simulada, 1440 e 390 px; capturas `manutencao-*` conferidas),
+  `faturamento-ui-testar` (mesma janela), typecheck e build. `node_modules` não tinha `pdfjs-dist`; `npm install` resolveu.
+- **Depois da 053, por leitura:** `neo_vw_itens`, `neo_vw_nsis` e `neo_painel_contratos` respondem; o gatilho `pgrst_ddl_watch`
+  que recarrega o catálogo da API está ativo.
+- **Não verificado:** gravação pela tela com o banco real e login real; a primeira gravação depois do deploy comprova que a API
+  já conhece a coluna `fator`. O `migrar.cjs --testar` não foi usado de propósito: rodaria a 051 e a 052 junto. Ainda sem ajuda
+  escrita na tela; o texto da Tabela de valores foi atualizado.
+
+## Atualização dos colaboradores pela ATIVOS 211 — 06/11/2026 (Codex)
+
+- Matheus esclareceu que o destino do cadastro é a aba Colaboradores da NEO,
+  incluindo matrícula Engelmig. A atualização anterior feita no TraceOne não
+  atualizava esta base: são bancos distintos, sem sincronização cadastral automática.
+- Fonte confirmada: `../traceone/Importação/ATIVOS 211 - 031126 - copia.xlsx`,
+  aba Lista, 251 pessoas. Na NEO todas podem ser cadastradas, inclusive as 23
+  sem matrícula CEMIG, pois possuem matrícula Engelmig e CPF válidos e únicos.
+- Aplicados 196 updates e 55 inserts em `public.colaboradores` do CENTRAL-NEO:
+  195 correspondências por matrícula CEMIG e uma por nome completo único em
+  cadastro sem identificadores. IDs e vínculos existentes foram preservados.
+- Importados nome, CPF, matrícula CEMIG quando disponível, matrícula Engelmig,
+  cargo, admissão, supervisor e situação. RG e AVP não têm coluna neste cadastro
+  e não foram adicionados. Células vazias não apagaram supervisor/CEMIG existentes.
+- Resultado: as 251 pessoas têm matrícula Engelmig, sendo 247 ativas e quatro
+  inativas. Total da NEO: 310 cadastros. Preservados integralmente os 59 cadastros
+  fora da lista, os sete vínculos de login, os acessos e os campos fora da importação.
+  Cadastros preexistentes de login não foram mesclados por coincidência de nome.
+- Backup, plano com IDs explícitos e resultado, fora do Git, em
+  `.tmp-faturamento/backup-colaboradores-ativos211-2026-11-06T11-01-47-460Z.json`
+  e seu `.result.json`. Operação local:
+  `.tmp-faturamento/colaboradores-ativos211-20261106.cjs` (plan/dry-run/apply/verify).
+- Proteções: projeto validado, hash da planilha, CPF/datas/duplicidades validados,
+  FKs/triggers conferidos, bloqueio de escrita e comparação integral com backup,
+  contagens exatas e verificação antes do commit. Simulação com rollback confirmado
+  passou; aplicação real e novas leituras SQL/API confirmaram os 251 registros.
+- A interface já consultava e mostrava matrícula Engelmig. Não houve mudança de
+  código da aplicação, schema, migration ou deploy; recarregar a aba mostra os dados.
+  Nenhuma escrita adicional no TraceOne. A limitação das 23 matrículas CEMIG
+  continua apenas no cadastro do TraceOne, não na NEO.
+
+## Correção dos nomes dos colaboradores — 06/11/2026 (Codex)
+
+- Matheus pediu nomes sem prefixo de matrícula e sem caracteres corrompidos,
+  autorizando retirar acentos. Conferido o cadastro inteiro da NEO (310 pessoas).
+- Corrigidos seis nomes: um prefixo de matrícula removido, três casos de UTF-8
+  interpretado como Latin-1 recuperados e dois nomes com acentos válidos
+  normalizados. Todos os 310 nomes ficaram sem acentos e sem prefixos de matrícula.
+- Alterado somente `nome` (mais o timestamp automático): matrículas CEMIG/Engelmig,
+  demais campos, os sete vínculos de login e todos os acessos foram preservados.
+  Não houve mescla nem exclusão de cadastros com nomes semelhantes.
+- Backup/plano em `.tmp-faturamento/backup-colaboradores-nomes-2026-11-06T11-04-38-286Z.json`,
+  resultado em seu `.result.json`, operação local no script
+  `.tmp-faturamento/colaboradores-nomes-20261106.cjs`.
+- Simulação com rollback confirmado, transação com IDs e contagem explícitos,
+  conferência integral por nova leitura SQL e conferência dos 310 nomes via API
+  passaram. Nenhum prefixo ou caractere não ASCII restante. Sem mudança de app,
+  schema ou deploy; atualizar a aba para recarregar os nomes.
+- Os snapshots das operações anteriores representam o estado anterior a esta
+  correção; o plano de nomes é a referência mais recente para verificar os dados.
 
 ## Entrega: Cálculo de KM — zoom, status e km linear do contrato — 05/11/2026 (Claude)
 

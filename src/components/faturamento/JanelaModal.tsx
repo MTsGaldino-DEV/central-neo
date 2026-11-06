@@ -8,8 +8,8 @@ const FOCAVEIS = 'a[href],button:not([disabled]),textarea:not([disabled]),input:
  * Janela centralizada com fundo escurecido. Fecha pelo X, por "Cancelar", pela tecla Esc
  * ou clicando fora. Prende o foco dentro e devolve ao elemento de origem ao fechar.
  */
-export function JanelaModal({ aberta, titulo, onFechar, rodape, largura = 'md', children }: {
-  aberta: boolean; titulo: ReactNode; onFechar: () => void; rodape?: ReactNode; largura?: 'md' | 'lg'; children: ReactNode;
+export function JanelaModal({ aberta, titulo, onFechar, rodape, largura = 'md', rotuloCancelar = 'Cancelar', children }: {
+  aberta: boolean; titulo: ReactNode; onFechar: () => void; rodape?: ReactNode; largura?: 'md' | 'lg'; rotuloCancelar?: string; children: ReactNode;
 }) {
   const id = useId();
   const caixa = useRef<HTMLDivElement>(null);
@@ -52,7 +52,7 @@ export function JanelaModal({ aberta, titulo, onFechar, rodape, largura = 'md', 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
         <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-linha px-5 py-3">
           <button type="button" onClick={onFechar}
-            className="rounded-lg border border-linha px-4 py-2 text-sm font-bold text-aco hover:bg-nevoa focus-visible:outline-2 focus-visible:outline-sinal">Cancelar</button>
+            className="rounded-lg border border-linha px-4 py-2 text-sm font-bold text-aco hover:bg-nevoa focus-visible:outline-2 focus-visible:outline-sinal">{rotuloCancelar}</button>
           {rodape}
         </footer>
       </div>

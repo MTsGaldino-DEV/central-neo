@@ -66,10 +66,10 @@ export default function TabelaValores() {
       <SecaoValorUS admin={admin} />
 
       <div className="bg-sinal-fundo rounded-2xl p-4 text-xs text-sinal-forte grid sm:grid-cols-2 gap-x-6 gap-y-1">
-        <p className="sm:col-span-2 font-bold flex items-center gap-1.5"><Info size={14} /> Regras da Tabela 03, já aplicadas no cálculo do pedido</p>
+        <p className="sm:col-span-2 font-bold flex items-center gap-1.5"><Info size={14} /> Regras aplicadas no cálculo do pedido</p>
         <p>• O valor do serviço é a soma dos fatores das atividades executadas.</p>
         <p>• Substituição = 1 retirada + 1 instalação.</p>
-        <p>• Área rural: acréscimo de 20%.</p>
+        <p>• Área rural e despacho COD: 20% cada (fator 1,0, 1,2 ou 1,4).</p>
         <p>• Abertura de dispositivo no ASTA não é paga à parte.</p>
       </div>
 

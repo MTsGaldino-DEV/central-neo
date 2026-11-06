@@ -11,6 +11,7 @@
  * A etapa é calculada no banco (view neo_vw_nsis) a partir dos itens.
  */
 import { supabase } from './supabase';
+import { ratearPago, textoFator } from './fechamentoCobranca';
 import type { LinhaRelatorioNsis, LinhaHistorico } from './fechamentoPlanilhas';
 
 export { lerNumero, normalizarAP } from './fechamentoFormato';
@@ -88,8 +89,8 @@ export interface ItemNsis {
   codigo: string | null;
   /** quantidade executada do código (vãos, árvores, peças…) */
   quantidade: number;
-  /** área rural: +20% no valor (nota 4 da Tabela 03) */
-  rural: boolean;
+  /** 1,0 urbano e CSC; 1,2 rural ou COD; 1,4 rural e COD */
+  fator: number;
   /** valor do código no momento do pedido; acertos posteriores não mudam o item */
   fator_unitario: number | null;
   equipe: string | null;
@@ -127,7 +128,7 @@ function normalizarItem(r: Record<string, unknown>): ItemNsis {
     i[c] = i[c] === null || i[c] === undefined ? null : Number(i[c]);
   }
   i.quantidade = Number(i.quantidade ?? 1);
-  i.rural = !!i.rural;
+  i.fator = Number(i.fator ?? 1);
   return i as unknown as ItemNsis;
 }
 
@@ -343,7 +344,8 @@ export async function getResumoFaturas(): Promise<ResumoFatura[]> {
 export async function getNsis(servico: string): Promise<{ nsis: Nsis; itens: ItemNsis[] }> {
   const [{ data: n, error: e1 }, { data: it, error: e2 }] = await Promise.all([
     supabase.from('neo_vw_nsis').select('*').eq('servico', servico).single(),
-    supabase.from('neo_nsis_itens').select('*').eq('servico', servico).order('criado_em', { ascending: true }),
+    // códigos gravados juntos têm o mesmo criado_em: o código desempata a ordem
+    supabase.from('neo_nsis_itens').select('*').eq('servico', servico).order('criado_em', { ascending: true }).order('codigo', { ascending: true }),
   ]);
   if (e1) throw new Error('Falha ao abrir a NSIS: ' + e1.message);
   if (e2) throw new Error('Falha ao carregar os itens: ' + e2.message);
@@ -352,14 +354,10 @@ export async function getNsis(servico: string): Promise<{ nsis: Nsis; itens: Ite
 
 // ─── Edição ─────────────────────────────────────────────────────────────────
 
-export async function criarItem(servico: string, campos: Partial<ItemNsisCampos> & { descricao: string }): Promise<ItemNsis> {
-  const { data, error } = await supabase
-    .from('neo_nsis_itens')
-    .insert({ servico, ...campos })
-    .select()
-    .single();
-  if (error) throw new Error('Falha ao adicionar o item: ' + error.message);
-  return normalizarItem(data);
+/** Grava todos os códigos do lançamento de uma vez: ou entram todos, ou nenhum. */
+export async function criarItens(servico: string, itens: (Partial<ItemNsisCampos> & { descricao: string })[]): Promise<void> {
+  const { error } = await supabase.from('neo_nsis_itens').insert(itens.map((campos) => ({ servico, ...campos })));
+  if (error) throw new Error('Falha ao salvar o lançamento: ' + error.message);
 }
 
 export async function atualizarItem(id: string, patch: Partial<ItemNsisCampos>): Promise<ItemNsis> {
@@ -371,6 +369,21 @@ export async function atualizarItem(id: string, patch: Partial<ItemNsisCampos>):
     .single();
   if (error) throw new Error('Falha ao salvar o item: ' + error.message);
   return normalizarItem(data);
+}
+
+/** A mesma mudança em todos os códigos do lançamento (NSMP, AP). */
+export async function atualizarItens(ids: string[], patch: Partial<ItemNsisCampos>): Promise<void> {
+  const { data, error } = await supabase.from('neo_nsis_itens').update(patch).in('id', ids).select('id');
+  if (error) throw new Error('Falha ao salvar o lançamento: ' + error.message);
+  if ((data ?? []).length !== ids.length) throw new Error('Nem todos os códigos do lançamento foram salvos. Recarregue a NSIS e confira.');
+}
+
+/** NSPR e valor pago da NSMP inteira; o valor é dividido entre os códigos numa só gravação. */
+export async function confirmarPago(itens: ItemNsis[], nspr: string, total: number | null): Promise<void> {
+  const partes = ratearPago(itens, total);
+  const linhas = itens.map((it, i) => ({ id: it.id, servico: it.servico, descricao: it.descricao, nspr, valor_final: partes[i].valor_final }));
+  const { error } = await supabase.from('neo_nsis_itens').upsert(linhas, { onConflict: 'id' });
+  if (error) throw new Error('Falha ao salvar a confirmação: ' + error.message);
 }
 
 export async function excluirItem(id: string): Promise<void> {
@@ -467,7 +480,8 @@ export async function exportarFechamento(filtros: FiltrosNsis): Promise<void> {
       .from('neo_nsis_itens')
       .select('*')
       .in('servico', servicos.slice(i, i + 200))
-      .order('criado_em', { ascending: true });
+      .order('criado_em', { ascending: true })
+      .order('codigo', { ascending: true });
     if (error) throw new Error('Falha ao exportar os itens: ' + error.message);
     for (const it of (data ?? []).map(normalizarItem)) {
       const lista = itensPorServico.get(it.servico) ?? [];
@@ -501,7 +515,7 @@ export async function exportarFechamento(filtros: FiltrosNsis): Promise<void> {
         'Nº do equipe': it.equipe ?? '',
         'Código': it.codigo ?? '',
         'Qtd.': it.codigo ? it.quantidade : '',
-        'Tipo de Serviço': it.descricao + (it.rural ? ' (rural +20%)' : ''),
+        'Tipo de Serviço': it.descricao + (it.fator > 1 ? ` (fator ${textoFator(it.fator)})` : ''),
         'VALOR INICIAL': it.valor_inicial ?? '',
         'NSPR': it.nspr ?? '',
         'US ADICIONAL': it.us_adicional ?? '',

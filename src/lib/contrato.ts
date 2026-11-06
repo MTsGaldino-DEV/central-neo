@@ -4,7 +4,7 @@
  * Regras que entram no cálculo do valor pedido (notas da Tabela 03):
  *   - valor = soma dos fatores das atividades executadas (fator × quantidade)
  *   - substituição = 1 retirada + 1 instalação
- *   - área rural = +20%
+ *   - fator 1,0 / 1,2 / 1,4 conforme rural e COD (lib/fechamentoCobranca.ts)
  */
 import { supabase } from './supabase';
 
@@ -34,8 +34,6 @@ export interface AcertoContrato {
   alterado_por_nome: string | null;
 }
 
-export const ACRESCIMO_RURAL = 1.2;
-
 function normalizar(r: Record<string, unknown>): CodigoContrato {
   return {
     ...(r as unknown as CodigoContrato),
@@ -63,12 +61,6 @@ export function listarContrato(forcar = false): Promise<CodigoContrato[]> {
     })();
   }
   return cache;
-}
-
-/** Valor pedido para um código: fator × quantidade, +20% se rural. */
-export function calcularValor(fator: number, quantidade: number, rural: boolean): number {
-  const v = fator * quantidade * (rural ? ACRESCIMO_RURAL : 1);
-  return Math.round(v * 10000) / 10000;
 }
 
 /** Para uma instalação, a retirada da mesma atividade (substituição = retirada + instalação). */
