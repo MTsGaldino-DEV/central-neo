@@ -88,7 +88,7 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
         {MULTAVEIS.map(c => <span key={c} className="inline-flex items-center gap-1.5"><code className="disp-sigla m">{SIGLAS[c]}</code>{c}</span>)}
         {CONTESTAVEIS.map(c => <span key={c} className="inline-flex items-center gap-1.5"><code className="disp-sigla c">{SIGLAS[c]}</code>{c}</span>)}
         <span className="inline-flex items-center gap-1.5"><code className="disp-sigla p">&nbsp;&nbsp;</code>Falta conferir</span>
-        <span>Em branco: cadastrou</span>
+        <span className="inline-flex items-center gap-1.5"><code className="disp-sigla ok">&nbsp;&nbsp;</code>Cadastrou</span>
       </div>
 
       <div className="disp-rolo">
@@ -122,7 +122,7 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
                       let cl = '', sigla = '', dicaTxt = inicio + 'fora do período';
                       if (!fora) {
                         if (!l) { cl = 'p'; dicaTxt = inicio + 'falta conferir'; }
-                        else if (l.situacao === 'CADASTROU') dicaTxt = inicio + 'cadastrou';
+                        else if (l.situacao === 'CADASTROU') { cl = 'ok'; dicaTxt = inicio + 'cadastrou'; }
                         else {
                           const m = ehMultavel(l.causa);
                           if (m) v += valor;

@@ -99,6 +99,15 @@ const celula = (page, f, d) => page.locator(`.disp-cel[data-frota="${f}"][data-d
       assert.equal(await page.locator('.disp-grade tbody tr:not(.disp-grupo)').count(), 62);
       assert.equal(await page.locator('.disp-cel.m[data-frota="9477"]').count(), 2);
       assert.equal(await celula(page, 9477, '2026-10-30').textContent(), 'VQ');
+      // Cadastrou: verde com check, em tom diferente do contestável (outubro: 1.922 células, 65 ocorrências)
+      assert.equal(await page.locator('.disp-cel.ok').count(), 1857);
+      assert.equal(await page.locator('.disp-cel[aria-label$="cadastrou"]:not(.ok)').count(), 0);
+      const pintura = (sel) => page.locator(sel).first().evaluate((e) => { const c = getComputedStyle(e); return { fundo: c.backgroundColor, imagem: c.backgroundImage }; });
+      const ok = await pintura('.disp-cel.ok'), cont = await pintura('.disp-cel.c');
+      assert.match(ok.imagem, /^url\("data:image\/svg/, 'o check aparece');
+      assert.equal(cont.imagem, 'none', 'contestável fica sem check');
+      assert.notEqual(ok.fundo, cont.fundo, 'cadastrou e contestável não têm o mesmo verde');
+      assert.equal(await page.locator('.disp-cel.ok').first().textContent(), '');
       await page.waitForTimeout(150);
       await page.screenshot({ path: path.join(saida, `disp-mes-${nome}.png`) });
       await semRolagem('mês');
@@ -155,6 +164,14 @@ const celula = (page, f, d) => page.locator(`.disp-cel[data-frota="${f}"][data-d
       await pop2.waitFor({ state: 'detached' });
       assert.equal(db.linhas.has('2026-11-03|4052'), false);
       assert.match(await celula(page, 4052, '2026-11-03').getAttribute('class'), /\bp\b/);
+
+      // Marcar Cadastrou pela célula: fica verde com check na hora
+      await celula(page, 4052, '2026-11-03').click();
+      const pop3 = page.locator('[data-slot="popover-content"]');
+      await pop3.getByRole('button', { name: 'Cadastrou' }).click();
+      await pop3.waitFor({ state: 'detached' });
+      assert.match(await celula(page, 4052, '2026-11-03').getAttribute('class'), /\bok\b/);
+      assert.equal(db.linhas.get('2026-11-03|4052').situacao, 'CADASTROU');
 
       // Do cabeçalho do mês para o dia
       await page.locator('[data-ir-dia="2026-11-05"]').click();
