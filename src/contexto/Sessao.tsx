@@ -33,9 +33,12 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const emailAtual = useRef<string | null>(null);
+  const usuarioAtual = useRef<string | null>(null);
+  const usuarioTraceone = useRef<string | null>(null);
 
   async function carregarDados(s: Session | null) {
     setSession(s);
+    usuarioAtual.current = s?.user.id ?? null;
     emailAtual.current = s?.user.email?.toLowerCase() ?? null;
     setErro(null);
     if (!s) {
@@ -59,6 +62,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   async function carregarTraceone(s: Session | null) {
     const email = emailAtual.current;
     if (!s || !email) {
+      usuarioTraceone.current = null;
       setProfile(null);
       setTraceone('desconectado');
       return;
@@ -68,6 +72,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       return;
     }
     const { data } = await supabaseTraceone.from('profiles').select('*').eq('id', s.user.id).maybeSingle();
+    usuarioTraceone.current = s.user.id;
     setProfile((data as Profile | null) ?? null);
     setTraceone('conectado');
   }
@@ -81,6 +86,12 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((evento, s) => {
+      // O supabase-js emite SIGNED_IN toda vez que a aba volta a ficar visível. Com o mesmo usuário nada
+      // mudou: ligar `carregando` trocaria a página pela tela de carregamento e perderia o que estava nela.
+      if (evento === 'SIGNED_IN' && s && s.user.id === usuarioAtual.current) {
+        setSession(s);
+        return;
+      }
       // TOKEN_REFRESHED não muda quem está logado: evita recarregar à toa
       if (evento === 'SIGNED_IN' || evento === 'SIGNED_OUT' || evento === 'USER_UPDATED') {
         if (evento !== 'USER_UPDATED') setCarregando(true);
@@ -96,6 +107,8 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: { subscription: subTraceone } } = supabaseTraceone.auth.onAuthStateChange((evento, s) => {
+      // Mesmo caso da sessão da NEO: voltar à aba não pode tirar a tela de medidores do ar.
+      if (evento === 'SIGNED_IN' && s && s.user.id === usuarioTraceone.current) return;
       if (evento === 'SIGNED_IN' || evento === 'SIGNED_OUT') {
         if (evento === 'SIGNED_IN') setTraceone('verificando');
         setTimeout(() => carregarTraceone(s), 0);
