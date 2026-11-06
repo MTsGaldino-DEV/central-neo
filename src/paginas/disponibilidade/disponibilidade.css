@@ -1,0 +1,39 @@
+/* Grade do mês da disponibilidade: precisa de colunas fixas e cabeçalho preso na mesma caixa de rolagem. */
+.disp-rolo { overflow: auto; max-height: calc(100vh - 7.5rem); min-height: 420px; background: #fff; border: 1px solid var(--color-linha); border-radius: 12px; }
+.disp-grade { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: 100%; min-width: 1010px; font-size: 12px; }
+.disp-grade th, .disp-grade td { padding: 0; border-bottom: 1px solid #edf2f3; border-right: 1px solid #f1f5f6; text-align: center; }
+.disp-grade thead th { position: sticky; top: 0; z-index: 3; background: #fbfcfc; border-bottom: 1px solid var(--color-linha); height: 40px; color: var(--color-aco); font-weight: 600; }
+.disp-grade thead button { display: block; width: 100%; height: 39px; line-height: 1.15; font-weight: 700; color: var(--color-tinta); font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.disp-grade thead button:hover:not(:disabled) { background: var(--color-sinal-fundo); }
+.disp-grade thead button:disabled { color: var(--color-aco-claro); cursor: default; }
+.disp-grade thead button small { display: block; font-size: 10px; font-weight: 600; color: var(--color-aco-claro); }
+.disp-grade thead th.disp-fds { background: #eef3f4; }
+.disp-grade thead th.disp-hoje button { box-shadow: inset 0 -2px 0 var(--color-sinal); }
+.disp-grade .disp-fixa { position: sticky; left: 0; z-index: 2; background: #fff; border-right: 1px solid var(--color-linha); }
+.disp-grade thead .disp-fixa { z-index: 5; background: #fbfcfc; }
+.disp-grade .disp-valor { position: sticky; right: 0; z-index: 2; background: #fff; border-left: 1px solid var(--color-linha); border-right: 0; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; padding: 0 7px; text-align: right; }
+.disp-grade thead .disp-valor { z-index: 5; background: #fbfcfc; }
+.disp-frota { width: 100%; height: 27px; font: 600 12px var(--font-codigo); color: var(--color-sinal-forte); text-decoration: underline; text-decoration-color: var(--color-linha); text-underline-offset: 3px; cursor: pointer; }
+.disp-frota:hover { background: var(--color-sinal-fundo); text-decoration-color: var(--color-sinal); }
+.disp-grade tr.disp-grupo td { background: var(--color-nevoa); font-weight: 800; text-align: left; padding: 6px 10px; font-size: 12.5px; }
+.disp-grade tr.disp-grupo td.disp-valor { text-align: right; padding: 0 7px; }
+.disp-grade td.disp-fds { background: #f7f9fa; }
+.disp-cel { display: block; width: 100%; height: 27px; font: 700 10.5px var(--font-codigo); letter-spacing: -.02em; cursor: pointer; }
+.disp-cel:hover:not(:disabled) { box-shadow: inset 0 0 0 2px var(--color-sinal); }
+.disp-cel.m, .disp-sigla.m { background: #ffc7ce; color: #9c0006; }
+.disp-cel.c, .disp-sigla.c { background: #c6efce; color: #006100; }
+.disp-cel.p, .disp-sigla.p { background: var(--color-pendente-fundo); box-shadow: inset 0 0 0 1px #fbd38d; }
+.disp-cel.p:hover { box-shadow: inset 0 0 0 2px var(--color-sinal); }
+.disp-cel:disabled { cursor: default; background: repeating-linear-gradient(135deg, #f4f7f8 0 4px, #fff 4px 8px); }
+.disp-grade tfoot td { position: sticky; bottom: 0; z-index: 2; background: #fbfcfc; border-top: 1px solid var(--color-linha); border-bottom: 0; height: 30px; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 11.5px; }
+.disp-grade tfoot .disp-fixa { z-index: 5; background: #fbfcfc; font-size: 10.5px; color: var(--color-aco); }
+.disp-grade tfoot .disp-valor { z-index: 5; background: #fbfcfc; }
+.disp-sigla { font: 700 10.5px var(--font-codigo); border-radius: 4px; padding: 1px 4px; }
+.disp-dica { position: fixed; z-index: 50; background: var(--color-noite); color: #fff; font-size: 12px; padding: 6px 9px; border-radius: 7px; pointer-events: none; white-space: nowrap; max-width: 320px; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 6px 16px rgb(0 0 0 / .25); }
+/* Ponto de situação no mini calendário: --ponto vem do modificador do dia. */
+.disp-dia-ponto { position: relative; }
+.disp-dia-ponto::after { content: ''; position: absolute; left: 50%; bottom: 2px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--ponto); box-shadow: 0 0 0 1px #fff; pointer-events: none; }
+@media (max-width: 860px) {
+  .disp-grade .disp-valor { position: static; }
+  .disp-rolo { max-height: calc(100vh - 5rem); }
+}

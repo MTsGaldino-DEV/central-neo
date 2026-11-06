@@ -26,6 +26,8 @@ const ConferenciaFat = lazy(() => import('@/paginas/faturamento/Conferencia'));
 const PainelFat = lazy(() => import('@/paginas/faturamento/Painel'));
 const FaturasFat = lazy(() => import('@/paginas/faturamento/Faturas'));
 const DocumentacaoFat = lazy(() => import('@/paginas/faturamento/Documentacao'));
+const ConferenciaDisp = lazy(() => import('@/paginas/disponibilidade/Conferencia'));
+const PainelDisp = lazy(() => import('@/paginas/disponibilidade/Painel'));
 
 function Carregando() {
   return (
@@ -119,6 +121,10 @@ export default function App() {
           <Route path="resumo" element={<ParaPainel />} />
           <Route path="documentacao" element={<DocumentacaoFat />} />
           <Route path="documentacao/:pagina" element={<DocumentacaoFat />} />
+        </Route>
+        <Route path="disponibilidade" element={<ExigeModulo modulo="disponibilidade"><Outlet /></ExigeModulo>}>
+          <Route index element={<ConferenciaDisp />} />
+          <Route path="painel" element={<PainelDisp />} />
         </Route>
         <Route path="acessos" element={<ExigeAdminNeo><Acessos /></ExigeAdminNeo>} />
         <Route path="colaboradores" element={<ExigeAdminNeo><Colaboradores /></ExigeAdminNeo>} />

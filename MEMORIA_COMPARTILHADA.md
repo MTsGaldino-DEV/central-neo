@@ -1,6 +1,6 @@
 # Memória compartilhada — Central NEO
 
-Atualizada em 06/11/2026 pelo Claude (lançamento de vários códigos na Fila; registros do Codex sobre colaboradores preservados). Este arquivo é o ponto de continuidade entre
+Atualizada em 06/11/2026 pelo Claude (Disponibilidade da frota e correção da troca de aba; registros do Codex sobre colaboradores preservados). Este arquivo é o ponto de continuidade entre
 Codex e Claude neste repositório. Guarda decisões e estado de trabalho, não o
 histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
@@ -63,9 +63,56 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
   `faturamento-conferencia-testar` usa `sql.begin` sem desfazer. Nunca injetar migration em `sql.begin` por preload
   ou atalho. Migration nova só entra no teste dentro de transação com `throw` no fim. Conferir antes de rodar.
 
+## Entrega: Disponibilidade da frota — 06/11/2026 (Claude)
+
+**Estado: código com commit local, sem push. Migrations 054 e 055 NÃO aplicadas.** Ordem para publicar: (1) Matheus autoriza e roda
+`node .tmp-faturamento/aplicar-054-055.cjs` (aplica e registra só as duas; `migrar.cjs` segue proibido); (2) push; (3) dar o módulo
+`disponibilidade` em Logins e acessos (ADMIN já vê). Se o push vier antes da migration, os ADMIN veem o menu novo e a tela dá erro.
+
+- **Desenho:** `docs/superpowers/specs/2026-11-06-disponibilidade-design.md`, com as decisões do Matheus e as do Claude a confirmar pelo uso.
+  **Plano:** `docs/superpowers/plans/2026-11-06-disponibilidade.md`. **Levantamento da planilha:** `docs/disponibilidade-frota-analise.md`.
+- **Telas:** `/disponibilidade` (abre em "Mês inteiro", botão para "Dia", mini calendário, histórico da frota, marcar pela célula) e
+  `/disponibilidade/painel` (no estilo do painel da planilha, sem os erros dela; meta só ADMIN).
+- **shadcn:** adotado a pedido do Matheus só em telas novas (`src/components/ui`, `components.json`), com os tokens ligados às cores da NEO em
+  `index.css`, sem regra global. O instalador trouxe o pacote `cn`; foi removido e os componentes usam `@/lib/utils`. Bordas ajustadas para `border-linha`.
+- **Histórico:** a 055 traz 62 frotas e 23/03 a 31/10/2026 (1.031 ocorrências, 274 multáveis, R$ 236.736; dia sem lançamento vira CADASTROU, origem PLANILHA).
+  Comentários da planilha não foram importados: têm nomes e dados de saúde.
+- **Verificado:** `disponibilidade-banco-testar` (054 e 055 em transação desfeita: totais por mês, RLS, meta, dia futuro; não deixou nada no banco);
+  `disponibilidade-ui-testar` (1440, 1920 e 390 px, Supabase simulado; capturas `disp-*` conferidas); `sessao-aba-testar`; `manutencao-ui-testar`;
+  `faturamento-ui-testar` (rodar com `NEO_TEST_URL=http://localhost:5173`); typecheck e build.
+- **Não verificado:** gravação com banco real e login real; só é possível depois de aplicar as migrations.
+- **Pendências:** horários da grade parecem desatualizados em 6 frotas (a correção é por migration; não há tela de frotas); o painel mostra só o ano atual;
+  confirmar quem pode marcar (hoje, quem tem o módulo).
+
+## Correção: trocar de aba perdia a tela — 06/11/2026 (Claude)
+
+- **Causa:** o supabase-js emite `SIGNED_IN` sempre que a aba volta a ficar visível (`_recoverAndRefresh`, auth-js 2.118). `Sessao.tsx` ligava `carregando`,
+  e o `Protegido` trocava a página pela tela de carregamento: tudo desmontava e o estado se perdia. No TraceOne, `verificando` fazia o mesmo com a Lista de Medidores.
+- **Correção:** `SIGNED_IN` do mesmo usuário só atualiza a sessão. Login de outro usuário e saída continuam como antes.
+- **Teste:** `scripts/sessao-aba-testar.cjs` falhou antes da correção e passa depois. Mudança: voltar à aba não relê mais o acesso; acesso revogado passa a valer ao recarregar a página (a RLS protege de qualquer forma).
+
+## Análise da planilha de disponibilidade do contrato 7360 — 06/11/2026 (Claude)
+
+Só leitura de `Importação/Disponibilidade Contrato 7360_Macro.xlsm`; nada foi alterado na planilha, e ela não foi aberta no Excel.
+
+- **Conteúdo:** uma aba por mês (mar–dez/2026), 62 frotas × dias; R$ 864 fixo por ocorrência de Veículo Quebrado, Atraso > 4h ou
+  Descadastramento Antecipado. A macro só abre uma legenda.
+- **Total:** planilha R$ 234.144; recontado R$ 236.736 (274 ocorrências). As fórmulas de VALOR vão até a coluna AL e perdem o dia 31
+  (R$ 864 em julho, R$ 1.728 em agosto).
+- **Painel não confiável:** Total Anual `#REF!`; março lê a célula errada (`H64`, R$ 2.592, em vez de `F64`, R$ 22.464); o gráfico
+  mensal dobra os valores; `*ASO*` também conta "Atraso"; os campos Supervisão e Meta não afetam nenhuma fórmula.
+- **Decisões do Matheus (06/11):** o valor é o gasto estimado de uma equipe parada, contando a multa da CEMIG; usar os R$ 864 como estão.
+  O "." na planilha não significa nada. Ele quer **replicar a planilha em sistema**; o desenho ainda não foi aprovado.
+- **Levantamento completo:** `docs/disponibilidade-frota-analise.md` (regras, totais, erros a não replicar, evidências).
+- **Descoberta:** a aba `Turma` da Fatura Completa (`horijr`, `horfjr`) explica os lançamentos: na 9844, Veículo Quebrado 12 de 12 sem
+  jornada; Descadastramento 4 de 4 saíram mais de 4h antes. Serve para conferir depois, não para lançar no dia. Horários da grade
+  parecem desatualizados em 6 frotas. Na 9844 não aparece multa por frota-dia (só essa fatura foi verificada).
+- **REA (`C:\Engenharia Reversa\rea-main`):** é para binários e aplicativos; não foi usada nem é necessária para esta planilha.
+- **Cuidado:** a pasta `Importação/` não está no `.gitignore`, e a planilha tem rótulo de LGPD, nomes e dados de saúde. Não incluir no commit.
+
 ## Fila de NSIS: vários códigos, fator e janela no meio — 06/11/2026 (Claude)
 
-**Estado: migration 053 aplicada no CENTRAL-NEO pelo Matheus em 06/11/2026; commit local feito; push pendente da confirmação dele.**
+**Estado: migration 053 aplicada no CENTRAL-NEO pelo Matheus em 06/11/2026; commit `6fd6cd1` com push em 06/11/2026, autorizado por ele.**
 Ele rodou `.tmp-faturamento/aplicar-053.cjs`, que aplica e registra só a 053 (2.217 itens, pedido 254,5856 US e pago 208,96 US
 iguais antes e depois; todos com fator 1,0), e `manutencao-fator-testar` passou no banco real. **`migrar.cjs` segue proibido:**
 reaplicaria a 051 e a 052 (ver incidente abaixo), que continuam fora de `neo_interno.migracoes`.

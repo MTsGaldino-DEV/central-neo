@@ -9,13 +9,14 @@
  */
 import { supabase } from './supabase';
 
-export type Modulo = 'traceone' | 'fechamento' | 'faturamento';
+export type Modulo = 'traceone' | 'fechamento' | 'faturamento' | 'disponibilidade';
 export type PapelNeo = 'ADMIN' | 'USUARIO';
 
 export const MODULOS: { id: Modulo; nome: string; descricao: string }[] = [
   { id: 'faturamento', nome: 'Faturamento', descricao: 'Conferência de créditos e débitos CEMIG' },
   { id: 'traceone', nome: 'TraceOne', descricao: 'Controle de medidores' },
   { id: 'fechamento', nome: 'Manutenção', descricao: 'NSIS → NSMP → NSPR → fatura' },
+  { id: 'disponibilidade', nome: 'Disponibilidade', descricao: 'Conferência diária das frotas e custo de equipe parada' },
 ];
 
 export interface AcessoNeo {

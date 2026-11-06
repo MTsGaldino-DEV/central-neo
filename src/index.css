@@ -91,6 +91,23 @@
   --color-foreground: var(--chart-foreground);
   --color-muted: var(--muted);
   --color-chart-label: var(--chart-label);
+
+  /* shadcn (components/ui) usando as cores da NEO. Sem regra global: as telas antigas não mudam. */
+  --color-background: #ffffff;
+  --color-primary: var(--color-sinal);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--color-nevoa);
+  --color-secondary-foreground: var(--color-tinta);
+  --color-accent: var(--color-sinal-fundo);
+  --color-accent-foreground: var(--color-sinal-forte);
+  --color-muted-foreground: var(--color-aco);
+  --color-popover: #ffffff;
+  --color-popover-foreground: var(--color-tinta);
+  --color-card: #ffffff;
+  --color-card-foreground: var(--color-tinta);
+  --color-destructive: var(--color-erro);
+  --color-input: var(--color-linha);
+  --color-ring: var(--color-sinal);
 }
 
 /* Fundo Noite do login e da barra lateral */

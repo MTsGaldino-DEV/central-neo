@@ -14,6 +14,7 @@ Central do **NEO (Núcleo de Eficiência Operacional)**, irmã da Central NEC. R
 | Ferramentas: Cálculo de KM pelos PDFs de Percursos do rastreador | ✅ desde 05/11/2026 |
 | Manutenção (antigo Fechamento de Notas: controle de NSMC, aba "211 NSIS") | ✅ no MVP |
 | Faturamento | faturas, painel, conferência, importação, contrato e documentação implementados |
+| Disponibilidade da frota: conferência diária e custo de equipe parada | código pronto em 06/11/2026; depende das migrations 054 e 055 (§9) |
 | Notas de ouvidoria | em breve |
 | Conciliação: o que foi enviado para pagamento × o que a CEMIG pagou | em breve (o fechamento já traz o comparativo por fatura) |
 
@@ -191,4 +192,15 @@ Implementado em 05/11/2026. Quantos km uma equipe rodou, a partir do PDF "Percur
 - **Mapa:** zoom pela rodinha, botões + / − / dia inteiro, arrastar para mover (até 60×), dica com horário, velocidade e status ao passar o mouse, régua de escala que acompanha o zoom. Trechos fora dos status marcados ficam cinza.
 - Saídas: "Copiar resumo" (texto, com o km linear) e planilha de auditoria (abas Resumo, com status considerados e km linear; Posições, com km do trecho, acumulado, status do trecho, se entra no km linear e motivo de cada descarte; e Acionamentos (apoio), quando houver).
 - Validação (05/11/2026, 5 PDFs reais): 8592/SHR0H56 17/09 = 130,7 km; 9477/SHQ0C04 27/09 = 134,9 km; 7812/SIG0A50 22/10 = 123,5 km; 4052/RUN3B56 24/10 (2 PDFs) = 174,1 km. Todos os descartados têm velocidade 0.
+
+## 9. Disponibilidade da frota
+
+Substitui a planilha "Disponibilidade Contrato 7360". Toda manhã, alguém confere no GDIS quem cadastrou ontem e registra o motivo de quem não cadastrou. Levantamento em `docs/disponibilidade-frota-analise.md`.
+
+- **Módulo:** `disponibilidade` (lê e marca). Meta e valor só ADMIN. Rotas: `/disponibilidade` (abre no mês atual, em "Mês inteiro"; `?visao=dia&dia=AAAA-MM-DD`, `?mes=AAAA-MM`, `?sup=`) e `/disponibilidade/painel` (`?mes=` de 0 a 11, `?sup=`).
+- **Banco (migrations 054 e 055):** `neo_disp_frotas` (grade, muda por migration), `neo_disp_lancamentos` (uma linha por dia e frota; sem linha = falta conferir), `neo_disp_config` (valor R$ 864 e meta). RPCs `neo_disp_mes` e `neo_disp_ano` devolvem JSON, porque um mês passa do limite de 1.000 linhas da API. Dia futuro é recusado pela RLS; início do controle em 23/03/2026.
+- **Regra:** Veículo Quebrado, Atraso superior a 4h e Descadastramento Antecipado valem R$ 864 cada, mostrados como negativos. Atestado, Treinamento, Folga TAC, Férias, Suspensão, ASO e Interstício valem R$ 0. Regras puras em `src/lib/disponibilidadeRegras.ts`.
+- **Componentes:** estas telas usam shadcn (`src/components/ui`). Os tokens ficam em `@theme inline`, sem regra global. As telas antigas continuam como estão; a grade do mês tem CSS próprio (`disponibilidade.css`).
+- **Conferir pela fatura:** a aba `Turma` da Fatura Completa (`horijr`, `horfjr`) mostra o início e o fim da jornada, mas chega depois e não traz a causa. Ainda não há integração.
+- **Testes:** `disponibilidade-banco-testar` (transação desfeita) e `disponibilidade-ui-testar` (Supabase simulado; precisa de `.tmp-faturamento/disp-dados.json`).
 

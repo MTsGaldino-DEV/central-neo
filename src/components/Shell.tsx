@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Route,
-  ClipboardList, FileSpreadsheet, Table2, BarChart3, Receipt, MessageSquareWarning, Scale, Users, KeyRound, LogOut, Contact,
+  ClipboardList, FileSpreadsheet, Table2, BarChart3, Receipt, MessageSquareWarning, Scale, Users, KeyRound, LogOut, Contact, CalendarCheck,
   ChevronDown, Menu, X, type LucideIcon,
 } from 'lucide-react';
 import NeoLogo from './NeoLogo';
@@ -49,6 +49,12 @@ export function useSecoesNav(): SecaoNav[] {
       { label: 'Conferência', href: '/faturamento/conferencia', icon: ClipboardList },
       { label: 'Importar fatura', href: '/faturamento/importar', icon: FileSpreadsheet },
       { label: 'Tabelas do contrato', href: '/faturamento/tabelas', icon: Table2 },
+    ] });
+  }
+  if (temModulo(acesso, 'disponibilidade')) {
+    secoes.push({ titulo: 'Frota', itens: [
+      { label: 'Conferência', href: '/disponibilidade', icon: CalendarCheck, fim: true },
+      { label: 'Painel', href: '/disponibilidade/painel', icon: BarChart3 },
     ] });
   }
   secoes.push({ titulo: 'Em breve', itens: EM_BREVE, emBreve: true });
