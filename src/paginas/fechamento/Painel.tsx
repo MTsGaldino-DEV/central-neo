@@ -7,7 +7,7 @@ import { getPainel, FAIXAS_IDADE, type Painel as DadosPainel, type Par } from '@
 type Unidade = 'reais' | 'us';
 
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-const ETAPAS_ABERTAS: Etapa[] = ['A_FECHAR', 'AGUARDANDO_NSMP', 'AGUARDANDO_NSPR', 'AGUARDANDO_FATURA'];
+const ETAPAS_ABERTAS: Etapa[] = ['A_FECHAR', 'AGUARDANDO_NSMP', 'AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO', 'AGUARDANDO_FATURA'];
 
 function iso(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

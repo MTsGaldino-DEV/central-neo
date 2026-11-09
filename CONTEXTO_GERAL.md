@@ -90,8 +90,10 @@ Na tela o módulo se chama **Manutenção** desde 26/10/2026; URLs, tabelas e ar
 - `neo_nsis`: uma linha por NSIS, com os campos do relatório. Localidade = 4 primeiros dígitos da Referência, e DT EXECUÇÃO = Término. Também guarda `sem_cobranca` + `motivo_sem_cobranca` e a `origem` (RELATORIO, HISTORICO ou MANUAL).
 - `neo_nsis_itens`: cada cobrança (descrição, código, equipe, valor_inicial, us_adicional, nsmp, nspr, valor_final, fatura).
 - `neo_localidade_supervisor`: localidade (4 dígitos) → município, posto e supervisor (Posto 1 Pedro, 2 Elton, 3 Vinicius, 4 Victor; carga na migration 009). Não tem tela: mudanças vão por migration. A view traz `supervisor` no fim. NSIS sem localidade (as do histórico) ficam sem supervisor.
-- `neo_vw_nsis` (security_invoker): calcula a **etapa** a partir dos itens:
-  `A_FECHAR → AGUARDANDO_NSMP → AGUARDANDO_NSPR → AGUARDANDO_FATURA → FATURADA`, ou `SEM_COBRANCA`.
+- `neo_vw_nsis` (security_invoker): calcula a **etapa** a partir dos itens. Duas regras (migration 056, `neo_nsis.fluxo_novo`):
+  - **Fluxo novo** (`fluxo_novo = true`, NSIS que entram a partir de 09/11/2026): `A_FECHAR → AGUARDANDO_NSPR → AGUARDANDO_SALESFORCE → AGUARDANDO_APROPRIACAO → FATURADA` (rótulo "Concluída"). Códigos, equipe e NSMP entram juntos na etapa 1; cada NSIS tem 1 NSMP e 1 NSPR. A NSRI informa NSMC e valor pago na etapa 1 e pula a NSPR. A data do Salesforce é uma por NSIS (`neo_nsis.data_lancamento_sf`). O supervisor vem da equipe (`neo_nsis.supervisor_equipe`, de `neo_disp_frotas` por `neo_supervisor_da_equipe()`, ou digitado à mão).
+  - **Histórico** (`fluxo_novo = false`): `A_FECHAR → AGUARDANDO_NSMP → AGUARDANDO_NSPR → AGUARDANDO_FATURA → FATURADA`, como sempre.
+  - Ambas podem ir para `SEM_COBRANCA`.
 - Alertas: **divergente** = tem NSPR e valor pago ≠ pedido. **Sem valor pago** = tem NSPR, mas o valor final está vazio (comum no histórico). O "pago − pedido" só compara itens com os dois valores.
 - RPCs: `neo_importar_nsis` (upsert do relatório, nunca mexe em itens), `neo_importar_historico` (planilha de controle, idempotente por serviço + NSMP), `neo_resumo_fechamento`, `neo_resumo_faturas`, `neo_listar_usuarios`.
 - RLS: `neo_tem_modulo('fechamento')`.

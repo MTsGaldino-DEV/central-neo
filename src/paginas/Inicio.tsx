@@ -81,10 +81,11 @@ export default function Inicio() {
             </div>
             <h3 className="text-lg font-extrabold mt-4">Manutenção</h3>
             <p className="text-sm text-aco">NSIS de manutenção: do GDIS até a fatura.</p>
-            <div className="grid grid-cols-3 gap-2 mt-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">
               <Mini rotulo="A fechar" valor={resumo?.etapas.A_FECHAR ?? '—'} cor="text-etapa-fechar" />
-              <Mini rotulo="Gerar NSMP" valor={resumo?.etapas.AGUARDANDO_NSMP ?? (resumo ? 0 : '—')} cor="text-etapa-nsmp" />
               <Mini rotulo="Aguard. NSPR" valor={resumo?.etapas.AGUARDANDO_NSPR ?? (resumo ? 0 : '—')} cor="text-etapa-nspr" />
+              <Mini rotulo="Aguard. Salesforce" valor={resumo?.etapas.AGUARDANDO_SALESFORCE ?? (resumo ? 0 : '—')} cor="text-etapa-salesforce" />
+              <Mini rotulo="Aguard. apropriação" valor={resumo?.etapas.AGUARDANDO_APROPRIACAO ?? (resumo ? 0 : '—')} cor="text-etapa-apropriacao" />
             </div>
             {resumo && resumo.divergentes > 0 && (
               <p className="mt-3 text-xs font-semibold text-cobre">{resumo.divergentes} NSIS com valor pago diferente do pedido</p>
