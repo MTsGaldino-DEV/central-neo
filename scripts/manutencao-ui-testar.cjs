@@ -180,6 +180,9 @@ function responderNsis(url, metodo, corpo) {
 
     const page = await context.newPage(); globalThis.paginaTeste = page;
     page.on('pageerror', (e) => falhas.push(e.message));
+    // confirm() do app: aceita por padrão; os testes de cancelamento trocam a resposta
+    const dialogos = []; let aceitarDialogo = true;
+    page.on('dialog', async (d) => { dialogos.push(d.message()); if (aceitarDialogo) await d.accept(); else await d.dismiss(); });
     const foto = (nome) => page.screenshot({ path: path.join(saida, nome + '.png') });
     const janela = page.getByRole('dialog');
     const form = page.getByRole('form', { name: 'O que deve ser cobrado?' });
@@ -577,6 +580,24 @@ function responderNsis(url, metodo, corpo) {
 
     // Desfazer esta etapa: a NSIS volta para ela e o dado some (etapa 1 não tem desfazer)
     assert.equal(await resumo(E1).getByRole('button', { name: 'Desfazer esta etapa' }).count(), 0);
+    // Cancelar o diálogo: nada é apagado e a NSIS continua na mesma etapa
+    aceitarDialogo = false;
+    for (const [etapa, trecho] of [[E4, 'O número da apropriação será apagado'], [E3, 'A data será apagada'], [E2, 'A NSPR e o valor pago desta NSIS serão apagados']]) {
+      dialogos.length = 0;
+      escritas.length = 0;
+      await resumo(etapa).getByRole('button', { name: 'Desfazer esta etapa' }).click();
+      await page.waitForTimeout(300);
+      assert.equal(dialogos.length, 1, `desfazer pede confirmação (${etapa})`);
+      assert.ok(dialogos[0].includes(trecho), `o diálogo diz o que será apagado: ${dialogos[0]}`);
+      assert.equal(escritas.filter((e) => e.metodo !== 'GET').length, 0, 'cancelar não grava nada');
+    }
+    assert.equal(itensDe('900020001')[0].fatura, 'AP 83809', 'cancelar mantém a apropriação');
+    assert.equal(nsisDe('900020001').data_lancamento_sf, hoje, 'cancelar mantém a data do Salesforce');
+    assert.deepEqual([itensDe('900020001')[0].nspr, itensDe('900020001')[0].valor_final], ['NSPR201', 1.5], 'cancelar mantém NSPR e valor pago');
+    await chip('Concluída').waitFor();
+    assert.equal(await janela.getByRole('form').count(), 0, 'cancelar não reabre etapa nenhuma');
+    // Aceitar o diálogo: o dado some e a NSIS volta à etapa
+    aceitarDialogo = true;
     await resumo(E4).getByRole('button', { name: 'Desfazer esta etapa' }).click();
     await chip('Aguardando apropriação').waitFor();
     assert.equal(itensDe('900020001')[0].fatura, null);

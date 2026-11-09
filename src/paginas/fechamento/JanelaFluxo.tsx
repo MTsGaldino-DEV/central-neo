@@ -139,8 +139,15 @@ function ResumoPasso({ passo, titulo, nsis, itens, onCorrigir, onAlterado }: {
   const pedido = totalPedido(itens);
 
   function desfazer() {
-    if (passo === 'NSPR') return executar(() => desfazerNspr(itens));
-    if (passo === 'SF') return executar(() => desfazerLancamentoSf(nsis.servico));
+    if (passo === 'NSPR') {
+      if (!confirm('Desfazer a etapa NSPR? A NSPR e o valor pago desta NSIS serão apagados e ela volta para "Aguardando NSPR".')) return;
+      return executar(() => desfazerNspr(itens));
+    }
+    if (passo === 'SF') {
+      if (!confirm('Desfazer a data de lançamento no Salesforce? A data será apagada e a NSIS volta para "Aguardando Salesforce".')) return;
+      return executar(() => desfazerLancamentoSf(nsis.servico));
+    }
+    if (!confirm('Desfazer a apropriação? O número da apropriação será apagado e a NSIS volta para "Aguardando apropriação".')) return;
     return executar(() => desfazerApropriacao(itens));
   }
 
