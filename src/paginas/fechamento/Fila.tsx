@@ -9,7 +9,7 @@ import FiltroColuna from '@/components/fechamento/FiltroColuna';
 import PainelNsis from './PainelNsis';
 import {
   listarNsis, getResumo, getResumoFaturas, exportarFechamento, criarNsisManual, formatarUS, formatarReais, formatarData,
-  contarPorEtapa, temFiltro, listarTiposServico, valoresDaColuna, infoEtapa,
+  contarPorEtapa, temFiltro, listarTiposServico, valoresDaColuna, infoEtapa, ehFluxoNovo,
   type Etapa, type Nsis, type ResumoFechamento, type ResumoFatura, type FiltrosNsis,
 } from '@/lib/fechamento';
 import { COLUNAS_FLUXO, colunasVisiveis, type ColunaFluxo } from '@/lib/fechamentoFluxo';
@@ -112,7 +112,7 @@ export default function FilaFechamento() {
   // Colunas por etapa: fluxo novo mostra o que a etapa já tem; histórico e listas mistas, o conjunto de hoje
   const colunas: ColunaFluxo[] = etapa === 'TODAS'
     ? colunasVisiveis('TODAS', false)
-    : (linhas.length > 0 ? linhas.every((n) => n.fluxo_novo) : ETAPAS_FLUXO.includes(etapa))
+    : (linhas.length > 0 ? linhas.every((n) => ehFluxoNovo(n)) : ETAPAS_FLUXO.includes(etapa))
       ? colunasVisiveis(etapa, false)
       : colunasVisiveis(etapa, true);
 

@@ -98,6 +98,7 @@ assert.deepEqual(
 const caminhoSupabase = require.resolve('../src/lib/supabase.ts');
 let bd = { neo_nsis_itens: [], neo_nsis: [] };
 const escritasBd = [];
+let falharInsert = false;
 function consulta(tabela) {
   const q = { op: 'select', filtros: [], patch: null, linhas: null, selecionar: false, unico: false };
   const api = {
@@ -115,6 +116,7 @@ function consulta(tabela) {
       const casa = (r) => q.filtros.every((f) => f(r));
       let data = null;
       if (q.op !== 'select') escritasBd.push({ tabela, op: q.op, patch: q.patch, linhas: q.linhas });
+      if (q.op === 'insert' && falharInsert) return Promise.resolve({ data: null, error: { message: 'erro simulado' } }).then(ok, falha);
       if (q.op === 'update') { data = alvo.filter(casa); data.forEach((r) => Object.assign(r, q.patch)); }
       else if (q.op === 'insert') { data = q.linhas.map((l, i) => ({ id: 'novo-' + (alvo.length + i), ...l })); alvo.push(...data); }
       else if (q.op === 'upsert') { for (const l of q.linhas) Object.assign(alvo.find((r) => r.id === l.id), l); data = q.linhas; }
@@ -172,6 +174,35 @@ const semEscrita = async (acao, mensagem) => {
   });
   assert.deepEqual(bd.neo_nsis_itens.map((i) => [i.nsmp, i.equipe, i.valor_final, i.nspr]), [['C1', '4404', 0, null], ['C1', '4404', 0, null]], 'NSRI: NSMC, valor pago zero aceito, sem NSPR');
   assert.equal(bd.neo_nsis[0].supervisor_equipe, 'Pedro');
+  assert.equal(bd.neo_nsis[0].fluxo_novo, true, 'a etapa 1 marca a NSIS como fluxo novo');
+
+  // Ordem das gravações: primeiro a NSIS (fluxo_novo e supervisor), depois os itens
+  bd = { neo_nsis_itens: [], neo_nsis: [{ servico: 'S1', fluxo_novo: false, supervisor_equipe: null }] };
+  escritasBd.length = 0;
+  await lib.fecharEtapa1(comoNsis(), { itens: [campos], equipe: '4404', nsmp: 'M1', supervisor: ' Vinícius ', valorPagoUS: null });
+  assert.deepEqual(escritasBd.map((e) => [e.tabela, e.op]), [['neo_nsis', 'update'], ['neo_nsis_itens', 'insert']], 'neo_nsis antes dos itens');
+  assert.deepEqual(escritasBd[0].patch, { fluxo_novo: true, supervisor_equipe: 'Vinícius' });
+  assert.equal(bd.neo_nsis_itens.length, 1);
+
+  // Se os itens falharem: erro claro e nenhum item parcial (a NSIS fica sem itens, ainda em "A fechar")
+  bd = { neo_nsis_itens: [], neo_nsis: [{ servico: 'S1', fluxo_novo: false, supervisor_equipe: null }] };
+  falharInsert = true;
+  await assert.rejects(
+    () => lib.fecharEtapa1(comoNsis(), { itens: [campos, { ...campos, codigo: '704002' }], equipe: '4404', nsmp: 'M1', supervisor: null, valorPagoUS: null }),
+    /^Error: Falha ao salvar os códigos: erro simulado/,
+  );
+  falharInsert = false;
+  assert.equal(bd.neo_nsis_itens.length, 0, 'nenhum item parcial');
+
+  // Regra de fluxo novo: marcada no banco, ou A fechar sem itens e sem "sem cobrança"
+  const reg = (extra) => lib.ehFluxoNovo({ fluxo_novo: false, etapa: 'A_FECHAR', qtd_itens: 0, sem_cobranca: false, ...extra });
+  assert.equal(reg({}), true, 'histórica sem itens em A fechar conta como fluxo novo');
+  assert.equal(reg({ fluxo_novo: true, etapa: 'AGUARDANDO_NSPR', qtd_itens: 2 }), true);
+  assert.equal(reg({ etapa: 'AGUARDANDO_FATURA', qtd_itens: 1 }), false, 'histórica com itens segue o layout antigo');
+  assert.equal(reg({ qtd_itens: 1 }), false);
+  assert.equal(reg({ etapa: 'SEM_COBRANCA', sem_cobranca: true }), false);
+  assert.equal(reg({ sem_cobranca: true }), false);
+  assert.equal(lib.ehFluxoNovo({ fluxo_novo: false, etapa: 'A_FECHAR', qtd_itens: 3, sem_cobranca: false }, 0), true, 'a quantidade de itens da janela prevalece');
 
   // NSPR e AP vazias, valor inválido, data vazia ou futura: recusadas sem gravar
   const itensNspr = [novoItem('1')];

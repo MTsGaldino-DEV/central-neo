@@ -95,6 +95,18 @@ export interface Nsis {
   data_lancamento_sf: string | null;
 }
 
+/**
+ * Uma NSIS segue o fluxo novo quando está marcada no banco ou quando está em "A fechar" sem nenhum item
+ * (e sem "sem cobrança"): não há histórico a preservar. Ao salvar a etapa 1 ela é marcada fluxo_novo = true.
+ * `qtdItens` permite usar a lista de itens já carregada na janela em vez do total da view.
+ */
+export function ehFluxoNovo(
+  n: Pick<Nsis, 'fluxo_novo' | 'etapa' | 'qtd_itens' | 'sem_cobranca'>,
+  qtdItens: number = n.qtd_itens,
+): boolean {
+  return n.fluxo_novo || (!n.sem_cobranca && n.etapa === 'A_FECHAR' && qtdItens === 0);
+}
+
 export interface ItemNsis {
   id: string;
   servico: string;
@@ -502,7 +514,8 @@ function valorPagoValido(v: number | null | undefined): v is number {
 
 /**
  * Etapa 1 do fluxo novo: grava os códigos com a mesma equipe e a mesma NSMP (NSRI: a NSMC, mesma coluna)
- * e o supervisor na NSIS. Na NSRI o valor pago também entra aqui e é rateado entre os códigos, sem NSPR.
+ * e o supervisor na NSIS, que passa a ser fluxo_novo = true (a NSIS histórica sem itens entra no fluxo novo aqui).
+ * Na NSRI o valor pago também entra aqui e é rateado entre os códigos, sem NSPR.
  * Valida tudo antes de gravar qualquer coisa.
  */
 export async function fecharEtapa1(
@@ -522,13 +535,20 @@ export async function fecharEtapa1(
     const partes = ratearPago(itens.map((it, i) => ({ id: String(i), valor_inicial: it.valor_inicial })), dados.valorPagoUS);
     partes.forEach((p, i) => { itens[i].valor_final = p.valor_final; });
   }
-  await criarItens(nsis.servico, itens);
 
+  // Primeiro a NSIS: marca o fluxo novo e grava o supervisor. Se os itens falharem em seguida (tudo-ou-nada),
+  // a NSIS fica sem itens em "A fechar", que é o estado de antes.
   const { error } = await supabase
     .from('neo_nsis')
-    .update({ supervisor_equipe: dados.supervisor?.trim() || null })
+    .update({ fluxo_novo: true, supervisor_equipe: dados.supervisor?.trim() || null })
     .eq('servico', nsis.servico);
-  if (error) throw new Error('Os códigos foram salvos, mas falhou gravar o supervisor: ' + error.message);
+  if (error) throw new Error('Falha ao gravar a equipe e o supervisor: ' + error.message);
+
+  try {
+    await criarItens(nsis.servico, itens);
+  } catch (e) {
+    throw new Error('Falha ao salvar os códigos: ' + (e instanceof Error ? e.message.replace(/^Falha ao salvar o lançamento: /, '') : String(e)));
+  }
 }
 
 /** Etapa 2 (NSIS que não é NSRI): NSPR e valor pago, em US, para a NSIS inteira. */

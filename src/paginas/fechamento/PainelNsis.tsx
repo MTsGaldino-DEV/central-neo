@@ -7,7 +7,7 @@ import EtapaChip from '@/components/fechamento/EtapaChip';
 import { JanelaModal } from '@/components/faturamento/JanelaModal';
 import {
   getNsis, criarItens, atualizarItem, atualizarItens, confirmarPago, excluirItem, definirSemCobranca,
-  formatarUS, formatarReais, emReais, formatarData, lerNumero, normalizarAP,
+  formatarUS, formatarReais, emReais, formatarData, lerNumero, normalizarAP, ehFluxoNovo,
   type Nsis, type ItemNsis, type ItemNsisCampos,
 } from '@/lib/fechamento';
 import { listarContrato, type CodigoContrato } from '@/lib/contrato';
@@ -76,6 +76,8 @@ export default function PainelNsis({ servico, onFechar, onAlterado }: Props) {
     else onFechar();
   }
 
+  // NSIS histórica em "A fechar" sem nenhum item não tem nada a preservar: segue o fluxo novo (a etapa 1 grava fluxo_novo = true)
+  const fluxoNovo = nsis ? ehFluxoNovo(nsis, itens.length) : false;
   const lancamentos = agruparLancamentos(itens);
   const pendente = lancamentos.find((l) => l.nsmp === null);
 
@@ -119,7 +121,10 @@ export default function PainelNsis({ servico, onFechar, onAlterado }: Props) {
               {nsis.observacao ? (
                 <p className="text-base font-semibold leading-relaxed">{nsis.observacao}</p>
               ) : nsis.origem === 'HISTORICO' ? (
-                <p className="text-sm text-aco">Veio da planilha de controle: o que foi feito está descrito nos itens de cobrança abaixo.</p>
+                <p className="text-sm text-aco">
+                  {fluxoNovo ? 'Veio da planilha de controle e ainda não tem itens de cobrança. Informe os códigos abaixo.'
+                    : 'Veio da planilha de controle: o que foi feito está descrito nos itens de cobrança abaixo.'}
+                </p>
               ) : (
                 <p className="text-sm font-semibold text-pendente flex items-center gap-1.5">
                   <AlertTriangle size={15} /> Sem observação no GDIS. Abra o serviço lá para ver o que foi feito.
@@ -174,9 +179,9 @@ export default function PainelNsis({ servico, onFechar, onAlterado }: Props) {
 
               {nsis.sem_cobranca ? (
                 <SemCobranca nsis={nsis} onAlterado={aposMudanca} />
-              ) : nsis.fluxo_novo ? (
+              ) : fluxoNovo ? (
                 <div className="space-y-3">
-                  <JanelaFluxo nsis={nsis} itens={itens} onAlterado={aposMudanca}
+                  <JanelaFluxo nsis={{ ...nsis, fluxo_novo: true }} itens={itens} onAlterado={aposMudanca}
                     onRascunho={(tem) => { setRascunho(tem); if (!tem) setAvisoSair(false); }} />
                   {itens.length === 0 && <MarcarSemCobranca servico={servico} onAlterado={aposMudanca} />}
                 </div>

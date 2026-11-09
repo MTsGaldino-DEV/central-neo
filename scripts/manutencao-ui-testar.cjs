@@ -37,6 +37,10 @@ const nsis = [
   baseNsis('900000001', 'R', 'Trocada cruzeta e podada arvore tocando na rede'),
   baseNsis('900000002', 'U', 'Dois pedidos antigos'),
   baseNsis('900000003', 'U', 'Sem nada lancado'),
+  // histórica sem nenhum item, em A fechar: conta como fluxo novo (nada do histórico a preservar)
+  { ...baseNsis('900000004', 'U', null), origem: 'HISTORICO', termino: '2026-11-08T15:00:00Z' },
+  // histórica com itens, aguardando fatura: continua com a janela e as colunas antigas
+  { ...baseNsis('900000005', 'U', 'Historica aguardando fatura'), origem: 'HISTORICO' },
   // fluxo novo: três a fechar (duas NSIS e uma NSRI) e uma que já tem NSMP
   novaNsis('900010010', 'NSIS', '2001', '2026-11-03T15:00:00Z', 'Fluxo novo A'),
   novaNsis('900010011', 'NSRI', '2002', '2026-11-04T15:00:00Z', 'Fluxo novo B'),
@@ -54,7 +58,13 @@ const legado = (servico, descricao, nsmp, valor) => ({
 let itens = [
   legado('900000002', 'Pedido antigo A', 'A1', 0.1), legado('900000002', 'Pedido antigo B', 'B1', 0.2),
   { ...legado('900010013', 'Pedido novo', 'N9', 0.1), equipe: '4404' },
+  // 900000001 e 900000003 já têm um lançamento antigo pago e faturado (sem itens elas seriam fluxo novo);
+  // o teste do formulário antigo parte de "Novo lançamento, com outra NSMP"
+  { ...legado('900000001', 'Lancamento antigo X', 'ANT1', 0.05), nspr: 'NSPRANT', valor_final: 0.05, fatura: 'AP 1' },
+  { ...legado('900000003', 'Lancamento antigo Z', 'ANT3', 0.05), nspr: 'NSPRANT', valor_final: 0.05, fatura: 'AP 3' },
+  { ...legado('900000005', 'Pedido FA', 'F1', 0.1), nspr: 'P5', valor_final: 0.1 },
 ];
+const idLegadoZ = itens.find((i) => i.servico === '900000003').id;
 const escritas = [];
 let atrasoGravacao = 0;
 // equipes que existem em neo_disp_frotas no simulado
@@ -185,7 +195,8 @@ function responderNsis(url, metodo, corpo) {
     page.on('dialog', async (d) => { dialogos.push(d.message()); if (aceitarDialogo) await d.accept(); else await d.dismiss(); });
     const foto = (nome) => page.screenshot({ path: path.join(saida, nome + '.png') });
     const janela = page.getByRole('dialog');
-    const form = page.getByRole('form', { name: 'O que deve ser cobrado?' });
+    const form = page.getByRole('form', { name: 'Novo lançamento' });
+    const novoLancamento = () => janela.getByRole('button', { name: 'Novo lançamento, com outra NSMP' }).click();
     const buscar = async (termo) => {
       await page.getByLabel('Código da Tabela 03').fill(termo);
       await page.getByText('Carregando a tabela').waitFor({ state: 'detached' });
@@ -196,9 +207,12 @@ function responderNsis(url, metodo, corpo) {
     await page.goto(urlBase + '/fechamento?etapa=TODAS');
     await page.getByRole('cell', { name: '900000001' }).first().click();
     await janela.waitFor();
+    await janela.getByText('Lancamento antigo X').waitFor();
+    assert.equal(await janela.getByRole('form', { name: /Códigos, equipe/ }).count(), 0, 'NSIS histórica com itens não usa a janela do fluxo novo');
     assert.equal(await page.locator('aside.max-w-2xl').count(), 0, 'a gaveta lateral saiu');
     const caixa = await janela.boundingBox();
     assert.ok(Math.abs(caixa.x + caixa.width / 2 - 720) < 2, 'a janela fica centralizada');
+    await novoLancamento();
     await form.waitFor();
     assert.equal(await page.getByRole('radio', { name: /× 1,2/ }).isChecked(), true, 'zona rural abre em × 1,2');
     await foto('manutencao-janela-vazia');
@@ -256,7 +270,7 @@ function responderNsis(url, metodo, corpo) {
     await foto('manutencao-lancamento');
 
     // ── Uma NSMP vale para todos os códigos ──
-    const ids = itens.filter((i) => i.servico === '900000001').map((i) => i.id);
+    const ids = itens.filter((i) => i.servico === '900000001' && i.codigo).map((i) => i.id);
     escritas.length = 0;
     await janela.getByLabel('Nº da NSMP').fill('NSMP77');
     await janela.getByLabel('Nº da NSMP').press('Enter');
@@ -300,7 +314,7 @@ function responderNsis(url, metodo, corpo) {
 
     // ── Edição usa o fator e mantém a NSMP dos outros ──
     await page.goto(urlBase + '/fechamento?etapa=TODAS&nsis=900000001');
-    await janela.getByRole('button', { name: 'Editar item 1' }).click();
+    await janela.getByRole('button', { name: 'Editar item 2' }).click();
     await janela.getByRole('radio', { name: /× 1,4/ }).waitFor();
     assert.equal(await janela.getByRole('radio', { name: /× 1,4/ }).isChecked(), true);
     await janela.getByText('× 1,0', { exact: true }).click();
@@ -310,6 +324,7 @@ function responderNsis(url, metodo, corpo) {
 
     // ── Item sem código no lançamento: sem fator, valor digitado ──
     await page.goto(urlBase + '/fechamento?etapa=TODAS&nsis=900000003');
+    await novoLancamento();
     await form.waitFor();
     assert.equal(await page.getByRole('radio', { name: /× 1,0/ }).isChecked(), true, 'zona urbana abre em × 1,0');
     await form.getByRole('button', { name: 'Lançar item sem código' }).click();
@@ -335,8 +350,9 @@ function responderNsis(url, metodo, corpo) {
     // NSIS do fluxo novo em A fechar: só as colunas dessa etapa
     for (const s of ['900000001', '900000002', '900000003']) ocultos.add(s);
     await page.goto(urlBase + '/fechamento?etapa=A_FECHAR');
-    await esperarLinhas(3);
+    await esperarLinhas(4);
     assert.deepEqual(await cabecalhos(), ['N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Etapa']);
+    await page.getByRole('cell', { name: '900000004' }).waitFor();
     assert.equal(await page.getByRole('button', { name: /Gerar NSMP/ }).count(), 0, 'chip de histórico vazio fica escondido');
     assert.equal(await page.getByRole('button', { name: /Aguard\. fatura/ }).count(), 0, 'chip de histórico vazio fica escondido');
     assert.equal(await page.getByRole('button', { name: /Sem cobrança/ }).count(), 1);
@@ -374,7 +390,7 @@ function responderNsis(url, metodo, corpo) {
 
     // Remover o chip restaura as linhas
     await page.getByRole('button', { name: 'Remover filtro' }).click();
-    await esperarLinhas(3);
+    await esperarLinhas(4);
     assert.equal(parametro('col.tipo_serv'), null);
     assert.equal(await page.getByText('Tipo do serviço: NSRI').count(), 0);
 
@@ -391,7 +407,7 @@ function responderNsis(url, metodo, corpo) {
     // Colunas de valor só ordenam: sem pesquisa nem lista
     ocultos.clear();
     await page.goto(urlBase + '/fechamento?etapa=TODAS');
-    await esperarLinhas(7);
+    await esperarLinhas(9);
     assert.deepEqual(await cabecalhos(), [
       'N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Equipe', 'Supervisor', 'NSMP', 'NSPR',
       'Lançamento Salesforce', 'Valor pago', 'Data lançamento SF', 'Apropriação', 'Observação', 'Etapa',
@@ -429,8 +445,9 @@ function responderNsis(url, metodo, corpo) {
     assert.ok(larguras.janela <= larguras.tela && larguras.doc <= larguras.tela, 'sem rolagem lateral: ' + JSON.stringify(larguras));
     await foto('manutencao-celular');
     await page.goto(urlBase + '/fechamento?etapa=TODAS');
-    itens = itens.filter((i) => i.servico !== '900000003');
+    itens = itens.filter((i) => i.servico !== '900000003' || i.id === idLegadoZ);
     await page.goto(urlBase + '/fechamento?etapa=TODAS&nsis=900000003');
+    await novoLancamento();
     await form.waitFor();
     await buscar('704003');
     await buscar('cruzeta');
@@ -685,6 +702,54 @@ function responderNsis(url, metodo, corpo) {
     assert.equal(escritas.filter((e) => e.metodo === 'POST').length, 1, 'uma confirmação só');
     await chip('Aguardando Salesforce').waitFor();
     atrasoGravacao = 0;
+
+    // NSIS histórica sem itens em A fechar: a lista mistura com fluxo novo e mesmo assim só tem as colunas da etapa
+    ocultos.clear();
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(urlBase + '/fechamento?etapa=A_FECHAR');
+    await page.getByRole('cell', { name: '900000004' }).waitFor();
+    assert.ok(await page.getByRole('cell', { name: '900010010' }).count() >= 1, 'a lista tem NSIS do fluxo novo junto');
+    assert.deepEqual(await cabecalhos(), ['N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Etapa'], 'sem Observação nem Lançamento Salesforce');
+    await foto('fila-historica-a-fechar');
+
+    // ...e a janela dela é a do fluxo novo: sem a palavra COD, pede códigos, equipe e NSMP
+    await abrir('900000004');
+    await formEtapa(E1).waitFor();
+    await semBotaoNovo();
+    assert.doesNotMatch(await janela.innerText(), /COD/i, 'a janela do fluxo novo não menciona COD');
+    assert.equal(await janela.getByRole('radio').count(), 2, 'só os dois fatores do fluxo novo');
+    await janela.getByRole('radio', { name: /Urbano e CSC/ }).waitFor();
+    await janela.getByRole('radio', { name: /Rural e CSC/ }).waitFor();
+    await formEtapa(E1).getByLabel('Código da Tabela 03').waitFor();
+    await formEtapa(E1).getByLabel('Nº da equipe').waitFor();
+    await formEtapa(E1).getByLabel('NSMP').waitFor();
+    await fotoNosDois('historica-etapa1');
+    await buscar('704003');
+    assert.doesNotMatch(await janela.innerText(), /COD/i, 'nem depois de escolher um código');
+    await formEtapa(E1).getByLabel('Nº da equipe').fill('4404');
+    await formEtapa(E1).getByLabel('NSMP').fill('NSMP500');
+    escritas.length = 0;
+    assert.equal(nsisDe('900000004').fluxo_novo, false);
+    await salvar(E1).click();
+    await formEtapa(E2).waitFor();
+    await chip('Aguardando NSPR').waitFor();
+    assert.equal(nsisDe('900000004').fluxo_novo, true, 'salvar a etapa 1 marca a NSIS como fluxo novo');
+    const gravadas = escritas.filter((e) => e.metodo !== 'GET').map((e) => (e.tabela ?? 'neo_nsis_itens') + ':' + e.metodo);
+    assert.deepEqual(gravadas, ['neo_nsis:PATCH', 'neo_nsis_itens:POST'], 'a NSIS é marcada antes de gravar os itens');
+    assert.equal(escritas[0].corpo.fluxo_novo, true);
+    assert.deepEqual(itensDe('900000004').map((i) => [i.codigo, i.equipe, i.nsmp]), [['704003', '4404', 'NSMP500']]);
+
+    // NSIS histórica com itens (aguardando fatura): colunas e janela antigas
+    await page.goto(urlBase + '/fechamento?etapa=AGUARDANDO_FATURA');
+    await esperarLinhas(1);
+    assert.deepEqual(await cabecalhos(), [
+      'N° Serviço', 'Tipo do serviço', 'NSMP', 'Equipe', 'Supervisor', 'NSPR', 'DT execução',
+      'Lançamento Salesforce', 'Valor pago', 'Apropriação', 'Observação', 'Etapa',
+    ]);
+    await abrir('900000005');
+    await janela.getByText('Pedido FA').waitFor();
+    assert.equal(await janela.getByRole('form', { name: /Códigos, equipe/ }).count(), 0, 'histórica com itens não ganha a janela do fluxo novo');
+    assert.equal(await janela.getByLabel('Ex.: AP 83809').count(), 1, 'a janela antiga pede a fatura');
 
     // NSIS histórica abre a janela antiga, com Novo lançamento
     await abrir('900000002');
