@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import {
   Copy, Check, Loader2, Plus, Pencil, Trash2, ChevronDown, ChevronRight, Ban, RotateCcw,
-  AlertTriangle, MapPin, CalendarCheck, FileText, Equal, FilePlus2, Repeat2,
+  AlertTriangle, MapPin, CalendarCheck, FileText, Equal,
 } from 'lucide-react';
 import EtapaChip from '@/components/fechamento/EtapaChip';
 import { JanelaModal } from '@/components/faturamento/JanelaModal';
@@ -10,8 +10,12 @@ import {
   formatarUS, formatarReais, emReais, formatarData, lerNumero, normalizarAP,
   type Nsis, type ItemNsis, type ItemNsisCampos,
 } from '@/lib/fechamento';
-import { listarContrato, retiradaPar, filtrarCodigos, type CodigoContrato } from '@/lib/contrato';
-import { FATORES, agruparLancamentos, calcularValor, fatorPadrao, textoFator, type Lancamento } from '@/lib/fechamentoCobranca';
+import { listarContrato, type CodigoContrato } from '@/lib/contrato';
+import { agruparLancamentos, calcularValor, fatorPadrao, textoFator, type Lancamento } from '@/lib/fechamentoCobranca';
+import {
+  ROTULO_SECAO, CAMPO, ROTULO_CAMPO, impedirEnvioPeloEnter, EditorCodigos, SeletorCodigo, SeletorFator, valorDaLinha, type LinhaLancamento,
+} from './ComponentesLancamento';
+import JanelaFluxo from './JanelaFluxo';
 
 interface Props {
   servico: string;
@@ -19,10 +23,6 @@ interface Props {
   /** Avisa a fila que algo mudou (etapa, valores). */
   onAlterado: () => void;
 }
-
-const ROTULO_SECAO = 'text-[11px] font-bold uppercase tracking-widest text-aco-claro';
-const CAMPO = 'w-full h-9 px-3 text-sm border border-linha rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sinal/30 focus:border-sinal';
-const ROTULO_CAMPO = 'block text-[11px] font-semibold text-aco mb-1';
 
 export default function PainelNsis({ servico, onFechar, onAlterado }: Props) {
   const [nsis, setNsis] = useState<Nsis | null>(null);
@@ -174,6 +174,12 @@ export default function PainelNsis({ servico, onFechar, onAlterado }: Props) {
 
               {nsis.sem_cobranca ? (
                 <SemCobranca nsis={nsis} onAlterado={aposMudanca} />
+              ) : nsis.fluxo_novo ? (
+                <div className="space-y-3">
+                  <JanelaFluxo nsis={nsis} itens={itens} onAlterado={aposMudanca}
+                    onRascunho={(tem) => { setRascunho(tem); if (!tem) setAvisoSair(false); }} />
+                  {itens.length === 0 && <MarcarSemCobranca servico={servico} onAlterado={aposMudanca} />}
+                </div>
               ) : (
                 <div className="space-y-3">
                   {lancamentos.map((l) => (
@@ -425,42 +431,9 @@ function ConfirmacaoNspr({ valorPedido, varios, onSalvar }: { valorPedido: numbe
   );
 }
 
-// ─── Fator: 1,0, 1,2 ou 1,4 ──────────────────────────────────────────────────
-
-function SeletorFator({ valor, zona, onMudar }: { valor: number; zona?: string | null; onMudar: (f: number) => void }) {
-  const grupo = useId();
-  return (
-    <fieldset>
-      <legend className={ROTULO_CAMPO}>Fator pago</legend>
-      <div className="grid grid-cols-3 gap-2">
-        {FATORES.map((f) => (
-          <label key={f.valor} className="cursor-pointer">
-            <input type="radio" name={grupo} className="peer sr-only" checked={valor === f.valor} onChange={() => onMudar(f.valor)} />
-            <span className="flex h-full flex-col items-center justify-center rounded-lg border border-linha bg-white px-2 py-1.5 text-center transition-colors hover:border-sinal/50 peer-checked:border-sinal peer-checked:bg-sinal-fundo peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sinal">
-              <span className={`font-codigo text-sm font-extrabold ${valor === f.valor ? 'text-sinal' : 'text-tinta'}`}>{f.rotulo}</span>
-              <span className="text-[11px] leading-tight text-aco">{f.legenda}</span>
-            </span>
-          </label>
-        ))}
-      </div>
-      {zona === 'R' && <p className="mt-1.5 text-[11px] text-aco">Zona rural no GDIS. Se o despacho foi COD, use × 1,4.</p>}
-      {zona === 'U' && <p className="mt-1.5 text-[11px] text-aco">Zona urbana no GDIS. Se o despacho foi COD, use × 1,2.</p>}
-    </fieldset>
-  );
-}
-
 // ─── Lançamento: vários códigos que saem na mesma NSMP ───────────────────────
 
 type CamposItem = Partial<ItemNsisCampos> & { descricao: string };
-
-interface LinhaLancamento {
-  chave: string;
-  codigo: CodigoContrato | null;
-  descricao: string;
-  quantidade: string;
-  /** só nas linhas sem código */
-  valorManual: string;
-}
 
 function FormLancamento({ titulo, zona, equipePadrao, fatorInicial, valorUS, onRascunho, onSalvar, onCancelar }: {
   titulo: string;
@@ -477,44 +450,15 @@ function FormLancamento({ titulo, zona, equipePadrao, fatorInicial, valorUS, onR
   const [linhas, setLinhas] = useState<LinhaLancamento[]>([]);
   const [fator, setFator] = useState(fatorInicial);
   const [equipe, setEquipe] = useState(equipePadrao);
-  const [aviso, setAviso] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
-  const proximaChave = useRef(0);
 
   useEffect(() => {
     listarContrato().then(setTabela).catch((e) => setErroTabela(e instanceof Error ? e.message : 'Falha ao carregar a tabela.'));
   }, []);
   useEffect(() => { onRascunho(linhas.length > 0); }, [linhas.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const codigosNaLista = new Set(linhas.flatMap((l) => (l.codigo ? [l.codigo.codigo] : [])));
-
-  function adicionarCodigo(c: CodigoContrato, quantidade = '1') {
-    if (codigosNaLista.has(c.codigo)) {
-      setAviso(`${c.codigo} já está na lista. Ajuste a quantidade.`);
-      return;
-    }
-    setAviso(null);
-    setLinhas((atual) => [...atual, { chave: c.codigo, codigo: c, descricao: `${c.operacao} ${c.atividade}`, quantidade, valorManual: '' }]);
-  }
-
-  function adicionarSemCodigo() {
-    setAviso(null);
-    proximaChave.current += 1;
-    setLinhas((atual) => [...atual, { chave: `manual-${proximaChave.current}`, codigo: null, descricao: '', quantidade: '1', valorManual: '' }]);
-  }
-
-  function mudar(chave: string, mudanca: Partial<LinhaLancamento>) {
-    setLinhas((atual) => atual.map((l) => (l.chave === chave ? { ...l, ...mudanca } : l)));
-  }
-
-  function valorDaLinha(l: LinhaLancamento): number | null {
-    if (!l.codigo) return lerNumero(l.valorManual);
-    const qtd = lerNumero(l.quantidade);
-    return qtd !== null ? calcularValor(l.codigo.fator_us, qtd, fator) : null;
-  }
-
-  const total = Math.round(linhas.reduce((soma, l) => soma + (valorDaLinha(l) ?? 0), 0) * 10000) / 10000;
+  const total = Math.round(linhas.reduce((soma, l) => soma + (valorDaLinha(l, fator) ?? 0), 0) * 10000) / 10000;
 
   async function enviar(e: FormEvent) {
     e.preventDefault();
@@ -553,77 +497,7 @@ function FormLancamento({ titulo, zona, equipePadrao, fatorInicial, valorUS, onR
       <p className="text-sm font-bold">{titulo}</p>
       {erro && <p role="alert" className="text-xs text-erro bg-erro-fundo rounded-lg px-3 py-2">{erro}</p>}
 
-      <div>
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <label htmlFor="busca-codigo" className="text-[11px] font-semibold text-aco">Código da Tabela 03</label>
-          <button type="button" onClick={adicionarSemCodigo} className="flex items-center gap-1 text-[11px] font-semibold text-sinal hover:underline">
-            <FilePlus2 size={12} /> Lançar item sem código
-          </button>
-        </div>
-        {erroTabela ? (
-          <p className="text-xs text-erro">{erroTabela}</p>
-        ) : (
-          <SeletorCodigo tabela={tabela} selecionado={null} naLista={codigosNaLista} entradaId="busca-codigo" onEscolher={adicionarCodigo} onLimpar={() => {}} />
-        )}
-        {aviso && <p className="mt-1.5 text-[11px] font-semibold text-pendente">{aviso}</p>}
-      </div>
-
-      {linhas.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-linha px-3 py-5 text-center text-xs text-aco">
-          Busque um código acima. Pode escolher quantos forem necessários: todos saem na mesma NSMP.
-        </p>
-      ) : (
-        <ul className="divide-y divide-linha rounded-lg border border-linha">
-          {linhas.map((l) => {
-            const par = l.codigo ? retiradaPar(l.codigo, tabela) : null;
-            const valor = valorDaLinha(l);
-            return (
-              <li key={l.chave} className="flex flex-wrap items-start gap-x-3 gap-y-2 px-3 py-2.5">
-                <div className="min-w-0 flex-[1_1_16rem]">
-                  <div className="flex items-center gap-2">
-                    {l.codigo
-                      ? <span className="font-codigo text-sm font-bold text-sinal">{l.codigo.codigo}</span>
-                      : <span className="rounded bg-nevoa px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-aco">Sem código</span>}
-                    {l.codigo && <span className="text-[11px] text-aco">{formatarUS(l.codigo.fator_us, 4)} US por {(l.codigo.unidade ?? 'unidade').toLowerCase()}</span>}
-                  </div>
-                  <input value={l.descricao} onChange={(e) => mudar(l.chave, { descricao: e.target.value })} aria-label="Descrição no pedido"
-                    placeholder={l.codigo ? 'Descrição no pedido' : 'Tipo de serviço cobrado'}
-                    className="mt-1 w-full rounded border border-transparent bg-transparent px-1 py-0.5 -ml-1 text-sm hover:border-linha focus:border-sinal focus:bg-white focus:outline-none focus:ring-2 focus:ring-sinal/30" />
-                  {par && !codigosNaLista.has(par.codigo) && (
-                    <button type="button" onClick={() => adicionarCodigo(par, l.quantidade)} className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-sinal hover:underline">
-                      <Repeat2 size={12} /> Foi substituição: incluir a retirada <span className="font-codigo">{par.codigo}</span>
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-1 items-start justify-between gap-3 sm:flex-none">
-                  {l.codigo ? (
-                    <label className="block w-20">
-                      <span className="block text-[11px] text-aco mb-0.5">Qtd ({(l.codigo.unidade ?? 'un').toLowerCase()})</span>
-                      <input value={l.quantidade} onChange={(e) => mudar(l.chave, { quantidade: e.target.value })} inputMode="decimal"
-                        className="w-full h-8 px-2 text-sm text-right border border-linha rounded-lg focus:outline-none focus:ring-2 focus:ring-sinal/30 focus:border-sinal" />
-                    </label>
-                  ) : (
-                    <label className="block w-24">
-                      <span className="block text-[11px] text-aco mb-0.5">Valor (US)</span>
-                      <input value={l.valorManual} onChange={(e) => mudar(l.chave, { valorManual: e.target.value })} inputMode="decimal" placeholder="0,10"
-                        className="w-full h-8 px-2 text-sm text-right border border-linha rounded-lg focus:outline-none focus:ring-2 focus:ring-sinal/30 focus:border-sinal" />
-                    </label>
-                  )}
-                  <div className="w-24 text-right">
-                    <span className="block text-[11px] text-aco mb-0.5">Pedido</span>
-                    <strong className="block h-8 text-sm leading-8 text-cobre">{formatarUS(valor, 4)}</strong>
-                  </div>
-                  <button type="button" onClick={() => { setLinhas((atual) => atual.filter((x) => x.chave !== l.chave)); setAviso(null); }}
-                    className="mt-[18px] grid size-8 place-items-center rounded-lg text-aco-claro hover:bg-erro-fundo hover:text-erro"
-                    title="Tirar da lista" aria-label={`Tirar ${l.codigo?.codigo ?? 'item sem código'} da lista`}>
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <EditorCodigos tabela={tabela} erroTabela={erroTabela} linhas={linhas} onLinhas={setLinhas} fator={fator} />
 
       <div className="grid gap-4 sm:grid-cols-[9rem_1fr]">
         <div>
@@ -650,11 +524,6 @@ function FormLancamento({ titulo, zona, equipePadrao, fatorInicial, valorUS, onR
       </div>
     </form>
   );
-}
-
-/** Enter num campo do lançamento não grava: a lista pode estar pela metade. Só o botão Salvar grava. */
-function impedirEnvioPeloEnter(e: KeyboardEvent<HTMLFormElement>) {
-  if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault();
 }
 
 // ─── Edição completa de um item já lançado ───────────────────────────────────
@@ -828,98 +697,6 @@ function FormEdicao({ titulo, inicial, onSalvar, onCancelar }: {
         </button>
       </div>
     </form>
-  );
-}
-
-/**
- * Busca na Tabela 03 por código ou palavras da atividade; setas + Enter escolhem.
- * Sem `selecionado`, a busca limpa depois de cada escolha para já pedir o próximo código.
- */
-function SeletorCodigo({ tabela, selecionado, naLista, entradaId, onEscolher, onLimpar }: {
-  tabela: CodigoContrato[];
-  selecionado: CodigoContrato | null;
-  naLista?: Set<string>;
-  entradaId?: string;
-  onEscolher: (c: CodigoContrato) => void;
-  onLimpar: () => void;
-}) {
-  const [termo, setTermo] = useState('');
-  const [aberto, setAberto] = useState(false);
-  const [ativo, setAtivo] = useState(0);
-  const entrada = useRef<HTMLInputElement>(null);
-  const fechamento = useRef<number | undefined>(undefined);
-
-  useEffect(() => { if (!selecionado) entrada.current?.focus(); }, [selecionado]);
-  useEffect(() => () => window.clearTimeout(fechamento.current), []);
-
-  const opcoes = filtrarCodigos(tabela.filter((c) => c.ativo), termo).slice(0, 30);
-
-  if (selecionado) {
-    return (
-      <div className="flex items-center gap-3 border border-sinal/40 bg-sinal-fundo rounded-lg px-3 py-2">
-        <span className="font-codigo font-bold text-sinal">{selecionado.codigo}</span>
-        <span className="flex-1 min-w-0 text-sm">
-          <span className="font-semibold">{selecionado.operacao}</span> {selecionado.atividade}
-          <span className="block text-[11px] text-aco">{formatarUS(selecionado.fator_us, 4)} US por {(selecionado.unidade ?? 'unidade').toLowerCase()}</span>
-        </span>
-        <button type="button" onClick={() => { onLimpar(); setTermo(''); }} className="text-xs font-semibold text-sinal hover:underline">Trocar</button>
-      </div>
-    );
-  }
-
-  function escolher(c: CodigoContrato) {
-    onEscolher(c);
-    setTermo('');
-    setAtivo(0);
-    setAberto(false);
-  }
-
-  function teclar(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'ArrowDown') { e.preventDefault(); setAberto(true); setAtivo((a) => Math.min(a + 1, opcoes.length - 1)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setAtivo((a) => Math.max(a - 1, 0)); }
-    else if (e.key === 'Enter') {
-      // Enter com a busca vazia não escolhe o primeiro código da tabela por acidente
-      e.preventDefault();
-      if (opcoes[ativo] && (termo.trim() || (aberto && ativo > 0))) escolher(opcoes[ativo]);
-    } else if (e.key === 'Escape' && aberto) { e.stopPropagation(); setAberto(false); }
-  }
-
-  return (
-    <div className="relative">
-      <input ref={entrada} id={entradaId} value={termo} onChange={(e) => { setTermo(e.target.value); setAtivo(0); setAberto(true); }}
-        onClick={() => setAberto(true)}
-        onFocus={() => { window.clearTimeout(fechamento.current); if (termo.trim()) setAberto(true); }}
-        onBlur={() => { fechamento.current = window.setTimeout(() => setAberto(false), 150); }}
-        onKeyDown={teclar}
-        placeholder="Digite o código ou o serviço: poda, espaçador, cruzeta, 704091…"
-        className={CAMPO} />
-      {aberto && (
-        <ul className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto bg-white border border-linha rounded-xl shadow-lg">
-          {opcoes.length === 0 && <li className="px-3 py-3 text-sm text-aco">{tabela.length === 0 ? 'Carregando a tabela…' : 'Nenhum código encontrado.'}</li>}
-          {opcoes.map((c, i) => (
-            <li key={c.codigo}>
-              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => escolher(c)}
-                onMouseEnter={() => setAtivo(i)}
-                className={`w-full text-left px-3 py-2 flex items-start gap-3 ${i === ativo ? 'bg-sinal-fundo' : ''}`}>
-                <span className="font-codigo text-xs font-bold text-sinal pt-0.5">{c.codigo}</span>
-                <span className="flex-1 min-w-0">
-                  <span className="block text-sm"><span className="font-semibold">{c.operacao}</span> {c.atividade}</span>
-                  <span className="block text-[11px] text-aco truncate">{c.descricao}</span>
-                </span>
-                {naLista?.has(c.codigo) ? (
-                  <span className="flex items-center gap-1 whitespace-nowrap pt-0.5 text-[11px] font-bold text-concluido"><Check size={12} /> Na lista</span>
-                ) : (
-                  <span className="text-xs font-bold text-cobre whitespace-nowrap pt-0.5">
-                    {formatarUS(c.fator_us, 4)}
-                    {c.acertado && <span className="block text-[9px] text-pendente text-right">acertado</span>}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }
 

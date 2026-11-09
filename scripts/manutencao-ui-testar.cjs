@@ -56,6 +56,9 @@ let itens = [
   { ...legado('900010013', 'Pedido novo', 'N9', 0.1), equipe: '4404' },
 ];
 const escritas = [];
+let atrasoGravacao = 0;
+// equipes que existem em neo_disp_frotas no simulado
+const frotas = { 4404: 'Vinícius' };
 
 function comItens(n) {
   const d = itens.filter((i) => i.servico === n.servico);
@@ -64,7 +67,7 @@ function comItens(n) {
   const semNsmp = conta((i) => !i.nsmp); const semNspr = conta((i) => i.nsmp && !i.nspr); const semFatura = conta((i) => i.nspr && !i.fatura);
   const unico = (f) => [...new Set(d.map((i) => i[f]).filter(Boolean))].join(', ') || null;
   return {
-    ...n, qtd_itens: d.length, valor_inicial_total: soma('valor_inicial'), valor_final_total: soma('valor_final'), itens_sem_nsmp: semNsmp, itens_sem_nspr: semNspr, itens_sem_fatura: semFatura,
+    ...n, supervisor: n.fluxo_novo ? n.supervisor_equipe : n.supervisor, qtd_itens: d.length, valor_inicial_total: soma('valor_inicial'), valor_final_total: soma('valor_final'), itens_sem_nsmp: semNsmp, itens_sem_nspr: semNspr, itens_sem_fatura: semFatura,
     itens_divergentes: 0, itens_sem_valor_pago: 0, nsmps: unico('nsmp'), nsprs: unico('nspr'), faturas: unico('fatura'), equipes: unico('equipe'), codigos: unico('codigo'),
     etapa: n.fluxo_novo
       ? (d.length === 0 || semNsmp ? 'A_FECHAR' : n.tipo_serv !== 'NSRI' && semNspr ? 'AGUARDANDO_NSPR' : !n.data_lancamento_sf ? 'AGUARDANDO_SALESFORCE' : d.some((i) => !i.fatura) ? 'AGUARDANDO_APROPRIACAO' : 'FATURADA')
@@ -131,6 +134,19 @@ function responderItens(url, metodo, corpo) {
   throw Error('Método inesperado: ' + metodo);
 }
 
+/** PATCH e POST em neo_nsis (supervisor, data do Salesforce, sem cobrança, NSIS manual). */
+function responderNsis(url, metodo, corpo) {
+  escritas.push({ metodo, corpo, consulta: url.search, tabela: 'neo_nsis' });
+  if (metodo === 'POST') { nsis.push({ ...baseNsis(corpo.servico, 'U', corpo.observacao ?? null), ...corpo }); return []; }
+  if (metodo === 'PATCH') {
+    const alvo = nsis.find((n) => n.servico === url.searchParams.get('servico')?.replace('eq.', ''));
+    assert.ok(alvo, 'PATCH em NSIS que não existe');
+    Object.assign(alvo, corpo);
+    return [];
+  }
+  throw Error('Método inesperado em neo_nsis: ' + metodo);
+}
+
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const falhas = [];
@@ -142,6 +158,7 @@ function responderItens(url, metodo, corpo) {
       if (metodo === 'OPTIONS') return route.fulfill({ status: 200 });
       const umObjeto = (req.headers().accept || '').includes('vnd.pgrst.object');
       let corpo = [];
+      if (metodo !== 'GET' && atrasoGravacao) await new Promise((r) => setTimeout(r, atrasoGravacao));
       if (url.hostname !== api.hostname) corpo = umObjeto ? null : [];
       else if (recurso === 'user') corpo = usuario;
       else if (recurso === 'neo_acessos') corpo = { user_id: id, papel: 'ADMIN', modulos: ['fechamento'], ativo: true };
@@ -154,6 +171,8 @@ function responderItens(url, metodo, corpo) {
         corpo = servico ? nsis.filter((n) => n.servico === servico).map(comItens) : filtrarLista(url);
         if (umObjeto) corpo = corpo[0];
       } else if (recurso === 'neo_nsis_itens') corpo = responderItens(url, metodo, req.postDataJSON());
+      else if (recurso === 'neo_nsis') corpo = responderNsis(url, metodo, req.postDataJSON());
+      else if (recurso === 'neo_supervisor_da_equipe') corpo = frotas[req.postDataJSON().p_equipe] ?? null;
       else throw Error('Requisição inesperada: ' + recurso);
       const quantos = Array.isArray(corpo) ? corpo.length : 1;
       await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': quantos ? `0-${quantos - 1}/${quantos}` : '*/0' }, body: JSON.stringify(corpo) });
@@ -416,8 +435,245 @@ function responderItens(url, metodo, corpo) {
     assert.ok(larguraForm.janela <= larguraForm.tela && larguraForm.corpo <= larguraForm.caixa, 'lançamento cabe no celular: ' + JSON.stringify(larguraForm));
     await foto('manutencao-celular-lancamento');
 
+    // ── Janela do fluxo novo: quatro etapas pela interface ──
+    const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+    const dias = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+    const mais = (servico, tipo, localidade) => nsis.push(novaNsis(servico, tipo, localidade, '2026-11-07T15:00:00Z', 'Fluxo novo, janela'));
+    mais('900020001', 'NSIS', '3001'); mais('900020002', 'NSRI', '3002'); mais('900020003', 'NSIS', '3003'); mais('900020004', 'NSIS', '3004');
+    await page.setViewportSize({ width: 1440, height: 1300 });
+    const abrir = async (servico) => { await page.goto(`${urlBase}/fechamento?etapa=TODAS&nsis=${servico}`); await janela.getByText('Detalhes da execução').waitFor(); };
+    const formEtapa = (nome) => janela.getByRole('form', { name: new RegExp(nome) });
+    const resumo = (nome) => janela.getByRole('region', { name: new RegExp(nome) });
+    const chip = (nome) => janela.getByText(nome, { exact: true }).first();
+    const salvar = (nome) => formEtapa(nome).getByRole('button', { name: 'Salvar' });
+    const alerta = (nome, texto) => formEtapa(nome).getByRole('alert').getByText(texto).waitFor();
+    const semBotaoNovo = async () => assert.equal(await janela.getByRole('button', { name: /Novo lançamento|Adicionar mais códigos/ }).count(), 0, 'o fluxo novo não tem novo lançamento');
+    const itensDe = (servico) => itens.filter((i) => i.servico === servico);
+    const nsisDe = (servico) => nsis.find((n) => n.servico === servico);
+    const E1 = 'Códigos, equipe e NSMP'; const E2 = 'NSPR e valor pago'; const E3 = 'Lançamento no Salesforce'; const E4 = 'Apropriação';
+    /** Nada passa da borda da janela, no desktop (1440) e no celular (390): confere e tira a foto dos dois. */
+    const fotoNosDois = async (nome) => {
+      for (const [largura, sufixo] of [[1440, 'desktop'], [390, 'celular']]) {
+        await page.setViewportSize({ width: largura, height: 1500 });
+        await page.waitForTimeout(150);
+        const cortes = await janela.evaluate((d) => {
+          const borda = d.getBoundingClientRect();
+          const fora = [...d.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.right > borda.right + 1 || r.left < borda.left - 1); });
+          return { rolagem: d.scrollWidth > d.clientWidth + 1, doc: document.documentElement.scrollWidth > window.innerWidth, fora: fora.map((e) => e.tagName + ':' + (e.textContent || '').slice(0, 30)) };
+        });
+        assert.deepEqual(cortes, { rolagem: false, doc: false, fora: [] }, `nada cortado em ${nome} (${sufixo})`);
+        await foto(`fluxo-${nome}-${sufixo}`);
+      }
+      await page.setViewportSize({ width: 1440, height: 1300 });
+    };
+
+    // NSIS comum: etapa 1
+    await abrir('900020001');
+    await formEtapa(E1).waitFor();
+    await semBotaoNovo();
+    assert.equal(await janela.getByRole('radio').count(), 2, 'só os dois fatores do fluxo novo');
+    assert.equal(await janela.getByRole('radio', { name: /Urbano e CSC/ }).isChecked(), true, 'zona urbana abre em Urbano e CSC');
+    assert.equal(await janela.getByRole('radio', { name: /Rural e CSC/ }).isChecked(), false);
+    assert.equal(await janela.getByText('× 1,4').count(), 0, 'sem fator de 1,4');
+    assert.equal(await formEtapa(E1).getByLabel('NSMP').count(), 1);
+    assert.equal(await formEtapa(E1).getByLabel('Valor pago (US)').count(), 0, 'só a NSRI pede valor pago na etapa 1');
+    await formEtapa(E1).getByRole('button', { name: 'Salvar' }).click();
+    await alerta(E1, 'Escolha pelo menos um código.');
+    await buscar('704003');
+    await formEtapa(E1).getByLabel('Qtd (arvore)').fill('2');
+    await janela.getByRole('radio', { name: /Rural e CSC/ }).check({ force: true });
+    await formEtapa(E1).getByText('0,2400 US').waitFor();
+    await salvar(E1).click();
+    await alerta(E1, 'Informe o número da equipe.');
+    await formEtapa(E1).getByLabel('Nº da equipe').fill('4404');
+    await formEtapa(E1).getByLabel('Nº da equipe').blur();
+    await formEtapa(E1).getByText('Supervisor: Vinícius').waitFor();
+    await salvar(E1).click();
+    await alerta(E1, 'Informe a NSMP.');
+    assert.equal(itensDe('900020001').length, 0, 'nada foi gravado com a NSMP vazia');
+    await formEtapa(E1).getByLabel('NSMP').fill('NSMP100');
+    await fotoNosDois('etapa1');
+    escritas.length = 0;
+    await salvar(E1).click();
+    await formEtapa(E2).waitFor();
+    await chip('Aguardando NSPR').waitFor();
+    assert.deepEqual(itensDe('900020001').map((i) => [i.codigo, i.quantidade, i.fator, i.valor_inicial, i.equipe, i.nsmp, i.nspr]), [['704003', 2, 1.2, 0.24, '4404', 'NSMP100', null]]);
+    assert.equal(nsisDe('900020001').supervisor_equipe, 'Vinícius', 'o supervisor da frota fica gravado');
+    await semBotaoNovo();
+    await resumo(E1).getByText('NSMP100').waitFor();
+
+    // Etapa 2: NSPR e valor pago em US
+    assert.equal(await janela.getByLabel('NSMC').count(), 0);
+    await salvar(E2).click();
+    await alerta(E2, 'Informe a NSPR.');
+    await formEtapa(E2).getByLabel('NSPR', { exact: true }).fill('NSPR200');
+    await salvar(E2).click();
+    await alerta(E2, 'Informe o valor pago (zero é aceito).');
+    assert.equal(itensDe('900020001')[0].nspr, null, 'valor vazio não avança a etapa');
+    await formEtapa(E2).getByLabel('Valor pago (US)').fill('abc');
+    await salvar(E2).click();
+    await alerta(E2, 'Valor pago inválido.');
+    await formEtapa(E2).getByLabel('Valor pago (US)').fill('1,5');
+    await fotoNosDois('etapa2');
+    await salvar(E2).click();
+    await formEtapa(E3).waitFor();
+    await chip('Aguardando Salesforce').waitFor();
+    assert.deepEqual([itensDe('900020001')[0].nspr, itensDe('900020001')[0].valor_final], ['NSPR200', 1.5], '1,5 vale 1,5');
+
+    // Etapa 3: data de lançamento no Salesforce
+    assert.equal(await formEtapa(E3).getByLabel('Data de lançamento no Salesforce').getAttribute('max'), hoje, 'a data máxima é hoje em Brasília');
+    await salvar(E3).click();
+    await alerta(E3, 'Informe a data de lançamento no Salesforce.');
+    await formEtapa(E3).getByLabel('Data de lançamento no Salesforce').fill(dias(3));
+    await salvar(E3).click();
+    await alerta(E3, 'A data de lançamento não pode ser futura.');
+    assert.equal(nsisDe('900020001').data_lancamento_sf, null, 'data futura não grava');
+    await formEtapa(E3).getByLabel('Data de lançamento no Salesforce').fill(hoje);
+    await fotoNosDois('etapa3');
+    await salvar(E3).click();
+    await formEtapa(E4).waitFor();
+    await chip('Aguardando apropriação').waitFor();
+    assert.equal(nsisDe('900020001').data_lancamento_sf, hoje);
+
+    // Etapa 4: apropriação, e a NSIS conclui
+    await salvar(E4).click();
+    await alerta(E4, 'Informe a apropriação.');
+    await formEtapa(E4).getByLabel('Apropriação (AP)').fill('83809');
+    await fotoNosDois('etapa4');
+    await salvar(E4).click();
+    await chip('Concluída').waitFor();
+    await janela.getByText('NSIS concluída').waitFor();
+    assert.equal(await janela.getByRole('form').count(), 0, 'concluída: só o resumo');
+    assert.equal(itensDe('900020001')[0].fatura, 'AP 83809');
+    await resumo(E4).getByText('AP 83809').waitFor();
+    await semBotaoNovo();
+    await fotoNosDois('concluida');
+
+    // Corrigir: reabre a etapa preenchida e atualiza no lugar
+    await resumo(E2).getByRole('button', { name: 'Corrigir' }).click();
+    assert.equal(await formEtapa(E2).getByLabel('NSPR', { exact: true }).inputValue(), 'NSPR200');
+    assert.equal(await formEtapa(E2).getByLabel('Valor pago (US)').inputValue(), '1,5');
+    await formEtapa(E2).getByLabel('NSPR', { exact: true }).fill('NSPR201');
+    await salvar(E2).click();
+    await formEtapa(E2).waitFor({ state: 'detached' });
+    await resumo(E2).getByText('NSPR201').waitFor();
+    assert.equal(itensDe('900020001')[0].nspr, 'NSPR201');
+    await chip('Concluída').waitFor();
+
+    await resumo(E1).getByRole('button', { name: 'Corrigir' }).click();
+    await formEtapa(E1).getByText('704003').waitFor();
+    assert.equal(await formEtapa(E1).getByLabel('Nº da equipe').inputValue(), '4404');
+    await formEtapa(E1).getByText('Supervisor: Vinícius').waitFor();
+    assert.equal(await formEtapa(E1).getByLabel('NSMP').inputValue(), 'NSMP100');
+    assert.equal(await formEtapa(E1).getByLabel('Qtd (arvore)').inputValue(), '2');
+    assert.equal(await formEtapa(E1).getByRole('button', { name: 'Cancelar' }).count(), 1);
+    await fotoNosDois('corrigir-etapa1');
+    await formEtapa(E1).getByLabel('NSMP').fill('NSMP101');
+    await formEtapa(E1).getByLabel('Qtd (arvore)').fill('3');
+    await salvar(E1).click();
+    await formEtapa(E1).waitFor({ state: 'detached' });
+    await resumo(E1).getByText('NSMP101').waitFor();
+    assert.deepEqual(itensDe('900020001').map((i) => [i.nsmp, i.quantidade, i.valor_inicial, i.nspr, i.fatura, i.valor_final]), [['NSMP101', 3, 0.36, 'NSPR201', 'AP 83809', 1.5]], 'a correção mantém NSPR, AP e total pago');
+
+    // Desfazer esta etapa: a NSIS volta para ela e o dado some (etapa 1 não tem desfazer)
+    assert.equal(await resumo(E1).getByRole('button', { name: 'Desfazer esta etapa' }).count(), 0);
+    await resumo(E4).getByRole('button', { name: 'Desfazer esta etapa' }).click();
+    await chip('Aguardando apropriação').waitFor();
+    assert.equal(itensDe('900020001')[0].fatura, null);
+    await formEtapa(E4).waitFor();
+    await resumo(E3).getByRole('button', { name: 'Desfazer esta etapa' }).click();
+    await chip('Aguardando Salesforce').waitFor();
+    assert.equal(nsisDe('900020001').data_lancamento_sf, null);
+    await resumo(E2).getByRole('button', { name: 'Desfazer esta etapa' }).click();
+    await chip('Aguardando NSPR').waitFor();
+    assert.deepEqual([itensDe('900020001')[0].nspr, itensDe('900020001')[0].valor_final], [null, null]);
+    // valor pago zero é aceito
+    await formEtapa(E2).getByLabel('NSPR', { exact: true }).fill('NSPR202');
+    await formEtapa(E2).getByLabel('Valor pago (US)').fill('0');
+    await salvar(E2).click();
+    await chip('Aguardando Salesforce').waitFor();
+    assert.deepEqual([itensDe('900020001')[0].nspr, itensDe('900020001')[0].valor_final], ['NSPR202', 0], 'zero é um valor pago');
+
+    // NSRI: etapa 1 pede NSMC e valor pago, e vai direto para o Salesforce
+    await abrir('900020002');
+    await formEtapa('Códigos, equipe, NSMC e valor pago').waitFor();
+    assert.equal(await janela.getByLabel('NSMP').count(), 0, 'na NSRI o campo é NSMC');
+    await buscar('704004');
+    await formEtapa('NSMC').getByLabel('Nº da equipe').fill('4404');
+    await formEtapa('NSMC').getByLabel('NSMC').fill('NSMC1');
+    await formEtapa('NSMC').getByRole('button', { name: 'Salvar' }).click();
+    await alerta('NSMC', 'Informe o valor pago (zero é aceito).');
+    assert.equal(itensDe('900020002').length, 0, 'sem valor pago a NSRI não grava');
+    await formEtapa('NSMC').getByLabel('Valor pago (US)').fill('0,5');
+    await fotoNosDois('nsri-etapa1');
+    await formEtapa('NSMC').getByRole('button', { name: 'Salvar' }).click();
+    await formEtapa(E3).waitFor();
+    await chip('Aguardando Salesforce').waitFor();
+    assert.deepEqual(itensDe('900020002').map((i) => [i.nsmp, i.nspr, i.valor_final]), [['NSMC1', null, 0.5]]);
+    assert.equal(await janela.getByLabel('NSPR', { exact: true }).count(), 0, 'a NSRI não pede NSPR');
+    await resumo('Códigos, equipe, NSMC').getByText('NSMC1').waitFor();
+    await fotoNosDois('nsri-etapa3');
+
+    // Supervisor: equipe fora das frotas abre o campo à mão, opcional
+    await abrir('900020003');
+    await formEtapa(E1).waitFor();
+    await buscar('704003');
+    await formEtapa(E1).getByLabel('NSMP').fill('NSMP300');
+    const equipeCampo = formEtapa(E1).getByLabel('Nº da equipe');
+    assert.equal(await formEtapa(E1).getByText(/Supervisor/).count(), 0, 'sem equipe não há supervisor');
+    await equipeCampo.fill('abc'); await equipeCampo.blur();
+    await formEtapa(E1).getByLabel('Supervisor (informar à mão)').waitFor();
+    await foto('fluxo-supervisor-manual');
+    await equipeCampo.fill('999999'); await equipeCampo.blur();
+    await formEtapa(E1).getByLabel('Supervisor (informar à mão)').waitFor();
+    await equipeCampo.fill('4404'); await equipeCampo.blur();
+    await formEtapa(E1).getByText('Supervisor: Vinícius').waitFor();
+    assert.equal(await formEtapa(E1).getByLabel('Supervisor (informar à mão)').count(), 0, 'equipe da frota preenche sozinha');
+    await equipeCampo.fill('abc'); await equipeCampo.blur();
+    await formEtapa(E1).getByLabel('Supervisor (informar à mão)').waitFor();
+    await salvar(E1).click(); // o campo à mão é opcional: vazio não bloqueia
+    await formEtapa(E2).waitFor();
+    assert.equal(nsisDe('900020003').supervisor_equipe, null);
+    assert.equal(itensDe('900020003')[0].equipe, 'abc');
+    // e preenchido na correção
+    await resumo(E1).getByRole('button', { name: 'Corrigir' }).click();
+    await formEtapa(E1).getByLabel('Supervisor (informar à mão)').fill('Elton');
+    await salvar(E1).click();
+    await formEtapa(E1).waitFor({ state: 'detached' });
+    assert.equal(nsisDe('900020003').supervisor_equipe, 'Elton');
+    await resumo(E1).getByText('Elton').waitFor();
+
+    // Duplo clique em Salvar grava uma vez só e não passa duas etapas
+    atrasoGravacao = 400;
+    await abrir('900020004');
+    await formEtapa(E1).waitFor();
+    await buscar('704001');
+    await formEtapa(E1).getByLabel('Nº da equipe').fill('4404');
+    await formEtapa(E1).getByLabel('NSMP').fill('NSMP400');
+    escritas.length = 0;
+    await salvar(E1).dblclick();
+    await formEtapa(E2).waitFor();
+    assert.equal(itensDe('900020004').length, 1, 'o duplo clique não duplica o item');
+    assert.equal(escritas.filter((e) => e.metodo === 'POST' && !e.tabela).length, 1, 'uma gravação de itens só');
+    await chip('Aguardando NSPR').waitFor();
+    await formEtapa(E2).getByLabel('NSPR', { exact: true }).fill('NSPR400');
+    await formEtapa(E2).getByLabel('Valor pago (US)').fill('0,1');
+    escritas.length = 0;
+    await salvar(E2).dblclick();
+    await formEtapa(E3).waitFor();
+    assert.equal(escritas.filter((e) => e.metodo === 'POST').length, 1, 'uma confirmação só');
+    await chip('Aguardando Salesforce').waitFor();
+    atrasoGravacao = 0;
+
+    // NSIS histórica abre a janela antiga, com Novo lançamento
+    await abrir('900000002');
+    await janela.getByRole('button', { name: 'Novo lançamento, com outra NSMP' }).waitFor();
+    assert.equal(await janela.getByRole('form', { name: new RegExp(E1) }).count(), 0);
+    assert.equal(await janela.getByRole('button', { name: 'Desfazer esta etapa' }).count(), 0);
+    await janela.getByText('Pedido antigo A').waitFor();
+
     assert.deepEqual(falhas, [], 'sem erro de JavaScript na tela');
-    console.log('OK: janela no meio, vários códigos, fator, aviso ao fechar, NSMP/NSPR/AP do lançamento, rateio, histórico, edição, item sem código, colunas por etapa, filtros por coluna e celular.');
+    console.log('OK: janela no meio, vários códigos, fator, aviso ao fechar, NSMP/NSPR/AP do lançamento, rateio, histórico, edição, item sem código, colunas por etapa, filtros por coluna, celular e janela do fluxo novo (4 etapas, NSRI, supervisor, valor pago, data, desfazer, corrigir, duplo clique).');
   } catch (e) {
     await globalThis.paginaTeste?.screenshot({ path: path.join(saida, 'manutencao-falha.png') });
     throw e;

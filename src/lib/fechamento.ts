@@ -561,6 +561,78 @@ export async function informarApropriacao(itens: ItemNsis[], ap: string): Promis
   await atualizarItens(itens.map((it) => it.id), { fatura: numero });
 }
 
+/** Desfaz a etapa 2: apaga NSPR e valor pago de todos os códigos; a NSIS volta para "Aguardando NSPR". */
+export async function desfazerNspr(itens: ItemNsis[]): Promise<void> {
+  if (itens.length < 1) return;
+  await atualizarItens(itens.map((it) => it.id), { nspr: null, valor_final: null });
+}
+
+/** Desfaz a etapa 3: apaga a data de lançamento no Salesforce; a NSIS volta para "Aguardando Salesforce". */
+export async function desfazerLancamentoSf(servico: string): Promise<void> {
+  const { error } = await supabase.from('neo_nsis').update({ data_lancamento_sf: null }).eq('servico', servico);
+  if (error) throw new Error('Falha ao desfazer a data de lançamento: ' + error.message);
+}
+
+/** Desfaz a etapa 4: apaga a apropriação (AP) de todos os códigos; a NSIS volta para "Aguardando apropriação". */
+export async function desfazerApropriacao(itens: ItemNsis[]): Promise<void> {
+  if (itens.length < 1) return;
+  await atualizarItens(itens.map((it) => it.id), { fatura: null });
+}
+
+/** O que a etapa 1 informa de cada código; NSPR, valor pago e AP não entram aqui. */
+export type CamposEtapa1 = Pick<ItemNsisCampos, 'descricao' | 'codigo' | 'quantidade' | 'fator' | 'fator_unitario' | 'valor_inicial'>;
+
+/**
+ * Corrige a etapa 1 já salva: itens com `id` são atualizados no lugar (NSPR, valor pago e AP seguem com eles),
+ * os que sumiram da lista são excluídos e os novos entram com a NSPR e a AP que a NSIS já tem.
+ * O total pago que já existia é redistribuído entre os códigos finais; na NSRI vale o valor pago do formulário.
+ */
+export async function corrigirEtapa1(
+  nsis: Nsis,
+  atuais: ItemNsis[],
+  dados: { itens: (CamposEtapa1 & { id?: string })[]; equipe: string; nsmp: string; supervisor: string | null; valorPagoUS: number | null }
+): Promise<void> {
+  const equipe = dados.equipe.trim();
+  const nsmp = dados.nsmp.trim();
+  const nsri = nsis.tipo_serv === 'NSRI';
+  if (dados.itens.length < 1) throw new Error('Informe ao menos um código.');
+  if (!equipe) throw new Error('Informe o número da equipe.');
+  if (!nsmp) throw new Error(nsri ? 'Informe a NSMC.' : 'Informe a NSMP.');
+  if (nsri && !valorPagoValido(dados.valorPagoUS)) throw new Error('Informe o valor pago (zero é aceito).');
+
+  const nspr = atuais.find((it) => it.nspr)?.nspr ?? null;
+  const fatura = atuais.find((it) => it.fatura)?.fatura ?? null;
+  const totalPago = nsri ? dados.valorPagoUS : atuais.some((it) => it.valor_final !== null)
+    ? Math.round(atuais.reduce((s, it) => s + (it.valor_final ?? 0), 0) * 10000) / 10000
+    : null;
+
+  const mantidos = new Set(dados.itens.flatMap((it) => (it.id ? [it.id] : [])));
+  for (const it of atuais) if (!mantidos.has(it.id)) await excluirItem(it.id);
+  const novos: ItemNsisCampos[] = [];
+  for (const { id, ...campos } of dados.itens) {
+    const comum = { ...campos, equipe, nsmp };
+    if (id) await atualizarItem(id, comum);
+    else novos.push({ ...comum, nspr, fatura, valor_final: null, us_adicional: null, observacao: null });
+  }
+  if (novos.length > 0) await criarItens(nsis.servico, novos);
+
+  if (totalPago !== null && (nsri || nspr)) {
+    const { data, error } = await supabase.from('neo_nsis_itens').select('*').eq('servico', nsis.servico).order('criado_em', { ascending: true }).order('codigo', { ascending: true });
+    if (error) throw new Error('Falha ao recarregar os itens: ' + error.message);
+    const finais = (data ?? []).map(normalizarItem);
+    const partes = ratearPago(finais, totalPago);
+    const linhas = finais.map((it, i) => ({ id: it.id, servico: it.servico, descricao: it.descricao, valor_final: partes[i].valor_final }));
+    const { error: e2 } = await supabase.from('neo_nsis_itens').upsert(linhas, { onConflict: 'id' });
+    if (e2) throw new Error('Falha ao redistribuir o valor pago: ' + e2.message);
+  }
+
+  const { error } = await supabase
+    .from('neo_nsis')
+    .update({ supervisor_equipe: dados.supervisor?.trim() || null })
+    .eq('servico', nsis.servico);
+  if (error) throw new Error('Os códigos foram salvos, mas falhou gravar o supervisor: ' + error.message);
+}
+
 export async function excluirItem(id: string): Promise<void> {
   const { error } = await supabase.from('neo_nsis_itens').delete().eq('id', id);
   if (error) throw new Error('Falha ao excluir o item: ' + error.message);

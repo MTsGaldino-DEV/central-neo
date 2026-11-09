@@ -94,4 +94,119 @@ assert.deepEqual(
   'pago zero é um valor, não falta de valor',
 );
 
-console.log('OK: fator, valor do código, agrupamento por NSMP e rateio do valor pago.');
+// ─── Gravação do fluxo novo, com o Supabase simulado em memória ─────────────
+const caminhoSupabase = require.resolve('../src/lib/supabase.ts');
+let bd = { neo_nsis_itens: [], neo_nsis: [] };
+const escritasBd = [];
+function consulta(tabela) {
+  const q = { op: 'select', filtros: [], patch: null, linhas: null, selecionar: false, unico: false };
+  const api = {
+    select() { q.selecionar = true; return api; },
+    update(patch) { q.op = 'update'; q.patch = patch; return api; },
+    insert(linhas) { q.op = 'insert'; q.linhas = linhas; return api; },
+    upsert(linhas) { q.op = 'upsert'; q.linhas = linhas; return api; },
+    delete() { q.op = 'delete'; return api; },
+    eq(c, v) { q.filtros.push((r) => r[c] === v); return api; },
+    in(c, vs) { q.filtros.push((r) => vs.includes(r[c])); return api; },
+    order() { return api; },
+    single() { q.unico = true; return api; },
+    then(ok, falha) {
+      const alvo = bd[tabela];
+      const casa = (r) => q.filtros.every((f) => f(r));
+      let data = null;
+      if (q.op !== 'select') escritasBd.push({ tabela, op: q.op, patch: q.patch, linhas: q.linhas });
+      if (q.op === 'update') { data = alvo.filter(casa); data.forEach((r) => Object.assign(r, q.patch)); }
+      else if (q.op === 'insert') { data = q.linhas.map((l, i) => ({ id: 'novo-' + (alvo.length + i), ...l })); alvo.push(...data); }
+      else if (q.op === 'upsert') { for (const l of q.linhas) Object.assign(alvo.find((r) => r.id === l.id), l); data = q.linhas; }
+      else if (q.op === 'delete') { bd[tabela] = alvo.filter((r) => !casa(r)); }
+      else data = alvo.filter(casa);
+      return Promise.resolve({ data: q.unico ? data?.[0] ?? null : q.selecionar || q.op === 'select' ? data : null, error: null }).then(ok, falha);
+    },
+  };
+  return api;
+}
+require.cache[caminhoSupabase] = { id: caminhoSupabase, filename: caminhoSupabase, loaded: true, exports: { supabase: { from: consulta } } };
+const lib = require('../src/lib/fechamento.ts');
+const novoItem = (id, extra = {}) => ({
+  id, servico: 'S1', descricao: 'Item ' + id, codigo: '7040' + id, quantidade: 1, fator: 1, fator_unitario: 0.1, equipe: '4404', valor_inicial: 0.1, us_adicional: null,
+  nsmp: 'M1', nspr: null, valor_final: null, fatura: null, observacao: null, ...extra,
+});
+const comoNsis = (extra = {}) => ({ servico: 'S1', tipo_serv: 'NSIS', ...extra });
+const semEscrita = async (acao, mensagem) => {
+  const antes = escritasBd.length;
+  await assert.rejects(acao, mensagem);
+  assert.equal(escritasBd.length, antes, 'a validação falha antes de gravar qualquer coisa');
+};
+
+(async () => {
+  // Desfazer etapa 2: some a NSPR e o valor pago de todos os códigos; o resto fica
+  bd = {
+    neo_nsis_itens: [novoItem('1', { nspr: 'P1', valor_final: 0.1, fatura: 'AP 1' }), novoItem('2', { nspr: 'P1', valor_final: 0.2, fatura: 'AP 1' })],
+    neo_nsis: [{ servico: 'S1', data_lancamento_sf: '2026-11-05', supervisor_equipe: 'Ana' }],
+  };
+  await lib.desfazerNspr(bd.neo_nsis_itens);
+  assert.deepEqual(bd.neo_nsis_itens.map((i) => [i.nspr, i.valor_final, i.nsmp, i.fatura]), [[null, null, 'M1', 'AP 1'], [null, null, 'M1', 'AP 1']], 'só NSPR e valor pago saem');
+
+  // Desfazer etapa 3: some a data do Salesforce
+  await lib.desfazerLancamentoSf('S1');
+  assert.equal(bd.neo_nsis[0].data_lancamento_sf, null);
+  assert.equal(bd.neo_nsis[0].supervisor_equipe, 'Ana', 'o supervisor fica');
+
+  // Desfazer etapa 4: some a AP, a NSPR fica
+  bd.neo_nsis_itens.forEach((i) => { i.nspr = 'P1'; });
+  await lib.desfazerApropriacao(bd.neo_nsis_itens);
+  assert.deepEqual(bd.neo_nsis_itens.map((i) => [i.fatura, i.nspr]), [[null, 'P1'], [null, 'P1']]);
+
+  // Etapa 1 valida antes de gravar: nada é gravado se falta algo
+  bd = { neo_nsis_itens: [], neo_nsis: [{ servico: 'S1', supervisor_equipe: null }] };
+  const campos = {
+    descricao: 'Cruzeta', codigo: '704001', quantidade: 1, fator: 1, fator_unitario: 0.1, valor_inicial: 0.1, us_adicional: null,
+    equipe: null, nsmp: null, nspr: null, valor_final: null, fatura: null, observacao: null,
+  };
+  await semEscrita(() => lib.fecharEtapa1(comoNsis(), { itens: [], equipe: '4404', nsmp: 'M1', supervisor: null, valorPagoUS: null }), /ao menos um código/);
+  await semEscrita(() => lib.fecharEtapa1(comoNsis(), { itens: [campos], equipe: ' ', nsmp: 'M1', supervisor: null, valorPagoUS: null }), /equipe/);
+  await semEscrita(() => lib.fecharEtapa1(comoNsis(), { itens: [campos], equipe: '4404', nsmp: '', supervisor: null, valorPagoUS: null }), /NSMP/);
+  await semEscrita(() => lib.fecharEtapa1(comoNsis({ tipo_serv: 'NSRI' }), { itens: [campos], equipe: '4404', nsmp: 'C1', supervisor: null, valorPagoUS: null }), /valor pago/);
+  await lib.fecharEtapa1(comoNsis({ tipo_serv: 'NSRI' }), {
+    itens: [campos, { ...campos, codigo: '704002', valor_inicial: 0.3 }], equipe: '4404', nsmp: 'C1', supervisor: 'Pedro', valorPagoUS: 0,
+  });
+  assert.deepEqual(bd.neo_nsis_itens.map((i) => [i.nsmp, i.equipe, i.valor_final, i.nspr]), [['C1', '4404', 0, null], ['C1', '4404', 0, null]], 'NSRI: NSMC, valor pago zero aceito, sem NSPR');
+  assert.equal(bd.neo_nsis[0].supervisor_equipe, 'Pedro');
+
+  // NSPR e AP vazias, valor inválido, data vazia ou futura: recusadas sem gravar
+  const itensNspr = [novoItem('1')];
+  bd = { neo_nsis_itens: itensNspr, neo_nsis: [{ servico: 'S1', data_lancamento_sf: null }] };
+  await semEscrita(() => lib.informarNspr(itensNspr, ' ', 1), /NSPR/);
+  await semEscrita(() => lib.informarNspr(itensNspr, 'P1', Number.NaN), /valor pago/);
+  await semEscrita(() => lib.informarApropriacao(itensNspr, ' '), /apropriação/);
+  await semEscrita(() => lib.informarLancamentoSf('S1', ''), /Informe a data/);
+  await semEscrita(() => lib.informarLancamentoSf('S1', '2099-01-01'), /futura/);
+  await semEscrita(() => lib.informarLancamentoSf('S1', '2026-02-31'), /inválida/);
+  await lib.informarNspr(itensNspr, 'P1', 0);
+  assert.deepEqual([itensNspr[0].nspr, itensNspr[0].valor_final], ['P1', 0], 'valor pago zero é aceito');
+  await lib.informarLancamentoSf('S1', '2026-11-05');
+  assert.equal(bd.neo_nsis[0].data_lancamento_sf, '2026-11-05');
+  await lib.informarApropriacao(itensNspr, '83809');
+  assert.equal(itensNspr[0].fatura, 'AP 83809');
+
+  // Corrigir a etapa 1 depois da NSPR: atualiza no lugar, apaga o que saiu, copia NSPR e AP para o novo e refaz o rateio do total pago
+  bd = {
+    neo_nsis_itens: [novoItem('1', { nspr: 'P1', valor_final: 0.1, fatura: 'AP 9' }), novoItem('2', { nspr: 'P1', valor_final: 0.2, fatura: 'AP 9', valor_inicial: 0.2 })],
+    neo_nsis: [{ servico: 'S1', supervisor_equipe: 'Ana' }],
+  };
+  const atuais = [...bd.neo_nsis_itens];
+  await lib.corrigirEtapa1(comoNsis(), atuais, {
+    itens: [
+      { id: '1', descricao: 'Item 1', codigo: '70401', quantidade: 2, fator: 1.2, fator_unitario: 0.1, valor_inicial: 0.24 },
+      { descricao: 'Novo', codigo: '704009', quantidade: 1, fator: 1.2, fator_unitario: 0.06, valor_inicial: 0.072 },
+    ],
+    equipe: '4052', nsmp: 'M2', supervisor: 'Elton', valorPagoUS: null,
+  });
+  assert.deepEqual(bd.neo_nsis_itens.map((i) => i.codigo), ['70401', '704009'], 'o item 2 saiu e o novo entrou');
+  assert.ok(bd.neo_nsis_itens.every((i) => i.equipe === '4052' && i.nsmp === 'M2' && i.nspr === 'P1' && i.fatura === 'AP 9'), 'equipe e NSMP novas; NSPR e AP seguem');
+  assert.equal(Math.round(bd.neo_nsis_itens.reduce((s, i) => s + i.valor_final, 0) * 10000) / 10000, 0.3, 'o total pago continua o mesmo');
+  assert.equal(bd.neo_nsis[0].supervisor_equipe, 'Elton');
+
+  console.log('OK: fator, valor do código, agrupamento por NSMP, rateio do valor pago e gravação das etapas do fluxo novo.');
+})().catch((e) => { console.error(e); process.exitCode = 1; });
+
