@@ -173,17 +173,18 @@ const celula = (page, f, d) => page.locator(`.disp-cel[data-frota="${f}"][data-d
       assert.match(await celula(page, 4052, '2026-11-03').getAttribute('class'), /\bok\b/);
       assert.equal(db.linhas.get('2026-11-03|4052').situacao, 'CADASTROU');
 
-      // Contestável e "Falta conferir" são amarelos diferentes, lado a lado
+      // Contestável em amarelo e "Falta conferir" no fundo das pílulas ativas, lado a lado
       await celula(page, 4174, '2026-11-04').click();
       const pop4 = page.locator('[data-slot="popover-content"]');
       await pop4.getByRole('button', { name: 'Atestado' }).click();
       await pop4.waitFor({ state: 'detached' });
       assert.equal(await celula(page, 4174, '2026-11-04').textContent(), 'AT');
       const corDe = (l) => l.evaluate((e) => getComputedStyle(e).backgroundColor);
-      assert.notEqual(await corDe(celula(page, 4174, '2026-11-04')), await corDe(celula(page, 4174, '2026-11-05')), 'contestável não parece falta conferir');
+      assert.equal(await corDe(celula(page, 4174, '2026-11-05')), 'rgb(230, 244, 246)', 'falta conferir com o fundo da pílula ativa');
+      assert.equal(await corDe(page.locator('.disp-sigla.p')), await corDe(page.getByRole('button', { name: 'Todas as frotas' })), 'mesma cor da referência');
       await page.mouse.move(0, 0);
       await page.waitForTimeout(150);
-      await page.screenshot({ path: path.join(saida, `disp-amarelos-${nome}.png`) });
+      await page.screenshot({ path: path.join(saida, `disp-pendente-${nome}.png`) });
 
       // Do cabeçalho do mês para o dia
       await page.locator('[data-ir-dia="2026-11-05"]').click();
