@@ -38,8 +38,8 @@ const ETAPAS_FLUXO: Etapa[] = ['A_FECHAR', 'AGUARDANDO_NSPR', 'AGUARDANDO_SALESF
 const ETAPAS_HISTORICO: Etapa[] = ['AGUARDANDO_NSMP', 'AGUARDANDO_FATURA', 'SEM_COBRANCA'];
 const ETAPAS_HISTORICO_ESCONDIVEIS: Etapa[] = ['AGUARDANDO_NSMP', 'AGUARDANDO_FATURA'];
 
-/** Colunas de valor só ordenam: não têm lista de valores para filtrar. */
-const COLUNAS_SEM_LISTA: ColunaFluxo[] = ['valor_lancamento', 'valor_pago'];
+/** Colunas de valor e a observação (texto livre) só ordenam: não têm lista de valores para filtrar. */
+const COLUNAS_SEM_LISTA: ColunaFluxo[] = ['valor_lancamento', 'valor_pago', 'observacao'];
 
 /** Filtro por coluna na URL: ?col.tipo_serv=NSIS|NSRI (cada valor escapado com encodeURIComponent). */
 function lerColunas(params: URLSearchParams): Partial<Record<ColunaFluxo, string[]>> {
@@ -177,6 +177,7 @@ export default function FilaFechamento() {
   }
 
   function abrirColuna(c: ColunaFluxo) {
+    if (COLUNAS_SEM_LISTA.includes(c)) return; // só ordena: não busca milhares de valores
     setValoresCol((v) => ({ ...v, [c]: null }));
     valoresDaColuna(c, filtros)
       .then((lista) => setValoresCol((v) => ({ ...v, [c]: lista })))
@@ -537,7 +538,7 @@ function Celula({ id, n, localidadeVisivel }: { id: ColunaFluxo; n: Nsis; locali
     case 'data_lancamento_sf': return <td className="!text-[#64748b]">{n.data_lancamento_sf ? dataBR(n.data_lancamento_sf.slice(0, 10)) : vazio}</td>;
     case 'faturas': return <td className="!text-[#1d4ed8]"><Numeros valor={n.faturas} falta={n.qtd_itens > 0 && !!n.nsprs && n.itens_sem_fatura > 0} /></td>;
     case 'observacao': return (
-      <td className="!whitespace-normal">
+      <td className="!whitespace-normal min-w-[260px]">
         {n.observacao
           ? <span className="line-clamp-2">{n.observacao}</span>
           : n.qtd_itens === 0 && <span className="text-pendente text-xs font-semibold">sem observação no GDIS</span>}

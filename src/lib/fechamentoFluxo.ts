@@ -43,7 +43,7 @@ const COLUNAS_HISTORICO: ColunaFluxo[] = [
 export function colunasVisiveis(etapa: Etapa | 'TODAS', historico: boolean): ColunaFluxo[] {
   if (historico) return [...COLUNAS_HISTORICO];
   switch (etapa) {
-    case 'A_FECHAR': return [...BASE, 'etapa'];
+    case 'A_FECHAR': return [...BASE, 'observacao', 'etapa'];
     case 'AGUARDANDO_NSPR': return [...BASE, ...APOS_NSMP, 'etapa'];
     case 'AGUARDANDO_SALESFORCE': return [...BASE, ...APOS_NSMP, ...APOS_NSPR, 'etapa'];
     case 'AGUARDANDO_APROPRIACAO': return [...BASE, ...APOS_NSMP, ...APOS_NSPR, 'data_lancamento_sf', 'etapa'];

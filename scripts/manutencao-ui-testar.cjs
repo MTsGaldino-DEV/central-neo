@@ -351,8 +351,11 @@ function responderNsis(url, metodo, corpo) {
     for (const s of ['900000001', '900000002', '900000003']) ocultos.add(s);
     await page.goto(urlBase + '/fechamento?etapa=A_FECHAR');
     await esperarLinhas(4);
-    assert.deepEqual(await cabecalhos(), ['N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Etapa']);
+    assert.deepEqual(await cabecalhos(), ['N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Observação', 'Etapa']);
     await page.getByRole('cell', { name: '900000004' }).waitFor();
+    // a observação do GDIS aparece na célula (e a NSIS sem observação e sem itens avisa)
+    await page.getByRole('cell', { name: 'Fluxo novo A' }).waitFor();
+    await page.getByRole('cell', { name: 'sem observação no GDIS' }).waitFor();
     assert.equal(await page.getByRole('button', { name: /Gerar NSMP/ }).count(), 0, 'chip de histórico vazio fica escondido');
     assert.equal(await page.getByRole('button', { name: /Aguard\. fatura/ }).count(), 0, 'chip de histórico vazio fica escondido');
     assert.equal(await page.getByRole('button', { name: /Sem cobrança/ }).count(), 1);
@@ -360,6 +363,22 @@ function responderNsis(url, metodo, corpo) {
     assert.equal(await page.getByRole('button', { name: /Aguard\. Salesforce/ }).count(), 1);
     assert.equal(await primeiraCelula(), '900010010');
     await foto('fila-fluxo-a-fechar');
+    // 1440 e 390: a página não rola de lado e o texto da Observação aparece inteiro na célula (até 2 linhas)
+    for (const [largura, sufixo] of [[1440, 'desktop'], [390, 'celular']]) {
+      await page.setViewportSize({ width: largura, height: 900 });
+      await page.waitForTimeout(150);
+      const medidas = await page.evaluate(() => {
+        const doc = document.documentElement;
+        const celula = [...document.querySelectorAll('table.grade-nsis tbody tr td')].find((td) => td.textContent.includes('Fluxo novo A'));
+        const r = celula.getBoundingClientRect();
+        return { doc: doc.scrollWidth, tela: window.innerWidth, largura: r.width, cortado: celula.scrollWidth > celula.clientWidth + 1 };
+      });
+      assert.ok(medidas.doc <= medidas.tela, `A fechar em ${largura}: página sem rolagem lateral ${JSON.stringify(medidas)}`);
+      assert.ok(medidas.largura >= 255 && !medidas.cortado, `A fechar em ${largura}: Observação com largura mínima e sem corte ${JSON.stringify(medidas)}`);
+      await page.locator('table.grade-nsis').scrollIntoViewIfNeeded();
+      await foto('fila-fluxo-a-fechar-' + sufixo);
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
 
     // ▾ de Tipo do serviço lista os valores; Esc fecha
     await page.getByRole('button', { name: 'Filtrar Tipo do serviço' }).click();
@@ -416,6 +435,11 @@ function responderNsis(url, metodo, corpo) {
     await menu('Valor pago').getByRole('button', { name: 'Do menor para o maior' }).waitFor();
     assert.equal(await menu('Valor pago').getByPlaceholder('Pesquisar').count(), 0);
     await page.keyboard.press('Escape');
+    // Observação (texto livre) também só ordena: sem pesquisa nem lista de valores
+    await page.getByRole('button', { name: 'Filtrar Observação' }).click();
+    await menu('Observação').getByRole('button', { name: 'Ordenar de A a Z' }).waitFor();
+    assert.equal(await menu('Observação').getByPlaceholder('Pesquisar').count(), 0);
+    await page.keyboard.press('Escape');
 
     // NSIS do fluxo novo já com NSMP: etapa seguinte acrescenta equipe, supervisor e NSMP
     for (const s of ['900000001', '900000002', '900000003']) ocultos.add(s);
@@ -423,6 +447,7 @@ function responderNsis(url, metodo, corpo) {
     await esperarLinhas(1);
     assert.deepEqual(await cabecalhos(), ['N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Equipe', 'Supervisor', 'NSMP', 'Etapa']);
     assert.equal(await page.locator('table.grade-nsis tbody tr td').nth(5).textContent(), 'Ana');
+    assert.equal(await page.getByRole('cell', { name: 'Fluxo novo D' }).count(), 0, 'a observação não aparece depois de A fechar');
 
     // NSIS histórica mantém as colunas de hoje, inclusive Observação
     ocultos.clear(); ocultos.add('900010013');
@@ -709,7 +734,7 @@ function responderNsis(url, metodo, corpo) {
     await page.goto(urlBase + '/fechamento?etapa=A_FECHAR');
     await page.getByRole('cell', { name: '900000004' }).waitFor();
     assert.ok(await page.getByRole('cell', { name: '900010010' }).count() >= 1, 'a lista tem NSIS do fluxo novo junto');
-    assert.deepEqual(await cabecalhos(), ['N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Etapa'], 'sem Observação nem Lançamento Salesforce');
+    assert.deepEqual(await cabecalhos(), ['N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Observação', 'Etapa'], 'só a Observação a mais; sem Lançamento Salesforce');
     await foto('fila-historica-a-fechar');
 
     // ...e a janela dela é a do fluxo novo: sem a palavra COD, pede códigos, equipe e NSMP

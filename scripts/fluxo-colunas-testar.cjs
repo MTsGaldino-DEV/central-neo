@@ -22,7 +22,7 @@ assert.deepEqual(
 // ─── Fluxo novo: colunas acumulam por etapa, Etapa sempre por último ───────
 const novo = (etapa) => colunasVisiveis(etapa, false);
 
-assert.deepEqual(novo('A_FECHAR'), ['servico', 'tipo_serv', 'localidade', 'termino', 'etapa']);
+assert.deepEqual(novo('A_FECHAR'), ['servico', 'tipo_serv', 'localidade', 'termino', 'observacao', 'etapa']);
 assert.deepEqual(novo('AGUARDANDO_NSPR'), ['servico', 'tipo_serv', 'localidade', 'termino', 'equipes', 'supervisor', 'nsmps', 'etapa']);
 assert.deepEqual(novo('AGUARDANDO_SALESFORCE'),
   ['servico', 'tipo_serv', 'localidade', 'termino', 'equipes', 'supervisor', 'nsmps', 'nsprs', 'valor_pago', 'etapa']);
@@ -31,6 +31,13 @@ assert.deepEqual(novo('AGUARDANDO_APROPRIACAO'),
 assert.deepEqual(novo('FATURADA'),
   ['servico', 'tipo_serv', 'localidade', 'termino', 'equipes', 'supervisor', 'nsmps', 'nsprs', 'valor_pago', 'data_lancamento_sf', 'faturas', 'etapa']);
 assert.deepEqual(novo('TODAS'), COLUNAS_FLUXO.map((c) => c.id), 'Todas mostra todas as colunas');
+
+// Observação do GDIS só na primeira etapa (A fechar) e em Todas
+for (const etapa of ['AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO', 'FATURADA']) {
+  assert.ok(!novo(etapa).includes('observacao'), `${etapa}: sem Observação`);
+}
+assert.ok(novo('A_FECHAR').includes('observacao'), 'A fechar mostra a Observação');
+assert.ok(novo('TODAS').includes('observacao'), 'Todas mostra a Observação');
 
 for (const etapa of ['A_FECHAR', 'AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO', 'FATURADA', 'TODAS']) {
   const c = novo(etapa);
