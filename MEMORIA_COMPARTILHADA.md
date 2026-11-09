@@ -112,6 +112,13 @@ Só leitura de `Importação/Disponibilidade Contrato 7360_Macro.xlsm`; nada foi
 - **REA (`C:\Engenharia Reversa\rea-main`):** é para binários e aplicativos; não foi usada nem é necessária para esta planilha.
 - **Cuidado:** a pasta `Importação/` não está no `.gitignore`, e a planilha tem rótulo de LGPD, nomes e dados de saúde. Não incluir no commit.
 
+## Fila de NSIS: lista em grade igual à de Instalações do Visão de Dono — 09/11/2026 (Claude)
+
+- **Pedido de Matheus:** a lista da fila de NSIS ficar igual à da aba Instalações de `C:\APPWEB\visao-de-dono` (`FluxoInstalacoes.jsx`).
+- **Feito (só visual):** grade estilo Excel em `Fila.tsx` + bloco `.grade-nsis` em `index.css`: cabeçalho fixo, bordas em todas as células, rolagem interna (`calc(100vh - 280px)`), contador "N NSIS" no topo, realce no mouse, cores por coluna (NSMP roxo, NSPR verde, Apropriação azul) e coluna Etapa congelada à direita em telas ≥ 900 px. Colunas, filtros e paginação de 50 não mudaram.
+- **Não feito:** filtro e ordenação por coluna (menu ▾ do Visão de Dono). Lá tudo carrega no navegador; aqui a lista é paginada no servidor, então exigiria mudar `listarNsis`.
+- **Verificado:** typecheck; `manutencao-ui-testar` passou com o Supabase simulado. Falta Matheus ver com dados reais.
+
 ## Fila de NSIS: vários códigos, fator e janela no meio — 06/11/2026 (Claude)
 
 **Estado: migration 053 aplicada no CENTRAL-NEO pelo Matheus em 06/11/2026; commit `6fd6cd1` com push em 06/11/2026, autorizado por ele.**

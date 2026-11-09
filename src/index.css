@@ -176,3 +176,25 @@
 @supports not selector(::-webkit-scrollbar) {
   .rolagem-neo { scrollbar-width: thin; scrollbar-color: var(--color-sinal-claro) transparent; }
 }
+
+/* Grade estilo Excel da fila de NSIS (mesma lista de Instalações do Visão de Dono):
+ * cabeçalho fixo, bordas em todas as células, linha com realce no mouse e a coluna Etapa
+ * congelada à direita em telas largas. */
+.grade-nsis th {
+  position: sticky; top: 0; z-index: 2; background: #f8fafc; padding: 8px 6px;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; color: #64748b;
+  white-space: nowrap; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
+}
+.grade-nsis td {
+  padding: 7px 6px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
+  color: #334155; vertical-align: middle; white-space: nowrap; background: inherit;
+}
+.grade-nsis tbody tr { background: #fff; cursor: pointer; }
+.grade-nsis tbody tr.sem-hover { cursor: default; }
+.grade-nsis tbody tr.selecionada { background: var(--color-sinal-fundo); }
+.grade-nsis tbody tr:not(.sem-hover):hover > td { background-image: linear-gradient(rgba(15, 37, 68, 0.05), rgba(15, 37, 68, 0.05)); }
+.grade-nsis th:last-child, .grade-nsis td:last-child { border-right: none; }
+@media (min-width: 900px) {
+  .grade-nsis .grade-fixa { position: sticky; right: 0; z-index: 1; box-shadow: -1px 0 0 #e2e8f0; }
+  .grade-nsis .grade-fixa-cab { right: 0; z-index: 3; box-shadow: -1px 0 0 #e2e8f0; }
+}

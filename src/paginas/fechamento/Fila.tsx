@@ -344,79 +344,83 @@ export default function FilaFechamento() {
 
           {erro && <div className="text-sm text-erro bg-erro-fundo border border-red-200 rounded-xl p-3 flex gap-2"><AlertTriangle size={16} />{erro}</div>}
 
-          {/* Tabela */}
-          <div className="bg-white border border-linha rounded-2xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+          {/* Tabela: grade estilo Excel, igual à lista de Instalações do Visão de Dono */}
+          <div className="bg-white border border-[#e2e8f0] rounded-xl overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[#e2e8f0] text-xs text-[#64748b]">
+              <b className="text-tinta">{total.toLocaleString('pt-BR')}</b> NSIS
+            </div>
+            <div className="overflow-auto max-h-[calc(100vh-280px)] min-h-[200px]">
+              <table className="grade-nsis w-full min-w-[1180px] border-separate border-spacing-0 text-xs text-left">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wider text-aco border-b border-linha bg-nevoa/60">
-                    <th className="px-4 py-3 font-bold">N° Serviço</th>
-                    <th className="px-3 py-3 font-bold">Tipo do serviço</th>
-                    <th className="px-3 py-3 font-bold">NSMP</th>
-                    <th className="px-3 py-3 font-bold">Equipe</th>
-                    <th className="px-3 py-3 font-bold">Supervisor</th>
-                    <th className="px-3 py-3 font-bold">NSPR/NSMC</th>
-                    <th className="px-3 py-3 font-bold">DT execução</th>
-                    <th className="px-3 py-3 font-bold text-right">Lançamento Salesforce</th>
-                    <th className="px-3 py-3 font-bold text-right">Pago</th>
-                    <th className="px-3 py-3 font-bold">Apropriação</th>
-                    <th className="px-3 py-3 font-bold min-w-[260px]">Observação</th>
-                    <th className="px-4 py-3 font-bold">Etapa</th>
+                  <tr>
+                    <th>N° Serviço</th>
+                    <th>Tipo do serviço</th>
+                    <th>NSMP</th>
+                    <th>Equipe</th>
+                    <th>Supervisor</th>
+                    <th>NSPR/NSMC</th>
+                    <th>DT execução</th>
+                    <th className="text-right">Lançamento Salesforce</th>
+                    <th className="text-right">Pago</th>
+                    <th>Apropriação</th>
+                    <th className="min-w-[260px]">Observação</th>
+                    <th className="grade-fixa-cab">Etapa</th>
                   </tr>
                 </thead>
                 <tbody>
                   {!carregando && linhas.length === 0 && (
-                    <tr><td colSpan={12} className="py-16 text-center text-aco">
+                    <tr className="sem-hover"><td colSpan={12} className="!py-9 text-center !text-aco-claro !whitespace-normal">
                       <Inbox size={28} className="mx-auto text-aco-claro mb-2" />
                       {etapa === 'A_FECHAR' && !filtrado ? 'Nenhuma NSIS a fechar. Importe o relatório da semana.' : 'Nenhuma NSIS encontrada com esses filtros.'}
                     </td></tr>
                   )}
+                  {carregando && linhas.length === 0 && (
+                    <tr className="sem-hover"><td colSpan={12} className="!py-9 text-center !text-aco-claro">
+                      <Loader2 size={16} className="animate-spin inline mr-2 align-text-bottom" /> Carregando…
+                    </td></tr>
+                  )}
                   {linhas.map((n) => (
                     <tr key={n.servico} onClick={() => mudarParam('nsis', n.servico)}
-                      className={`border-b border-linha last:border-0 cursor-pointer hover:bg-sinal-fundo/50 align-top ${aberta === n.servico ? 'bg-sinal-fundo' : ''}`}>
-                      <td className="px-4 py-3 font-codigo font-semibold whitespace-nowrap">{n.servico}</td>
-                      <td className="px-3 py-3 text-xs font-bold whitespace-nowrap">{n.tipo_serv}</td>
-                      <td className="px-3 py-3"><Numeros valor={n.nsmps} falta={n.qtd_itens > 0 && n.itens_sem_nsmp > 0} /></td>
-                      <td className="px-3 py-3"><Numeros valor={n.equipes} falta={false} /></td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        {n.supervisor ?? <span className="text-aco-claro">—</span>}
-                        <span className="block text-[11px] text-aco">Loc. <span className="font-codigo">{n.localidade ?? '—'}</span></span>
+                      className={aberta === n.servico ? 'selecionada' : ''}>
+                      <td className="font-codigo font-bold text-[#0f2544]">{n.servico}</td>
+                      <td className="font-bold">{n.tipo_serv}</td>
+                      <td className="!text-[#7c3aed]"><Numeros valor={n.nsmps} falta={n.qtd_itens > 0 && n.itens_sem_nsmp > 0} /></td>
+                      <td><Numeros valor={n.equipes} falta={false} /></td>
+                      <td>
+                        {n.supervisor ?? <span className="text-[#94a3b8]">—</span>}
+                        <span className="block text-[11px] text-[#64748b]">Loc. <span className="font-codigo">{n.localidade ?? '—'}</span></span>
                       </td>
-                      <td className="px-3 py-3"><Numeros valor={n.nsprs} falta={n.qtd_itens > 0 && !!n.nsmps && n.itens_sem_nspr > 0} /></td>
-                      <td className="px-3 py-3 whitespace-nowrap text-aco">{formatarData(n.termino)}</td>
-                      <td className="px-3 py-3 text-right whitespace-nowrap">
+                      <td className="!text-[#15803d]"><Numeros valor={n.nsprs} falta={n.qtd_itens > 0 && !!n.nsmps && n.itens_sem_nspr > 0} /></td>
+                      <td className="!text-[#64748b]">{formatarData(n.termino)}</td>
+                      <td className="text-right tabular-nums">
                         {n.qtd_itens ? <>
-                          <span className="font-semibold">{formatarUS(n.valor_inicial_total)}</span>
-                          {n.valor_us_reais !== null && <span className="block text-[11px] text-aco">{formatarReais(n.valor_inicial_reais_total)}</span>}
-                        </> : '—'}
+                          <span className="font-bold">{formatarUS(n.valor_inicial_total)}</span>
+                          {n.valor_us_reais !== null && <span className="block text-[11px] text-[#64748b]">{formatarReais(n.valor_inicial_reais_total)}</span>}
+                        </> : <span className="text-[#94a3b8]">—</span>}
                       </td>
-                      <td className={`px-3 py-3 text-right whitespace-nowrap ${n.itens_divergentes > 0 ? 'text-erro' : ''}`}>
+                      <td className={`text-right tabular-nums ${n.itens_divergentes > 0 ? '!text-erro' : ''}`}>
                         {n.qtd_itens - n.itens_sem_nsmp - n.itens_sem_nspr > 0 ? <>
-                          <span className="font-semibold">{formatarUS(n.valor_final_total)}</span>
-                          {n.valor_us_reais !== null && <span className={`block text-[11px] ${n.itens_divergentes > 0 ? '' : 'text-aco'}`}>{formatarReais(n.valor_final_reais_total)}</span>}
-                        </> : '—'}
+                          <span className="font-bold">{formatarUS(n.valor_final_total)}</span>
+                          {n.valor_us_reais !== null && <span className={`block text-[11px] ${n.itens_divergentes > 0 ? '' : 'text-[#64748b]'}`}>{formatarReais(n.valor_final_reais_total)}</span>}
+                        </> : <span className="text-[#94a3b8]">—</span>}
                         {n.itens_sem_valor_pago > 0 && <span className="block text-[10px] font-bold text-pendente">sem valor pago</span>}
                       </td>
-                      <td className="px-3 py-3"><Numeros valor={n.faturas} falta={n.qtd_itens > 0 && !!n.nsprs && n.itens_sem_fatura > 0} /></td>
-                      <td className="px-3 py-3">
+                      <td className="!text-[#1d4ed8]"><Numeros valor={n.faturas} falta={n.qtd_itens > 0 && !!n.nsprs && n.itens_sem_fatura > 0} /></td>
+                      <td className="!whitespace-normal">
                         {n.observacao
                           ? <span className="line-clamp-2">{n.observacao}</span>
                           : n.qtd_itens === 0 && <span className="text-pendente text-xs font-semibold">sem observação no GDIS</span>}
-                        {n.qtd_itens > 0 && <span className="block text-[11px] text-aco mt-0.5">{n.qtd_itens} item{n.qtd_itens > 1 ? 's' : ''}</span>}
+                        {n.qtd_itens > 0 && <span className="block text-[11px] text-[#64748b] mt-0.5">{n.qtd_itens} item{n.qtd_itens > 1 ? 's' : ''}</span>}
                       </td>
-                      <td className="px-4 py-3"><EtapaChip etapa={n.etapa} curto /></td>
+                      <td className="grade-fixa"><EtapaChip etapa={n.etapa} curto /></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {carregando && linhas.length === 0 && (
-              <div className="py-12 flex items-center justify-center gap-2 text-aco"><Loader2 size={16} className="animate-spin" /> Carregando…</div>
-            )}
           </div>
           <Pagination page={pagina} totalPages={Math.ceil(total / POR_PAGINA)} totalItems={total}
             pageSize={POR_PAGINA} onPageChange={setPagina} label="NSIS" />
-          {total <= POR_PAGINA && <p className="text-xs text-aco-claro">{total} NSIS</p>}
         </>
       )}
 
