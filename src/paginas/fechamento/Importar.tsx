@@ -122,7 +122,7 @@ function AbaRelatorio() {
         <AreaArquivo onArquivo={ler} titulo="Arraste o relatório do GDIS aqui ou clique" dica='"Serviços Executados - Completo" · .xlsx, .xls ou .csv' />
         <div className="p-4 bg-sinal-fundo rounded-xl text-xs text-sinal-forte space-y-1">
           <p className="font-bold">O que entra</p>
-          <p>• Só linhas com <strong>Resp. = CONTRATADA</strong>. Entram todos os tipos (NSIS, NSRI, MULTIFUNCIONAL…), e o <strong>Tipo de Serv.</strong> fica guardado para filtrar na fila.</p>
+          <p>• Só linhas com <strong>Resp. = CONTRATADA ou MULTIFUNCIONAL</strong>. Entram todos os tipos (NSIS, NSRI, MULTIFUNCIONAL…), e o <strong>Tipo de Serv.</strong> fica guardado para filtrar na fila.</p>
           <p>• Localidade = 4 primeiros dígitos da Referência. DT execução = Término.</p>
           <p>• Matrícula e nome ficam guardados nos detalhes da NSIS.</p>
           <p>• NSIS já importada tem os dados do GDIS atualizados, sem perder o que já foi lançado no fechamento.</p>

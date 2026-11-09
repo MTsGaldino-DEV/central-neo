@@ -80,7 +80,7 @@ cores `bg-[#1e3a5f]` → `bg-sinal`. Os tokens de cor (`tinta`, `sinal`, `nevoa`
 Na tela o módulo se chama **Manutenção** desde 26/10/2026; URLs, tabelas e arquivos mantêm o nome `fechamento`.
 
 ### O processo (como era na planilha)
-1. O GDIS gera o relatório **"Serviços Executados - Completo"**. Interessa só **Resp. = CONTRATADA**. Desde a migration 008 entram todos os tipos (NSIS, NSRI, MULTIFUNCIONAL…), e o **Tipo de Serv.** fica em `neo_nsis.tipo_serv`.
+1. O GDIS gera o relatório **"Serviços Executados - Completo"**. Interessa só **Resp. = CONTRATADA ou MULTIFUNCIONAL** (desde 09/11/2026). Desde a migration 008 entram todos os tipos (NSIS, NSRI, MULTIFUNCIONAL…), e o **Tipo de Serv.** fica em `neo_nsis.tipo_serv`.
 2. O rapaz do fechamento lê a **Observação** (o que a equipe fez) e decide o que cobrar. Pode ser mais de um item por NSIS, cada um com um valor em **US**, conforme o contrato CEMIG.
 3. Gera a **NSMP** (pedido de pagamento) no sistema da CEMIG.
 4. A CEMIG devolve a **NSPR** (confirmação) e o **valor final** pago.

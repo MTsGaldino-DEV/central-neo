@@ -35,6 +35,9 @@ export interface LeituraRelatorio {
   erro?: string;
 }
 
+/** Valores da coluna Resp. do GDIS que entram na importação (em maiúsculas). */
+export const RESP_ACEITOS: string[] = ['CONTRATADA', 'MULTIFUNCIONAL'];
+
 function normalizarCabecalho(h: unknown): string {
   return String(h ?? '')
     .toLowerCase()
@@ -93,7 +96,7 @@ export function lerDataHora(raw: unknown): string | null {
  * Lê o relatório "Serviços Executados - Completo" do GDIS. O cabeçalho não
  * fica na primeira linha (vem depois do bloco de filtros), então procuramos a
  * linha que tem "Serviço" e "Término". Entram todos os tipos de serviço, só
- * os de responsabilidade da CONTRATADA.
+ * os de responsabilidade da CONTRATADA ou MULTIFUNCIONAL (RESP_ACEITOS).
  */
 export function lerRelatorioNsis(buffer: ArrayBuffer): LeituraRelatorio {
   const wb = XLSX.read(buffer, { type: 'array', raw: true, codepage: 1252 });
@@ -169,7 +172,7 @@ export function lerRelatorioNsis(buffer: ArrayBuffer): LeituraRelatorio {
     const tipo = (texto(val(linha, C.tipoServ)) ?? '').toUpperCase();
     if (!tipo) { ignorar('Tipo de Serv. vazio'); continue; }
     const resp = (texto(val(linha, C.resp)) ?? '').toUpperCase();
-    if (C.resp !== -1 && resp !== 'CONTRATADA') { ignorar(`Responsável ${resp || 'vazio'}`); continue; }
+    if (C.resp !== -1 && !RESP_ACEITOS.includes(resp)) { ignorar(`Responsável ${resp || 'vazio'}`); continue; }
     if (vistos.has(servico)) { ignorar('Serviço repetido no arquivo'); continue; }
     vistos.add(servico);
 
