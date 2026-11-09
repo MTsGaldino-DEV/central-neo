@@ -15,6 +15,7 @@ import { supabase } from './supabase';
 import { ratearPago, textoFator } from './fechamentoCobranca';
 import { normalizarAP } from './fechamentoFormato';
 import type { LinhaRelatorioNsis, LinhaHistorico } from './fechamentoPlanilhas';
+import type { ColunaFluxo } from './fechamentoFluxo';
 
 export { lerNumero, normalizarAP } from './fechamentoFormato';
 export type { LinhaRelatorioNsis, LinhaHistorico, LeituraRelatorio, LeituraHistorico } from './fechamentoPlanilhas';
@@ -197,7 +198,25 @@ export interface FiltrosNsis {
   /** código da Tabela 03 de algum item (vem do painel, "O que mais pedimos") */
   codigo?: string;
   ordem?: 'termino_desc' | 'termino_asc' | 'servico';
+  /** filtro por coluna da lista (estilo Excel): valores exatos; '—' = vazio; termino usa dias YYYY-MM-DD */
+  colunas?: Partial<Record<ColunaFluxo, string[]>>;
+  /** ordem por coluna; substitui a ordem padrão */
+  ordemColuna?: { coluna: ColunaFluxo; dir: 'asc' | 'desc' } | null;
 }
+
+/** Coluna da lista → coluna da view neo_vw_nsis. */
+const COLUNA_VIEW: Record<ColunaFluxo, string> = {
+  servico: 'servico', tipo_serv: 'tipo_serv', localidade: 'localidade', termino: 'termino', equipes: 'equipes',
+  supervisor: 'supervisor', nsmps: 'nsmps', nsprs: 'nsprs', valor_lancamento: 'valor_inicial_total',
+  valor_pago: 'valor_final_total', data_lancamento_sf: 'data_lancamento_sf', faturas: 'faturas',
+  observacao: 'observacao', etapa: 'etapa',
+};
+
+/** Texto que representa "vazio" na lista de valores de uma coluna. */
+export const VALOR_VAZIO = '—';
+
+/** Colunas numéricas: só ordenam, não têm lista de valores. */
+const COLUNAS_NUMERICAS: ColunaFluxo[] = ['valor_lancamento', 'valor_pago'];
 
 /** Dia seguinte (YYYY-MM-DD), para o "até" incluir o dia inteiro. */
 function diaSeguinte(d: string): string {
@@ -208,7 +227,10 @@ function diaSeguinte(d: string): string {
 
 const DATA_VALIDA = /^\d{4}-\d{2}-\d{2}$/;
 
-function aplicarFiltros<Q extends { eq: Function; ilike: Function; or: Function; gt: Function; gte: Function; lt: Function; order: Function }>(
+/** Texto entre aspas para o filtro "or" do PostgREST (vírgula, parênteses e aspas quebram a sintaxe). */
+const aspas = (v: string) => `"${v.replace(/[\\"]/g, '\\$&')}"`;
+
+function aplicarFiltros<Q extends { eq: Function; ilike: Function; or: Function; gt: Function; gte: Function; lt: Function; order: Function; in: Function }>(
   query: Q,
   f: FiltrosNsis,
   semOrdem = false
@@ -232,7 +254,32 @@ function aplicarFiltros<Q extends { eq: Function; ilike: Function; or: Function;
         `nsprs.ilike.${p}`, `faturas.ilike.${p}`, `equipes.ilike.${p}`, `nome.ilike.${p}`, `supervisor.ilike.${p}`].join(',')
     );
   }
+  // filtros por coluna: cada coluna aplica .in() (ou .or() quando entra vazio ou dia de execução)
+  for (const [coluna, valores] of Object.entries(f.colunas ?? {}) as [ColunaFluxo, string[] | undefined][]) {
+    if (!valores?.length || !(coluna in COLUNA_VIEW)) continue;
+    const col = COLUNA_VIEW[coluna];
+    const vazio = valores.includes(VALOR_VAZIO);
+    const reais = valores.filter((v) => v !== VALOR_VAZIO);
+    if (coluna === 'termino') {
+      const partes = reais.filter((d) => DATA_VALIDA.test(d))
+        .map((d) => `and(termino.gte.${d}T00:00:00-03:00,termino.lt.${diaSeguinte(d)}T00:00:00-03:00)`);
+      if (vazio) partes.push('termino.is.null');
+      if (partes.length) q = q.or(partes.join(','));
+    } else if (vazio) {
+      // coluna de data não aceita texto vazio
+      const partes = [`${col}.is.null`, ...(coluna === 'data_lancamento_sf' ? [] : [`${col}.eq.""`])];
+      if (reais.length) partes.push(`${col}.in.(${reais.map(aspas).join(',')})`);
+      q = q.or(partes.join(','));
+    } else if (reais.length) {
+      q = q.in(col, reais);
+    }
+  }
   if (semOrdem) return q;
+  if (f.ordemColuna && f.ordemColuna.coluna in COLUNA_VIEW) {
+    const col = COLUNA_VIEW[f.ordemColuna.coluna];
+    if (col === 'servico') return q.order('servico', { ascending: f.ordemColuna.dir === 'asc' });
+    return q.order(col, { ascending: f.ordemColuna.dir === 'asc', nullsFirst: false }).order('servico', { ascending: true });
+  }
   const ordem = f.ordem ?? 'termino_desc';
   if (ordem === 'servico') q = q.order('servico', { ascending: true });
   else q = q.order('termino', { ascending: ordem === 'termino_asc', nullsFirst: false }).order('servico', { ascending: true });
@@ -262,7 +309,8 @@ export async function listarNsis(
 
 /** Algum filtro além da etapa? (aí as contagens por etapa precisam seguir o filtro) */
 export function temFiltro(f: FiltrosNsis): boolean {
-  return !!(f.busca?.trim() || f.localidade?.trim() || f.alerta || f.de || f.ate || f.equipe?.trim() || f.tipo?.trim() || f.codigo?.trim());
+  const colunas = Object.values(f.colunas ?? {}).some((v) => !!v?.length);
+  return !!(f.busca?.trim() || f.localidade?.trim() || f.alerta || f.de || f.ate || f.equipe?.trim() || f.tipo?.trim() || f.codigo?.trim() || colunas);
 }
 
 /** Quantas NSIS em cada etapa, respeitando os filtros (menos a etapa). */
@@ -277,6 +325,47 @@ export async function contarPorEtapa(f: FiltrosNsis): Promise<{ etapas: Partial<
   };
   const [total, ...porEtapa] = await Promise.all([contar('TODAS'), ...ETAPAS.map((e) => contar(e.id))]);
   return { total, etapas: Object.fromEntries(ETAPAS.map((e, i) => [e.id, porEtapa[i]])) };
+}
+
+/** Dia (YYYY-MM-DD, fuso de Brasília) de um instante ISO. */
+function diaDe(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
+
+/**
+ * Valores distintos de uma coluna da lista para o filtro do cabeçalho. Respeita os outros filtros
+ * (inclusive a etapa), menos o da própria coluna. Vazio entra como '—' no fim da lista.
+ */
+export async function valoresDaColuna(coluna: ColunaFluxo, filtros: FiltrosNsis): Promise<string[]> {
+  const col = COLUNA_VIEW[coluna];
+  const colunas = { ...(filtros.colunas ?? {}) };
+  delete colunas[coluna];
+  const base: FiltrosNsis = { ...filtros, colunas, ordemColuna: null };
+  const numerica = COLUNAS_NUMERICAS.includes(coluna);
+
+  const vistos = new Set<string>();
+  let temVazio = false;
+  for (let pagina = 0; pagina < 20; pagina++) {
+    const from = pagina * 1000;
+    const { data, error } = await aplicarFiltros(supabase.from('neo_vw_nsis').select(col), base, true)
+      .order('servico', { ascending: true })
+      .range(from, from + 999);
+    if (error) throw new Error('Falha ao carregar os valores da coluna: ' + error.message);
+    const linhas = (data ?? []) as unknown as Record<string, unknown>[];
+    for (const l of linhas) {
+      const bruto = l[col];
+      if (bruto === null || bruto === undefined || bruto === '') { temVazio = true; continue; }
+      vistos.add(coluna === 'termino' ? diaDe(String(bruto)) : String(bruto));
+    }
+    if (linhas.length < 1000) break;
+  }
+  vistos.delete('');
+  const lista = [...vistos].sort((a, b) => numerica
+    ? Number(a) - Number(b)
+    : a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+  if (temVazio) lista.push(VALOR_VAZIO);
+  return lista;
 }
 
 /** Tipos de serviço que existem na base (opções do filtro). */

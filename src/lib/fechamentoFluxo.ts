@@ -8,7 +8,7 @@ import type { Etapa } from './fechamento';
 
 export type ColunaFluxo =
   | 'servico' | 'tipo_serv' | 'localidade' | 'termino' | 'equipes' | 'supervisor'
-  | 'nsmps' | 'nsprs' | 'valor_pago' | 'data_lancamento_sf' | 'faturas' | 'etapa';
+  | 'nsmps' | 'nsprs' | 'valor_lancamento' | 'valor_pago' | 'data_lancamento_sf' | 'faturas' | 'observacao' | 'etapa';
 
 export const COLUNAS_FLUXO: { id: ColunaFluxo; rotulo: string; numero?: boolean }[] = [
   { id: 'servico', rotulo: 'N° Serviço' },
@@ -19,9 +19,11 @@ export const COLUNAS_FLUXO: { id: ColunaFluxo; rotulo: string; numero?: boolean 
   { id: 'supervisor', rotulo: 'Supervisor' },
   { id: 'nsmps', rotulo: 'NSMP' },
   { id: 'nsprs', rotulo: 'NSPR' },
+  { id: 'valor_lancamento', rotulo: 'Lançamento Salesforce', numero: true },
   { id: 'valor_pago', rotulo: 'Valor pago', numero: true },
-  { id: 'data_lancamento_sf', rotulo: 'Lançamento Salesforce' },
+  { id: 'data_lancamento_sf', rotulo: 'Data lançamento SF' },
   { id: 'faturas', rotulo: 'Apropriação' },
+  { id: 'observacao', rotulo: 'Observação' },
   { id: 'etapa', rotulo: 'Etapa' },
 ];
 
@@ -31,7 +33,7 @@ const APOS_NSPR: ColunaFluxo[] = ['nsprs', 'valor_pago'];
 
 /** Colunas de hoje, usadas pelo histórico (nunca localidade nem data de lançamento). */
 const COLUNAS_HISTORICO: ColunaFluxo[] = [
-  'servico', 'tipo_serv', 'nsmps', 'equipes', 'supervisor', 'nsprs', 'termino', 'valor_pago', 'faturas', 'etapa',
+  'servico', 'tipo_serv', 'nsmps', 'equipes', 'supervisor', 'nsprs', 'termino', 'valor_lancamento', 'valor_pago', 'faturas', 'observacao', 'etapa',
 ];
 
 /**

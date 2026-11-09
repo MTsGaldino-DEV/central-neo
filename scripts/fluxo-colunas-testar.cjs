@@ -12,8 +12,9 @@ assert.deepEqual(
   COLUNAS_FLUXO.map((c) => [c.id, c.rotulo]),
   [
     ['servico', 'N° Serviço'], ['tipo_serv', 'Tipo do serviço'], ['localidade', 'Localidade'], ['termino', 'DT execução'],
-    ['equipes', 'Equipe'], ['supervisor', 'Supervisor'], ['nsmps', 'NSMP'], ['nsprs', 'NSPR'], ['valor_pago', 'Valor pago'],
-    ['data_lancamento_sf', 'Lançamento Salesforce'], ['faturas', 'Apropriação'], ['etapa', 'Etapa'],
+    ['equipes', 'Equipe'], ['supervisor', 'Supervisor'], ['nsmps', 'NSMP'], ['nsprs', 'NSPR'],
+    ['valor_lancamento', 'Lançamento Salesforce'], ['valor_pago', 'Valor pago'], ['data_lancamento_sf', 'Data lançamento SF'],
+    ['faturas', 'Apropriação'], ['observacao', 'Observação'], ['etapa', 'Etapa'],
   ],
   'COLUNAS_FLUXO com os rótulos da spec',
 );
@@ -37,7 +38,7 @@ for (const etapa of ['A_FECHAR', 'AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'AG
 }
 
 // ─── Histórico: as colunas de hoje, sem localidade nem data de lançamento ──
-const HOJE = ['servico', 'tipo_serv', 'nsmps', 'equipes', 'supervisor', 'nsprs', 'termino', 'valor_pago', 'faturas', 'etapa'];
+const HOJE = ['servico', 'tipo_serv', 'nsmps', 'equipes', 'supervisor', 'nsprs', 'termino', 'valor_lancamento', 'valor_pago', 'faturas', 'observacao', 'etapa'];
 for (const etapa of ['A_FECHAR', 'AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO', 'FATURADA', 'TODAS']) {
   assert.deepEqual(colunasVisiveis(etapa, true), HOJE, `${etapa} histórico: colunas de hoje`);
 }

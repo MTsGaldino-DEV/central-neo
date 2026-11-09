@@ -28,19 +28,33 @@ const baseNsis = (servico, zona, observacao) => ({
   servico, tipo_serv: 'NSIS', referencia: '1234567', localidade: '1234', endereco: 'Rua das Flores, 10', pedido_em: '2026-11-01T10:00:00Z', termino: '2026-11-02T15:00:00Z',
   resp: 'CONTRATADA', matricula: 'e1', nome: 'Equipe teste', tempo_deslocamento: null, tempo_execucao: null, prazo_legal: '24', observacao, zona, referencia_local: null,
   sem_cobranca: false, motivo_sem_cobranca: null, origem: 'RELATORIO', importado_em: '2026-11-03T00:00:00Z', atualizado_em: '2026-11-03T00:00:00Z', valor_us_reais: 2964.33, supervisor: 'Pedro',
+  fluxo_novo: false, supervisor_equipe: null, data_lancamento_sf: null,
+});
+const novaNsis = (servico, tipo, localidade, termino, observacao) => ({
+  ...baseNsis(servico, 'U', observacao), tipo_serv: tipo, localidade, termino, fluxo_novo: true, supervisor: null,
 });
 const nsis = [
   baseNsis('900000001', 'R', 'Trocada cruzeta e podada arvore tocando na rede'),
   baseNsis('900000002', 'U', 'Dois pedidos antigos'),
   baseNsis('900000003', 'U', 'Sem nada lancado'),
+  // fluxo novo: três a fechar (duas NSIS e uma NSRI) e uma que já tem NSMP
+  novaNsis('900010010', 'NSIS', '2001', '2026-11-03T15:00:00Z', 'Fluxo novo A'),
+  novaNsis('900010011', 'NSRI', '2002', '2026-11-04T15:00:00Z', 'Fluxo novo B'),
+  novaNsis('900010012', 'NSIS', '2003', '2026-11-05T15:00:00Z', 'Fluxo novo C'),
+  { ...novaNsis('900010013', 'NSIS', '2004', '2026-11-06T15:00:00Z', 'Fluxo novo D'), supervisor: 'Ana', supervisor_equipe: 'Ana' },
 ];
+// serviços que o simulado esconde da lista (para isolar um cenário de colunas)
+const ocultos = new Set();
 let seq = 0;
 const novoId = () => `item-${++seq}`;
 const legado = (servico, descricao, nsmp, valor) => ({
   id: novoId(), servico, descricao, codigo: null, quantidade: 1, rural: false, fator: 1, fator_unitario: null, equipe: '100', valor_inicial: valor, us_adicional: null,
   nsmp, nspr: null, valor_final: null, fatura: null, observacao: null, criado_em: '2026-10-01T00:00:00Z', atualizado_em: '2026-10-01T00:00:00Z',
 });
-let itens = [legado('900000002', 'Pedido antigo A', 'A1', 0.1), legado('900000002', 'Pedido antigo B', 'B1', 0.2)];
+let itens = [
+  legado('900000002', 'Pedido antigo A', 'A1', 0.1), legado('900000002', 'Pedido antigo B', 'B1', 0.2),
+  { ...legado('900010013', 'Pedido novo', 'N9', 0.1), equipe: '4404' },
+];
 const escritas = [];
 
 function comItens(n) {
@@ -52,9 +66,35 @@ function comItens(n) {
   return {
     ...n, qtd_itens: d.length, valor_inicial_total: soma('valor_inicial'), valor_final_total: soma('valor_final'), itens_sem_nsmp: semNsmp, itens_sem_nspr: semNspr, itens_sem_fatura: semFatura,
     itens_divergentes: 0, itens_sem_valor_pago: 0, nsmps: unico('nsmp'), nsprs: unico('nspr'), faturas: unico('fatura'), equipes: unico('equipe'), codigos: unico('codigo'),
-    etapa: d.length === 0 ? 'A_FECHAR' : semNsmp ? 'AGUARDANDO_NSMP' : semNspr ? 'AGUARDANDO_NSPR' : semFatura ? 'AGUARDANDO_FATURA' : 'FATURADA',
+    etapa: n.fluxo_novo
+      ? (d.length === 0 || semNsmp ? 'A_FECHAR' : n.tipo_serv !== 'NSRI' && semNspr ? 'AGUARDANDO_NSPR' : !n.data_lancamento_sf ? 'AGUARDANDO_SALESFORCE' : d.some((i) => !i.fatura) ? 'AGUARDANDO_APROPRIACAO' : 'FATURADA')
+      : d.length === 0 ? 'A_FECHAR' : semNsmp ? 'AGUARDANDO_NSMP' : semNspr ? 'AGUARDANDO_NSPR' : semFatura ? 'AGUARDANDO_FATURA' : 'FATURADA',
     valor_inicial_reais_total: soma('valor_inicial') * 2964.33, valor_final_reais_total: soma('valor_final') * 2964.33,
   };
+}
+
+/** Lista da fila com os filtros que o teste usa: etapa, tipo_serv in(...) e order. */
+function filtrarLista(url) {
+  let lista = nsis.map(comItens).filter((n) => !ocultos.has(n.servico));
+  const etapa = url.searchParams.get('etapa');
+  if (etapa?.startsWith('eq.')) lista = lista.filter((n) => n.etapa === etapa.slice(3));
+  const tipo = url.searchParams.get('tipo_serv');
+  if (tipo?.startsWith('in.(')) {
+    const valores = tipo.slice(4, -1).split(',').map((v) => v.replaceAll('"', ''));
+    lista = lista.filter((n) => valores.includes(n.tipo_serv));
+  }
+  const chaves = (url.searchParams.get('order') || '').split(',').filter(Boolean).map((k) => { const [col, dir] = k.split('.'); return { col, desc: dir === 'desc' }; });
+  return lista.sort((a, b) => {
+    for (const { col, desc } of chaves) {
+      const x = a[col]; const y = b[col];
+      if (x == y) continue;
+      if (x == null) return 1;
+      if (y == null) return -1;
+      const c = String(x).localeCompare(String(y), 'pt-BR', { numeric: true });
+      if (c) return desc ? -c : c;
+    }
+    return 0;
+  });
 }
 
 function responderItens(url, metodo, corpo) {
@@ -111,11 +151,12 @@ function responderItens(url, metodo, corpo) {
       else if (recurso === 'neo_vw_contrato_itens') corpo = contrato;
       else if (recurso === 'neo_vw_nsis') {
         const servico = url.searchParams.get('servico')?.replace('eq.', '');
-        const lista = nsis.filter((n) => !servico || n.servico === servico).map(comItens);
-        corpo = umObjeto ? lista[0] : lista;
+        corpo = servico ? nsis.filter((n) => n.servico === servico).map(comItens) : filtrarLista(url);
+        if (umObjeto) corpo = corpo[0];
       } else if (recurso === 'neo_nsis_itens') corpo = responderItens(url, metodo, req.postDataJSON());
       else throw Error('Requisição inesperada: ' + recurso);
-      await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': '0-2/3' }, body: JSON.stringify(corpo) });
+      const quantos = Array.isArray(corpo) ? corpo.length : 1;
+      await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': quantos ? `0-${quantos - 1}/${quantos}` : '*/0' }, body: JSON.stringify(corpo) });
     });
 
     const page = await context.newPage(); globalThis.paginaTeste = page;
@@ -262,6 +303,102 @@ function responderItens(url, metodo, corpo) {
     await janela.getByText('Serviço fora da tabela').waitFor();
     assert.deepEqual(escritas[0].corpo.map((c) => [c.codigo, c.fator, c.valor_inicial]), [[null, 1, 0.25], ['704004', 1.2, 0.04]]);
 
+    // ── Colunas por etapa e filtros por coluna (estilo Excel) ──
+    const cabecalhos = () => page.locator('table.grade-nsis thead th').evaluateAll((ths) => ths.map((t) => t.textContent.trim()));
+    const esperarLinhas = (n) => page.waitForFunction((q) => document.querySelectorAll('table.grade-nsis tbody tr:not(.sem-hover)').length === q, n);
+    const primeiraCelula = () => page.locator('table.grade-nsis tbody tr').first().locator('td').first().textContent();
+    const menu = (rotulo) => page.getByRole('dialog', { name: `Filtro de ${rotulo}` });
+    const parametro = (nome) => new URL(page.url()).searchParams.get(nome);
+
+    // NSIS do fluxo novo em A fechar: só as colunas dessa etapa
+    for (const s of ['900000001', '900000002', '900000003']) ocultos.add(s);
+    await page.goto(urlBase + '/fechamento?etapa=A_FECHAR');
+    await esperarLinhas(3);
+    assert.deepEqual(await cabecalhos(), ['N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Etapa']);
+    assert.equal(await page.getByRole('button', { name: /Gerar NSMP/ }).count(), 0, 'chip de histórico vazio fica escondido');
+    assert.equal(await page.getByRole('button', { name: /Aguard\. fatura/ }).count(), 0, 'chip de histórico vazio fica escondido');
+    assert.equal(await page.getByRole('button', { name: /Sem cobrança/ }).count(), 1);
+    assert.equal(await page.getByRole('button', { name: /Aguard\. apropriação/ }).count(), 1, 'etapas novas na fila');
+    assert.equal(await page.getByRole('button', { name: /Aguard\. Salesforce/ }).count(), 1);
+    assert.equal(await primeiraCelula(), '900010010');
+    await foto('fila-fluxo-a-fechar');
+
+    // ▾ de Tipo do serviço lista os valores; Esc fecha
+    await page.getByRole('button', { name: 'Filtrar Tipo do serviço' }).click();
+    await menu('Tipo do serviço').waitFor();
+    await menu('Tipo do serviço').getByLabel('NSRI').waitFor();
+    assert.equal(await menu('Tipo do serviço').getByLabel('NSIS').count(), 1);
+    await page.keyboard.press('Escape');
+    await menu('Tipo do serviço').waitFor({ state: 'detached' });
+
+    // Marcar um valor e aplicar reduz as linhas e mostra o chip removível
+    await page.getByRole('button', { name: 'Filtrar Tipo do serviço' }).click();
+    await menu('Tipo do serviço').getByLabel('NSRI').waitFor();
+    await menu('Tipo do serviço').getByLabel('Selecionar todos').uncheck();
+    await menu('Tipo do serviço').getByLabel('NSRI').check();
+    await menu('Tipo do serviço').getByRole('button', { name: 'Aplicar' }).click();
+    await esperarLinhas(1);
+    assert.equal(await primeiraCelula(), '900010011');
+    assert.equal(parametro('col.tipo_serv'), 'NSRI');
+    await page.getByText('Tipo do serviço: NSRI').waitFor();
+    await foto('fila-fluxo-filtro-coluna');
+
+    // Com o filtro ativo o menu mostra a seleção e a lista ignora o próprio filtro
+    await page.getByRole('button', { name: 'Filtrar Tipo do serviço' }).click();
+    await menu('Tipo do serviço').getByLabel('NSIS').waitFor();
+    assert.equal(await menu('Tipo do serviço').getByLabel('NSRI').isChecked(), true);
+    assert.equal(await menu('Tipo do serviço').getByLabel('NSIS').isChecked(), false);
+    await page.keyboard.press('Escape');
+
+    // Remover o chip restaura as linhas
+    await page.getByRole('button', { name: 'Remover filtro' }).click();
+    await esperarLinhas(3);
+    assert.equal(parametro('col.tipo_serv'), null);
+    assert.equal(await page.getByText('Tipo do serviço: NSRI').count(), 0);
+
+    // Ordenar: clicar de novo na mesma ordem volta à padrão
+    await page.getByRole('button', { name: 'Filtrar Tipo do serviço' }).click();
+    await page.getByRole('button', { name: 'Ordenar de Z a A' }).click();
+    await page.waitForFunction(() => new URL(location.href).searchParams.get('ordcol') === 'tipo_serv:desc');
+    await page.waitForFunction(() => document.querySelector('table.grade-nsis tbody tr td')?.textContent === '900010011');
+    await page.getByRole('button', { name: 'Filtrar Tipo do serviço' }).click();
+    await page.getByRole('button', { name: 'Ordenar de Z a A' }).click();
+    await page.waitForFunction(() => !new URL(location.href).searchParams.has('ordcol'));
+    await page.waitForFunction(() => document.querySelector('table.grade-nsis tbody tr td')?.textContent === '900010010');
+
+    // Colunas de valor só ordenam: sem pesquisa nem lista
+    ocultos.clear();
+    await page.goto(urlBase + '/fechamento?etapa=TODAS');
+    await esperarLinhas(7);
+    assert.deepEqual(await cabecalhos(), [
+      'N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Equipe', 'Supervisor', 'NSMP', 'NSPR',
+      'Lançamento Salesforce', 'Valor pago', 'Data lançamento SF', 'Apropriação', 'Observação', 'Etapa',
+    ], 'na etapa Todas aparecem todas as colunas');
+    await page.getByRole('button', { name: 'Filtrar Valor pago' }).click();
+    await menu('Valor pago').getByRole('button', { name: 'Do menor para o maior' }).waitFor();
+    assert.equal(await menu('Valor pago').getByPlaceholder('Pesquisar').count(), 0);
+    await page.keyboard.press('Escape');
+
+    // NSIS do fluxo novo já com NSMP: etapa seguinte acrescenta equipe, supervisor e NSMP
+    for (const s of ['900000001', '900000002', '900000003']) ocultos.add(s);
+    await page.goto(urlBase + '/fechamento?etapa=AGUARDANDO_NSPR');
+    await esperarLinhas(1);
+    assert.deepEqual(await cabecalhos(), ['N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Equipe', 'Supervisor', 'NSMP', 'Etapa']);
+    assert.equal(await page.locator('table.grade-nsis tbody tr td').nth(5).textContent(), 'Ana');
+
+    // NSIS histórica mantém as colunas de hoje, inclusive Observação
+    ocultos.clear(); ocultos.add('900010013');
+    await page.goto(urlBase + '/fechamento?etapa=AGUARDANDO_NSPR');
+    await esperarLinhas(1);
+    assert.deepEqual(await cabecalhos(), [
+      'N° Serviço', 'Tipo do serviço', 'NSMP', 'Equipe', 'Supervisor', 'NSPR', 'DT execução',
+      'Lançamento Salesforce', 'Valor pago', 'Apropriação', 'Observação', 'Etapa',
+    ]);
+    await page.goto(urlBase + '/fechamento?etapa=AGUARDANDO_NSMP');
+    await page.getByRole('button', { name: /Gerar NSMP/ }).waitFor();
+    assert.equal(await page.getByRole('button', { name: /Aguard\. fatura/ }).count(), 0);
+    ocultos.clear();
+
     // ── Celular: sem rolagem lateral ──
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(urlBase + '/fechamento?etapa=TODAS&nsis=900000001');
@@ -280,7 +417,7 @@ function responderItens(url, metodo, corpo) {
     await foto('manutencao-celular-lancamento');
 
     assert.deepEqual(falhas, [], 'sem erro de JavaScript na tela');
-    console.log('OK: janela no meio, vários códigos, fator, aviso ao fechar, NSMP/NSPR/AP do lançamento, rateio, histórico, edição, item sem código e celular.');
+    console.log('OK: janela no meio, vários códigos, fator, aviso ao fechar, NSMP/NSPR/AP do lançamento, rateio, histórico, edição, item sem código, colunas por etapa, filtros por coluna e celular.');
   } catch (e) {
     await globalThis.paginaTeste?.screenshot({ path: path.join(saida, 'manutencao-falha.png') });
     throw e;

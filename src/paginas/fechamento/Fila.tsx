@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Search, Download, Plus, Loader2, RefreshCw, FileSpreadsheet, AlertTriangle, ChevronRight, X, Inbox, CalendarRange, FilterX,
+  Search, Download, Plus, Loader2, RefreshCw, FileSpreadsheet, AlertTriangle, ChevronRight, X, Inbox, CalendarRange, FilterX, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { Pagination } from '@/components/Pagination';
 import EtapaChip from '@/components/fechamento/EtapaChip';
+import FiltroColuna from '@/components/fechamento/FiltroColuna';
 import PainelNsis from './PainelNsis';
 import {
-  ETAPAS, listarNsis, getResumo, getResumoFaturas, exportarFechamento, criarNsisManual, formatarUS, formatarReais, formatarData,
-  contarPorEtapa, temFiltro, listarTiposServico,
+  listarNsis, getResumo, getResumoFaturas, exportarFechamento, criarNsisManual, formatarUS, formatarReais, formatarData,
+  contarPorEtapa, temFiltro, listarTiposServico, valoresDaColuna, infoEtapa,
   type Etapa, type Nsis, type ResumoFechamento, type ResumoFatura, type FiltrosNsis,
 } from '@/lib/fechamento';
+import { COLUNAS_FLUXO, colunasVisiveis, type ColunaFluxo } from '@/lib/fechamentoFluxo';
 
 const POR_PAGINA = 50;
 
@@ -30,6 +32,42 @@ const ATALHOS: { id: string; nome: string; faixa: () => [string, string] }[] = [
 
 const dataBR = (d: string) => d.split('-').reverse().join('/');
 
+/** Etapas do fluxo novo (as demais só existem no histórico). */
+const ETAPAS_FLUXO: Etapa[] = ['A_FECHAR', 'AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO', 'FATURADA'];
+/** Etapas só do histórico: o chip só aparece com NSIS nelas (ou quando é a etapa aberta). */
+const ETAPAS_HISTORICO: Etapa[] = ['AGUARDANDO_NSMP', 'AGUARDANDO_FATURA', 'SEM_COBRANCA'];
+const ETAPAS_HISTORICO_ESCONDIVEIS: Etapa[] = ['AGUARDANDO_NSMP', 'AGUARDANDO_FATURA'];
+
+/** Colunas de valor só ordenam: não têm lista de valores para filtrar. */
+const COLUNAS_SEM_LISTA: ColunaFluxo[] = ['valor_lancamento', 'valor_pago'];
+
+/** Filtro por coluna na URL: ?col.tipo_serv=NSIS|NSRI (cada valor escapado com encodeURIComponent). */
+function lerColunas(params: URLSearchParams): Partial<Record<ColunaFluxo, string[]>> {
+  const colunas: Partial<Record<ColunaFluxo, string[]>> = {};
+  for (const c of COLUNAS_FLUXO) {
+    if (COLUNAS_SEM_LISTA.includes(c.id)) continue;
+    const bruto = params.get(`col.${c.id}`);
+    if (!bruto) continue;
+    const valores = bruto.split('|').map((v) => { try { return decodeURIComponent(v); } catch { return v; } }).filter(Boolean);
+    if (valores.length) colunas[c.id] = valores;
+  }
+  return colunas;
+}
+
+/** Ordem por coluna na URL: ?ordcol=termino:desc */
+function lerOrdemColuna(params: URLSearchParams): FiltrosNsis['ordemColuna'] {
+  const [coluna, dir] = (params.get('ordcol') ?? '').split(':');
+  if (!COLUNAS_FLUXO.some((c) => c.id === coluna) || (dir !== 'asc' && dir !== 'desc')) return null;
+  return { coluna: coluna as ColunaFluxo, dir };
+}
+
+/** Texto de um valor de coluna na lista do filtro e nos chips. */
+function textoValor(coluna: ColunaFluxo, v: string): string {
+  if (coluna === 'etapa' && v !== '—') return infoEtapa(v as Etapa).nome;
+  if ((coluna === 'termino' || coluna === 'data_lancamento_sf') && /^d{4}-d{2}-d{2}$/.test(v)) return dataBR(v);
+  return v;
+}
+
 export default function FilaFechamento() {
   const [params, setParams] = useSearchParams();
   const etapa = (params.get('etapa') as Etapa | 'TODAS' | null) ?? 'A_FECHAR';
@@ -48,6 +86,8 @@ export default function FilaFechamento() {
     ate: params.get('ate') ?? '',
     alerta: (params.get('alerta') as FiltrosNsis['alerta']) || null,
     ordem: (params.get('ordem') as FiltrosNsis['ordem']) || 'termino_asc',
+    colunas: lerColunas(params),
+    ordemColuna: lerOrdemColuna(params),
   };
   const filtrado = temFiltro(filtros);
   const chaveFiltros = JSON.stringify(filtros);
@@ -66,6 +106,15 @@ export default function FilaFechamento() {
   const [exportando, setExportando] = useState(false);
   const [novaAberta, setNovaAberta] = useState(false);
   const [tipos, setTipos] = useState<string[]>([]);
+  // valores de cada coluna, carregados quando o menu abre (null = carregando)
+  const [valoresCol, setValoresCol] = useState<Partial<Record<ColunaFluxo, string[] | null>>>({});
+
+  // Colunas por etapa: fluxo novo mostra o que a etapa já tem; histórico e listas mistas, o conjunto de hoje
+  const colunas: ColunaFluxo[] = etapa === 'TODAS'
+    ? colunasVisiveis('TODAS', false)
+    : (linhas.length > 0 ? linhas.every((n) => n.fluxo_novo) : ETAPAS_FLUXO.includes(etapa))
+      ? colunasVisiveis(etapa, false)
+      : colunasVisiveis(etapa, true);
 
   useEffect(() => { listarTiposServico().then(setTipos).catch(() => {}); }, []);
 
@@ -123,7 +172,28 @@ export default function FilaFechamento() {
   }
 
   function limparFiltros() {
-    mudarParams({ q: null, loc: null, equipe: null, tipo: null, codigo: null, de: null, ate: null, alerta: null });
+    const colunasNulas = Object.fromEntries(COLUNAS_FLUXO.map((c) => [`col.${c.id}`, null]));
+    mudarParams({ q: null, loc: null, equipe: null, tipo: null, codigo: null, de: null, ate: null, alerta: null, ...colunasNulas });
+  }
+
+  function abrirColuna(c: ColunaFluxo) {
+    setValoresCol((v) => ({ ...v, [c]: null }));
+    valoresDaColuna(c, filtros)
+      .then((lista) => setValoresCol((v) => ({ ...v, [c]: lista })))
+      .catch((e) => {
+        setValoresCol((v) => ({ ...v, [c]: [] }));
+        setErro(e instanceof Error ? e.message : 'Falha ao carregar os valores da coluna.');
+      });
+  }
+
+  function filtrarColuna(c: ColunaFluxo, valores: string[]) {
+    mudarParam(`col.${c}`, valores.length ? valores.map(encodeURIComponent).join('|') : null);
+  }
+
+  /** Clicar de novo na ordem já ativa da coluna volta à ordem padrão. */
+  function ordenarColuna(c: ColunaFluxo, dir: 'asc' | 'desc') {
+    const atual = filtros.ordemColuna;
+    mudarParam('ordcol', atual && atual.coluna === c && atual.dir === dir ? null : `${c}:${dir}`);
   }
 
   async function exportar() {
@@ -157,6 +227,15 @@ export default function FilaFechamento() {
   if (filtros.busca) chips.push({ rotulo: <>Busca: <b>{filtros.busca}</b></>, limpar: { q: null } });
   if (filtros.localidade) chips.push({ rotulo: <>Localidade <b>{filtros.localidade}</b></>, limpar: { loc: null } });
   if (filtros.equipe) chips.push({ rotulo: <>Equipe <b>{filtros.equipe}</b></>, limpar: { equipe: null } });
+  for (const c of COLUNAS_FLUXO) {
+    const v = filtros.colunas?.[c.id];
+    if (!v?.length) continue;
+    const mostrados = v.slice(0, 2).map((x) => textoValor(c.id, x)).join(', ');
+    chips.push({
+      rotulo: <>{c.rotulo}: <b>{mostrados}{v.length > 2 ? ` +${v.length - 2}` : ''}</b></>,
+      limpar: { [`col.${c.id}`]: null },
+    });
+  }
   if (filtros.alerta) chips.push({ rotulo: <b>{filtros.alerta === 'DIVERGENTE' ? 'Pago ≠ pedido' : 'NSPR sem valor pago'}</b>, limpar: { alerta: null } });
 
   const campo = 'h-9 px-3 text-sm border border-linha rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sinal/30 focus:border-sinal';
@@ -214,13 +293,17 @@ export default function FilaFechamento() {
 
       {/* Etapas do fluxo */}
       <div className="bg-white border border-linha rounded-2xl p-1.5 flex flex-nowrap items-center gap-1 overflow-x-auto">
-        {ETAPAS.map((e, i) => {
+        {[...ETAPAS_FLUXO, 'SEPARADOR' as const, ...ETAPAS_HISTORICO].map((id, i) => {
+          if (id === 'SEPARADOR') return <span key={id} className="w-px h-6 bg-linha mx-2 shrink-0" />;
+          const e = infoEtapa(id);
           const ativa = visao === 'nsis' && etapa === e.id;
+          const historica = ETAPAS_HISTORICO.includes(e.id);
+          // chips só do histórico somem quando vazios (a menos que sejam a etapa aberta)
+          if (ETAPAS_HISTORICO_ESCONDIVEIS.includes(e.id) && !ativa && contagem(e.id) === 0) return null;
           return (
             <div key={e.id} className="flex items-center shrink-0">
-              {i > 0 && i < 5 && <ChevronRight size={13} className="text-aco-claro/60" />}
-              {i === 5 && <span className="w-px h-6 bg-linha mx-2" />}
-              <button onClick={() => trocarEtapa(e.id)} title={e.nome}
+              {i > 0 && !historica && <ChevronRight size={13} className="text-aco-claro/60" />}
+              <button onClick={() => trocarEtapa(e.id)} title={historica ? `${e.nome} (histórico)` : e.nome}
                 className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${ativa ? `${e.classe} ring-1 ring-current/20` : 'text-aco hover:bg-nevoa'}`}>
                 <span className={`size-2 rounded-full ${e.marca}`} />
                 {e.curto}
@@ -312,7 +395,7 @@ export default function FilaFechamento() {
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-aco mb-1">Ordem</label>
-                <select value={filtros.ordem} onChange={(e) => mudarParam('ordem', e.target.value === 'termino_asc' ? null : e.target.value)}
+                <select value={filtros.ordem} onChange={(e) => mudarParams({ ordem: e.target.value === 'termino_asc' ? null : e.target.value, ordcol: null })}
                   className={`${campo} px-2`}>
                   <option value="termino_asc">Execução mais antiga primeiro</option>
                   <option value="termino_desc">Execução mais recente primeiro</option>
@@ -350,69 +433,53 @@ export default function FilaFechamento() {
               <b className="text-tinta">{total.toLocaleString('pt-BR')}</b> NSIS
             </div>
             <div className="overflow-auto max-h-[calc(100vh-280px)] min-h-[200px]">
-              <table className="grade-nsis w-full min-w-[1180px] border-separate border-spacing-0 text-xs text-left">
+              <table className={`grade-nsis w-full ${colunas.length > 6 ? 'min-w-[1180px]' : ''} border-separate border-spacing-0 text-xs text-left`}>
                 <thead>
                   <tr>
-                    <th>N° Serviço</th>
-                    <th>Tipo do serviço</th>
-                    <th>NSMP</th>
-                    <th>Equipe</th>
-                    <th>Supervisor</th>
-                    <th>NSPR/NSMC</th>
-                    <th>DT execução</th>
-                    <th className="text-right">Lançamento Salesforce</th>
-                    <th className="text-right">Pago</th>
-                    <th>Apropriação</th>
-                    <th className="min-w-[260px]">Observação</th>
-                    <th className="grade-fixa-cab">Etapa</th>
+                    {colunas.map((id) => {
+                      const def = COLUNAS_FLUXO.find((c) => c.id === id)!;
+                      const ordemDaColuna = filtros.ordemColuna?.coluna === id ? filtros.ordemColuna.dir : null;
+                      const selecionados = filtros.colunas?.[id];
+                      return (
+                        <th key={id} className={`${def.numero ? 'text-right' : ''} ${id === 'observacao' ? 'min-w-[260px]' : ''} ${id === 'etapa' ? 'grade-fixa-cab' : ''}`}>
+                          <div className={`flex items-center gap-1.5 ${def.numero ? 'justify-end' : ''}`}>
+                            <span>{def.rotulo}</span>
+                            {ordemDaColuna === 'asc' && <ArrowUp size={11} className="text-sinal" aria-hidden="true" />}
+                            {ordemDaColuna === 'desc' && <ArrowDown size={11} className="text-sinal" aria-hidden="true" />}
+                            <FiltroColuna
+                              coluna={def}
+                              valores={valoresCol[id] ?? null}
+                              selecionados={selecionados}
+                              ordem={ordemDaColuna}
+                              ativo={!!selecionados?.length}
+                              semLista={COLUNAS_SEM_LISTA.includes(id)}
+                              formatar={(v) => textoValor(id, v)}
+                              onAbrir={() => abrirColuna(id)}
+                              onOrdenar={(dir) => ordenarColuna(id, dir)}
+                              onFiltrar={(v) => filtrarColuna(id, v)}
+                            />
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
                   {!carregando && linhas.length === 0 && (
-                    <tr className="sem-hover"><td colSpan={12} className="!py-9 text-center !text-aco-claro !whitespace-normal">
+                    <tr className="sem-hover"><td colSpan={colunas.length} className="!py-9 text-center !text-aco-claro !whitespace-normal">
                       <Inbox size={28} className="mx-auto text-aco-claro mb-2" />
                       {etapa === 'A_FECHAR' && !filtrado ? 'Nenhuma NSIS a fechar. Importe o relatório da semana.' : 'Nenhuma NSIS encontrada com esses filtros.'}
                     </td></tr>
                   )}
                   {carregando && linhas.length === 0 && (
-                    <tr className="sem-hover"><td colSpan={12} className="!py-9 text-center !text-aco-claro">
+                    <tr className="sem-hover"><td colSpan={colunas.length} className="!py-9 text-center !text-aco-claro">
                       <Loader2 size={16} className="animate-spin inline mr-2 align-text-bottom" /> Carregando…
                     </td></tr>
                   )}
                   {linhas.map((n) => (
                     <tr key={n.servico} onClick={() => mudarParam('nsis', n.servico)}
                       className={aberta === n.servico ? 'selecionada' : ''}>
-                      <td className="font-codigo font-bold text-[#0f2544]">{n.servico}</td>
-                      <td className="font-bold">{n.tipo_serv}</td>
-                      <td className="!text-[#7c3aed]"><Numeros valor={n.nsmps} falta={n.qtd_itens > 0 && n.itens_sem_nsmp > 0} /></td>
-                      <td><Numeros valor={n.equipes} falta={false} /></td>
-                      <td>
-                        {n.supervisor ?? <span className="text-[#94a3b8]">—</span>}
-                        <span className="block text-[11px] text-[#64748b]">Loc. <span className="font-codigo">{n.localidade ?? '—'}</span></span>
-                      </td>
-                      <td className="!text-[#15803d]"><Numeros valor={n.nsprs} falta={n.qtd_itens > 0 && !!n.nsmps && n.itens_sem_nspr > 0} /></td>
-                      <td className="!text-[#64748b]">{formatarData(n.termino)}</td>
-                      <td className="text-right tabular-nums">
-                        {n.qtd_itens ? <>
-                          <span className="font-bold">{formatarUS(n.valor_inicial_total)}</span>
-                          {n.valor_us_reais !== null && <span className="block text-[11px] text-[#64748b]">{formatarReais(n.valor_inicial_reais_total)}</span>}
-                        </> : <span className="text-[#94a3b8]">—</span>}
-                      </td>
-                      <td className={`text-right tabular-nums ${n.itens_divergentes > 0 ? '!text-erro' : ''}`}>
-                        {n.qtd_itens - n.itens_sem_nsmp - n.itens_sem_nspr > 0 ? <>
-                          <span className="font-bold">{formatarUS(n.valor_final_total)}</span>
-                          {n.valor_us_reais !== null && <span className={`block text-[11px] ${n.itens_divergentes > 0 ? '' : 'text-[#64748b]'}`}>{formatarReais(n.valor_final_reais_total)}</span>}
-                        </> : <span className="text-[#94a3b8]">—</span>}
-                        {n.itens_sem_valor_pago > 0 && <span className="block text-[10px] font-bold text-pendente">sem valor pago</span>}
-                      </td>
-                      <td className="!text-[#1d4ed8]"><Numeros valor={n.faturas} falta={n.qtd_itens > 0 && !!n.nsprs && n.itens_sem_fatura > 0} /></td>
-                      <td className="!whitespace-normal">
-                        {n.observacao
-                          ? <span className="line-clamp-2">{n.observacao}</span>
-                          : n.qtd_itens === 0 && <span className="text-pendente text-xs font-semibold">sem observação no GDIS</span>}
-                        {n.qtd_itens > 0 && <span className="block text-[11px] text-[#64748b] mt-0.5">{n.qtd_itens} item{n.qtd_itens > 1 ? 's' : ''}</span>}
-                      </td>
-                      <td className="grade-fixa"><EtapaChip etapa={n.etapa} curto /></td>
+                      {colunas.map((id) => <Celula key={id} id={id} n={n} localidadeVisivel={colunas.includes('localidade')} />)}
                     </tr>
                   ))}
                 </tbody>
@@ -430,6 +497,55 @@ export default function FilaFechamento() {
       {novaAberta && <ModalNovaNsis onFechar={() => setNovaAberta(false)} onCriada={(s) => { setNovaAberta(false); mudarParam('nsis', s); carregar(); }} />}
     </div>
   );
+}
+
+/** Célula de uma coluna da lista; sem dado mostra —. */
+function Celula({ id, n, localidadeVisivel }: { id: ColunaFluxo; n: Nsis; localidadeVisivel: boolean }) {
+  const vazio = <span className="text-[#94a3b8]">—</span>;
+  switch (id) {
+    case 'servico': return <td className="font-codigo font-bold text-[#0f2544]">{n.servico}</td>;
+    case 'tipo_serv': return <td className="font-bold">{n.tipo_serv}</td>;
+    case 'localidade': return <td className="font-codigo">{n.localidade ?? vazio}</td>;
+    case 'nsmps': return <td className="!text-[#7c3aed]"><Numeros valor={n.nsmps} falta={n.qtd_itens > 0 && n.itens_sem_nsmp > 0} /></td>;
+    case 'equipes': return <td><Numeros valor={n.equipes} falta={false} /></td>;
+    case 'supervisor': return (
+      <td>
+        {n.supervisor ?? vazio}
+        {!localidadeVisivel && <span className="block text-[11px] text-[#64748b]">Loc. <span className="font-codigo">{n.localidade ?? '—'}</span></span>}
+      </td>
+    );
+    case 'nsprs': return <td className="!text-[#15803d]"><Numeros valor={n.nsprs} falta={n.qtd_itens > 0 && !!n.nsmps && n.itens_sem_nspr > 0} /></td>;
+    case 'termino': return <td className="!text-[#64748b]">{formatarData(n.termino)}</td>;
+    case 'valor_lancamento': return (
+      <td className="text-right tabular-nums">
+        {n.qtd_itens ? <>
+          <span className="font-bold">{formatarUS(n.valor_inicial_total)}</span>
+          {n.valor_us_reais !== null && <span className="block text-[11px] text-[#64748b]">{formatarReais(n.valor_inicial_reais_total)}</span>}
+        </> : vazio}
+      </td>
+    );
+    case 'valor_pago': return (
+      <td className={`text-right tabular-nums ${n.itens_divergentes > 0 ? '!text-erro' : ''}`}>
+        {n.qtd_itens - n.itens_sem_nsmp - n.itens_sem_nspr > 0 ? <>
+          <span className="font-bold">{formatarUS(n.valor_final_total)}</span>
+          {n.valor_us_reais !== null && <span className={`block text-[11px] ${n.itens_divergentes > 0 ? '' : 'text-[#64748b]'}`}>{formatarReais(n.valor_final_reais_total)}</span>}
+        </> : vazio}
+        {n.itens_sem_valor_pago > 0 && <span className="block text-[10px] font-bold text-pendente">sem valor pago</span>}
+      </td>
+    );
+    // data pura (YYYY-MM-DD): formatarData deslocaria um dia pelo fuso
+    case 'data_lancamento_sf': return <td className="!text-[#64748b]">{n.data_lancamento_sf ? dataBR(n.data_lancamento_sf.slice(0, 10)) : vazio}</td>;
+    case 'faturas': return <td className="!text-[#1d4ed8]"><Numeros valor={n.faturas} falta={n.qtd_itens > 0 && !!n.nsprs && n.itens_sem_fatura > 0} /></td>;
+    case 'observacao': return (
+      <td className="!whitespace-normal">
+        {n.observacao
+          ? <span className="line-clamp-2">{n.observacao}</span>
+          : n.qtd_itens === 0 && <span className="text-pendente text-xs font-semibold">sem observação no GDIS</span>}
+        {n.qtd_itens > 0 && <span className="block text-[11px] text-[#64748b] mt-0.5">{n.qtd_itens} item{n.qtd_itens > 1 ? 's' : ''}</span>}
+      </td>
+    );
+    case 'etapa': return <td className="grade-fixa"><EtapaChip etapa={n.etapa} curto /></td>;
+  }
 }
 
 /** NSMP / NSPR / equipe / AP da NSIS: um número por linha; "falta" quando algum item ainda não tem. */
