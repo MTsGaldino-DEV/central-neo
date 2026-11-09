@@ -14,3 +14,14 @@ export function lerRecolhidas(arm: Armazenamento | null = padrao()): Set<string>
 export function gravarRecolhidas(s: Set<string>, arm: Armazenamento | null = padrao()): void {
   try { arm?.setItem(CHAVE, JSON.stringify([...s])); } catch { /* sem armazenamento: só não lembra */ }
 }
+
+// Menu lateral inteiro recolhido (só ícones); também fica só neste navegador.
+const CHAVE_COMPACTO = 'neo-menu-compacto';
+
+export function lerMenuCompacto(arm: Armazenamento | null = padrao()): boolean {
+  try { return arm?.getItem(CHAVE_COMPACTO) === '1'; } catch { return false; }
+}
+
+export function gravarMenuCompacto(compacto: boolean, arm: Armazenamento | null = padrao()): void {
+  try { arm?.setItem(CHAVE_COMPACTO, compacto ? '1' : '0'); } catch { /* sem armazenamento: só não lembra */ }
+}

@@ -3,13 +3,13 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Route,
   ClipboardList, FileSpreadsheet, Table2, BarChart3, Receipt, MessageSquareWarning, Scale, Users, KeyRound, LogOut, Contact, CalendarCheck,
-  ChevronDown, Menu, X, type LucideIcon,
+  ChevronDown, Menu, X, PanelLeftClose, PanelLeftOpen, type LucideIcon,
 } from 'lucide-react';
 import NeoLogo from './NeoLogo';
 import { useSessao } from '@/contexto/Sessao';
 import { temModulo } from '@/lib/neo';
 import { sair as encerrarSessao, trocarMinhaSenha } from '@/lib/auth';
-import { gravarRecolhidas, lerRecolhidas } from '@/lib/secoesRecolhidas';
+import { gravarMenuCompacto, gravarRecolhidas, lerMenuCompacto, lerRecolhidas } from '@/lib/secoesRecolhidas';
 
 interface ItemNav { label: string; href: string; icon: LucideIcon; fim?: boolean }
 interface SecaoNav { titulo: string; itens: ItemNav[]; emBreve?: boolean }
@@ -90,6 +90,9 @@ export default function Shell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [menuAberto, setMenuAberto] = useState(false);
   const [modalSenha, setModalSenha] = useState(false);
+  // Menu recolhido: só ícones (somente no desktop; no celular o menu abre completo).
+  const [compacto, setCompacto] = useState(() => lerMenuCompacto());
+  const alternarCompacto = () => setCompacto(c => { gravarMenuCompacto(!c); return !c; });
   // Seções começam abertas; as que o usuário fechar ficam fechadas neste navegador.
   const [recolhidas, setRecolhidas] = useState<Set<string>>(() => lerRecolhidas());
   const alternar = (titulo: string) => setRecolhidas(r => {
@@ -114,21 +117,28 @@ export default function Shell({ children }: { children: ReactNode }) {
     navigate('/login', { replace: true });
   }
 
-  const barra = (
-    <aside className="w-64 shrink-0 h-full bg-noite-degrade text-white flex flex-col">
-      <div className="h-16 flex items-center justify-between px-5 border-b border-white/5">
-        <NeoLogo tema="escuro" className="h-7 w-auto" />
-        <button className="lg:hidden text-white/60 hover:text-white" onClick={() => setMenuAberto(false)} aria-label="Fechar menu">
-          <X size={18} />
+  const barra = (c: boolean) => (
+    <aside className={`${c ? 'w-16' : 'w-64'} shrink-0 h-full bg-noite-degrade text-white flex flex-col transition-[width] duration-200 motion-reduce:transition-none`}>
+      <div className={`h-16 flex items-center border-b border-white/5 ${c ? 'justify-center' : 'justify-between px-5'}`}>
+        {!c && <NeoLogo tema="escuro" className="h-7 w-auto" />}
+        {!c && (
+          <button className="lg:hidden text-white/60 hover:text-white" onClick={() => setMenuAberto(false)} aria-label="Fechar menu">
+            <X size={18} />
+          </button>
+        )}
+        <button type="button" onClick={alternarCompacto}
+          className={`hidden lg:flex items-center justify-center size-8 rounded-md text-white/60 hover:text-white hover:bg-white/5 ${c ? '' : '-mr-2'}`}
+          aria-label={c ? 'Expandir menu' : 'Recolher menu'} title={c ? 'Expandir menu' : 'Recolher menu'}>
+          {c ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
         </button>
       </div>
 
-      <nav className="rolagem-neo flex-1 overflow-y-auto py-4 pr-1.5 pl-3 space-y-3" aria-label="Menu">
+      <nav className={`rolagem-neo flex-1 overflow-y-auto py-4 space-y-3 ${c ? 'px-2 overflow-x-hidden' : 'pr-1.5 pl-3'}`} aria-label="Menu">
         {secoes.map((s) => {
-          const fechada = !!s.titulo && recolhidas.has(s.titulo);
+          const fechada = !c && !!s.titulo && recolhidas.has(s.titulo);
           return (
-          <div key={s.titulo || 'raiz'}>
-            {s.titulo && (
+          <div key={s.titulo || 'raiz'} className={c ? 'first:pt-0 pt-3 border-t border-white/5 first:border-t-0' : undefined}>
+            {s.titulo && !c && (
               <button type="button" onClick={() => alternar(s.titulo)} aria-expanded={!fechada}
                 className="w-full flex items-center justify-between gap-2 px-3 py-1.5 mb-0.5 rounded-md text-[10px] font-bold uppercase tracking-[0.16em] text-white/40 hover:text-white/70 hover:bg-white/5">
                 <span className="flex items-center gap-1.5 text-left">{s.titulo}
@@ -141,9 +151,10 @@ export default function Shell({ children }: { children: ReactNode }) {
                 const Icone = item.icon;
                 if (s.emBreve) {
                   return (
-                    <div key={item.label} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/30 cursor-default" title="Em breve">
-                      <Icone size={16} />
-                      {item.label}
+                    <div key={item.label} className={`flex items-center rounded-lg text-sm text-white/30 cursor-default ${c ? 'justify-center py-2' : 'gap-3 px-3 py-2'}`}
+                      title={`${item.label} (em breve)`}>
+                      <Icone size={16} aria-hidden={!c} aria-label={c ? item.label : undefined} />
+                      {!c && item.label}
                     </div>
                   );
                 }
@@ -153,16 +164,18 @@ export default function Shell({ children }: { children: ReactNode }) {
                     to={item.href}
                     end={item.fim}
                     onClick={() => setMenuAberto(false)}
+                    title={c ? item.label : undefined}
+                    aria-label={c ? item.label : undefined}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      `flex items-center rounded-lg text-sm font-medium transition-colors ${c ? 'justify-center py-2.5' : 'gap-3 px-3 py-2'} ${
                         isActive
                           ? 'bg-sinal text-white shadow-[inset_3px_0_0_var(--color-sinal-claro)]'
                           : 'text-white/70 hover:text-white hover:bg-white/5'
                       }`
                     }
                   >
-                    <Icone size={16} />
-                    {item.label}
+                    <Icone size={c ? 18 : 16} aria-hidden="true" />
+                    {!c && item.label}
                   </NavLink>
                 );
               })}
@@ -172,22 +185,26 @@ export default function Shell({ children }: { children: ReactNode }) {
         })}
       </nav>
 
-      <div className="p-3 border-t border-white/5">
-        <div className="flex items-center gap-3 px-2 py-2">
-          <div className="size-8 rounded-full bg-sinal flex items-center justify-center text-xs font-bold uppercase">
+      <div className={`border-t border-white/5 ${c ? 'p-2' : 'p-3'}`}>
+        <div className={`flex items-center py-2 ${c ? 'justify-center' : 'gap-3 px-2'}`} title={c ? nome : undefined}>
+          <div className="size-8 shrink-0 rounded-full bg-sinal flex items-center justify-center text-xs font-bold uppercase">
             {nome.slice(0, 1)}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate">{nome}</p>
-            <p className="text-[11px] text-white/45">{acesso?.papel === 'ADMIN' ? 'Administrador NEO' : 'Usuário NEO'}</p>
-          </div>
+          {!c && (
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate">{nome}</p>
+              <p className="text-[11px] text-white/45">{acesso?.papel === 'ADMIN' ? 'Administrador NEO' : 'Usuário NEO'}</p>
+            </div>
+          )}
         </div>
-        <div className="flex gap-1 mt-1">
-          <button onClick={() => setModalSenha(true)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/5 rounded-md">
-            <KeyRound size={13} /> Senha
+        <div className={`mt-1 ${c ? 'flex flex-col gap-1' : 'flex gap-1'}`}>
+          <button onClick={() => setModalSenha(true)} title={c ? 'Alterar senha' : undefined} aria-label={c ? 'Alterar senha' : undefined}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/5 rounded-md">
+            <KeyRound size={c ? 16 : 13} /> {!c && 'Senha'}
           </button>
-          <button onClick={sair} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/5 rounded-md">
-            <LogOut size={13} /> Sair
+          <button onClick={sair} title={c ? 'Sair' : undefined} aria-label={c ? 'Sair' : undefined}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/5 rounded-md">
+            <LogOut size={c ? 16 : 13} /> {!c && 'Sair'}
           </button>
         </div>
       </div>
@@ -196,10 +213,10 @@ export default function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="h-full flex">
-      <div className="hidden lg:block h-full">{barra}</div>
+      <div className="hidden lg:block h-full">{barra(compacto)}</div>
       {menuAberto && (
         <div className="lg:hidden fixed inset-0 z-40 flex">
-          {barra}
+          {barra(false)}
           <div className="flex-1 bg-black/40" onClick={() => setMenuAberto(false)} />
         </div>
       )}

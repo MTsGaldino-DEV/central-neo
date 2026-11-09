@@ -112,6 +112,32 @@ Só leitura de `Importação/Disponibilidade Contrato 7360_Macro.xlsm`; nada foi
 - **REA (`C:\Engenharia Reversa\rea-main`):** é para binários e aplicativos; não foi usada nem é necessária para esta planilha.
 - **Cuidado:** a pasta `Importação/` não está no `.gitignore`, e a planilha tem rótulo de LGPD, nomes e dados de saúde. Não incluir no commit.
 
+## Menu lateral recolhível só com ícones — 09/11/2026 (Claude)
+
+- Pedido do Matheus: a sidebar recolhe e fica em fila (coluna) mostrando só os ícones.
+- `src/components/Shell.tsx`: botão (PanelLeftClose/Open) no topo da barra, só no desktop (`lg`). Recolhida,
+  a barra vai de `w-64` a `w-16`; some o logo, os títulos das seções e os textos; cada item vira ícone
+  centralizado com `title`/`aria-label` (tooltip nativo); seções ficam separadas por uma linha fina e o
+  recolhimento por seção é ignorado (todos os ícones aparecem). Rodapé: avatar + ícones de Senha e Sair.
+- No celular o menu continua abrindo completo (`barra(false)`).
+- A escolha fica só neste navegador (`neo-menu-compacto` em `src/lib/secoesRecolhidas.ts`, junto das seções
+  recolhidas); sem localStorage, começa expandido.
+- Verificado: `tsc -b` e `vite build` passam. Não conferido no navegador logado (pendência: olhar a barra
+  recolhida com o Matheus).
+
+## Fila de NSIS: fluxo novo e filtros por coluna — 09/11/2026 (Claude)
+
+**Estado: migration 056 aplicada por Matheus em 09/11/2026 (conferido por leitura: 4 NSIS em `fluxo_novo`, histórico intacto); código commitado só localmente (`2c46b14`, `68f2f6c`, `56d7939`, `ef1c580` e o da Tarefa 5), sem push.** Desenho em `docs/superpowers/specs/2026-11-09-fila-nsis-fluxo-design.md` e plano em `docs/superpowers/plans/2026-11-09-fila-nsis-fluxo.md`.
+- **Fluxo (NSIS novas, `neo_nsis.fluxo_novo`):** A fechar (códigos, equipe, NSMP) → Aguardando NSPR (NSPR e valor pago em US) → Aguardando Salesforce (data de lançamento) → Aguardando apropriação (AP) → Concluída (`FATURADA`). NSRI: NSMC e valor pago na etapa 1, sem NSPR. Cada NSIS tem 1 NSMP e 1 NSPR. Cada etapa abre na janela da NSIS (`JanelaFluxo.tsx`), com Corrigir e Desfazer.
+- **Fatores do fluxo novo:** só Urbano e CSC (1,0) e Rural e CSC (1,2) (`FATORES_NOVOS`). Não existe COD. O histórico mantém 1,0/1,2/1,4.
+- **Supervisor:** na importação a lista mostra a localidade; depois da equipe informada, o supervisor vem de `neo_disp_frotas` (RPC `neo_supervisor_da_equipe`) e é gravado em `supervisor_equipe`. Equipe fora das frotas (ou não numérica): campo manual opcional.
+- **Histórico não muda:** quem é histórico = `origem = HISTORICO` ou já tem item. Entraram no fluxo novo só as NSIS de relatório/manual sem nenhum item (4). As 12 NSIS históricas sem itens em "A fechar" continuam no fluxo antigo.
+- **Desvio da decisão 4 do desenho:** NSMP, NSPR, equipe, valor pago e AP continuam gravados nos **itens** (copiados em todos); só `fluxo_novo`, `supervisor_equipe` e `data_lancamento_sf` ficam na NSIS. Isso preserva Painel, divergência, R$, exportação e Faturamento. A NSMC fica na coluna `nsmp` dos itens.
+- **Lista:** colunas por etapa (A fechar: N° Serviço, Tipo, Localidade, DT execução, Etapa; vão acumulando até Concluída; Todas mostra tudo; histórico mantém as colunas antigas). Filtro e ordenação por coluna (botão ▾, `FiltroColuna.tsx`) rodam no servidor; ficam na URL (`col.<coluna>`, `ordcol`). Chips de etapa novos; "Gerar NSMP" e "Aguard. fatura" só aparecem se houver histórico.
+- **Painel/Início:** etapas novas entram como abertas; o Início mostra A fechar, Aguard. NSPR, Aguard. Salesforce e Aguard. apropriação.
+- **Verificado:** `fluxo-nsis-banco-testar` (056, em transação desfeita, também sobre o banco real depois de aplicada), `manutencao-lancamento-testar`, `fluxo-colunas-testar`, `manutencao-ui-testar` (Supabase simulado; janela do fluxo novo em desktop e celular), typecheck e build.
+- **Pendências:** a 056 não está registrada em `neo_interno.migracoes` (rodar `migrar.cjs` a reaplicaria; é inofensivo, mas melhor registrar); `manutencao-fator-testar` falha na asserção "item existente fica com fator 1,0" porque o banco já tem 2 itens com outro fator (a 056 não tem relação); NSRI não entra em "pago" no Painel (o Painel conta valor pago só de itens com NSPR); falta Matheus ver a fila e a janela com dados reais; push não feito.
+
 ## Fila de NSIS: lista em grade igual à de Instalações do Visão de Dono — 09/11/2026 (Claude)
 
 - **Pedido de Matheus:** a lista da fila de NSIS ficar igual à da aba Instalações de `C:\APPWEB\visao-de-dono` (`FluxoInstalacoes.jsx`).
