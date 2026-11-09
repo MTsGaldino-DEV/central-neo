@@ -1,17 +1,19 @@
 /**
  * lib/fechamento.ts — Manutenção (antigo Fechamento de Notas): notas de NSIS
  *
- * Ciclo de uma NSIS finalizada no GDIS:
- *   A_FECHAR           → o rapaz do fechamento lê o que foi feito e decide o que cobrar
- *   AGUARDANDO_NSMP    → itens a cobrar definidos, falta gerar a NSMP na CEMIG
- *   AGUARDANDO_NSPR    → NSMP gerada, falta a CEMIG confirmar (NSPR + valor pago)
- *   AGUARDANDO_FATURA  → confirmada, falta aparecer na fatura (AP)
- *   FATURADA           → paga e com a AP registrada
- *   SEM_COBRANCA       → não há o que pedir
- * A etapa é calculada no banco (view neo_vw_nsis) a partir dos itens.
+ * Ciclo de uma NSIS finalizada no GDIS. Fluxo novo (neo_nsis.fluxo_novo = true):
+ *   A_FECHAR               → códigos, equipe e NSMP (NSRI: NSMC e valor pago)
+ *   AGUARDANDO_NSPR        → NSMP gerada, falta a CEMIG confirmar (NSPR + valor pago); a NSRI pula esta etapa
+ *   AGUARDANDO_SALESFORCE  → falta a data de lançamento no Salesforce
+ *   AGUARDANDO_APROPRIACAO → lançada, falta a apropriação (AP)
+ *   FATURADA ("Concluída") → com a AP registrada
+ *   SEM_COBRANCA           → não há o que pedir
+ * Só o histórico (fluxo_novo = false) usa AGUARDANDO_NSMP ("Gerar NSMP") e AGUARDANDO_FATURA.
+ * A etapa é calculada no banco (view neo_vw_nsis); o fluxo novo usa os campos da NSIS e os itens.
  */
 import { supabase } from './supabase';
 import { ratearPago, textoFator } from './fechamentoCobranca';
+import { normalizarAP } from './fechamentoFormato';
 import type { LinhaRelatorioNsis, LinhaHistorico } from './fechamentoPlanilhas';
 
 export { lerNumero, normalizarAP } from './fechamentoFormato';
@@ -21,6 +23,8 @@ export type Etapa =
   | 'A_FECHAR'
   | 'AGUARDANDO_NSMP'
   | 'AGUARDANDO_NSPR'
+  | 'AGUARDANDO_SALESFORCE'
+  | 'AGUARDANDO_APROPRIACAO'
   | 'AGUARDANDO_FATURA'
   | 'FATURADA'
   | 'SEM_COBRANCA';
@@ -29,8 +33,10 @@ export const ETAPAS: { id: Etapa; nome: string; curto: string; classe: string; m
   { id: 'A_FECHAR', nome: 'A fechar', curto: 'A fechar', classe: 'text-etapa-fechar bg-etapa-fechar-fundo', marca: 'bg-etapa-fechar' },
   { id: 'AGUARDANDO_NSMP', nome: 'Aguardando NSMP', curto: 'Gerar NSMP', classe: 'text-etapa-nsmp bg-etapa-nsmp-fundo', marca: 'bg-etapa-nsmp' },
   { id: 'AGUARDANDO_NSPR', nome: 'Aguardando NSPR', curto: 'Aguard. NSPR', classe: 'text-etapa-nspr bg-etapa-nspr-fundo', marca: 'bg-etapa-nspr' },
+  { id: 'AGUARDANDO_SALESFORCE', nome: 'Aguardando Salesforce', curto: 'Aguard. Salesforce', classe: 'text-etapa-salesforce bg-etapa-salesforce-fundo', marca: 'bg-etapa-salesforce' },
+  { id: 'AGUARDANDO_APROPRIACAO', nome: 'Aguardando apropriação', curto: 'Aguard. apropriação', classe: 'text-etapa-apropriacao bg-etapa-apropriacao-fundo', marca: 'bg-etapa-apropriacao' },
   { id: 'AGUARDANDO_FATURA', nome: 'Aguardando fatura', curto: 'Aguard. fatura', classe: 'text-etapa-fatura bg-etapa-fatura-fundo', marca: 'bg-etapa-fatura' },
-  { id: 'FATURADA', nome: 'Faturada', curto: 'Faturada', classe: 'text-etapa-faturada bg-etapa-faturada-fundo', marca: 'bg-etapa-faturada' },
+  { id: 'FATURADA', nome: 'Concluída', curto: 'Concluída', classe: 'text-etapa-faturada bg-etapa-faturada-fundo', marca: 'bg-etapa-faturada' },
   { id: 'SEM_COBRANCA', nome: 'Sem cobrança', curto: 'Sem cobrança', classe: 'text-etapa-sem bg-etapa-sem-fundo', marca: 'bg-etapa-sem' },
 ];
 
@@ -80,6 +86,12 @@ export interface Nsis {
   valor_final_reais_total: number;
   /** da tabela localidade → supervisor; null se a localidade não estiver cadastrada */
   supervisor: string | null;
+  /** true = NSIS do fluxo novo (NSMP → NSPR → Salesforce → apropriação); false = histórico */
+  fluxo_novo: boolean;
+  /** supervisor gravado ao informar a equipe (ou à mão); só no fluxo novo */
+  supervisor_equipe: string | null;
+  /** data de lançamento no Salesforce, YYYY-MM-DD */
+  data_lancamento_sf: string | null;
 }
 
 export interface ItemNsis {
@@ -384,6 +396,80 @@ export async function confirmarPago(itens: ItemNsis[], nspr: string, total: numb
   const linhas = itens.map((it, i) => ({ id: it.id, servico: it.servico, descricao: it.descricao, nspr, valor_final: partes[i].valor_final }));
   const { error } = await supabase.from('neo_nsis_itens').upsert(linhas, { onConflict: 'id' });
   if (error) throw new Error('Falha ao salvar a confirmação: ' + error.message);
+}
+
+// ─── Fluxo novo da fila ─────────────────────────────────────────────────────
+
+/** Supervisor da frota da equipe (neo_disp_frotas); null se a equipe não for um número de frota conhecida. */
+export async function supervisorDaEquipe(equipe: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('neo_supervisor_da_equipe', { p_equipe: equipe.trim() });
+  if (error) throw new Error('Falha ao buscar o supervisor da equipe: ' + error.message);
+  return (data as string | null) ?? null;
+}
+
+function valorPagoValido(v: number | null | undefined): v is number {
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0;
+}
+
+/**
+ * Etapa 1 do fluxo novo: grava os códigos com a mesma equipe e a mesma NSMP (NSRI: a NSMC, mesma coluna)
+ * e o supervisor na NSIS. Na NSRI o valor pago também entra aqui e é rateado entre os códigos, sem NSPR.
+ * Valida tudo antes de gravar qualquer coisa.
+ */
+export async function fecharEtapa1(
+  nsis: Nsis,
+  dados: { itens: ItemNsisCampos[]; equipe: string; nsmp: string; supervisor: string | null; valorPagoUS: number | null }
+): Promise<void> {
+  const equipe = dados.equipe.trim();
+  const nsmp = dados.nsmp.trim();
+  const nsri = nsis.tipo_serv === 'NSRI';
+  if (dados.itens.length < 1) throw new Error('Informe ao menos um código.');
+  if (!equipe) throw new Error('Informe o número da equipe.');
+  if (!nsmp) throw new Error(nsri ? 'Informe a NSMC.' : 'Informe a NSMP.');
+  if (nsri && !valorPagoValido(dados.valorPagoUS)) throw new Error('Informe o valor pago (zero é aceito).');
+
+  const itens = dados.itens.map((it) => ({ ...it, equipe, nsmp }));
+  if (nsri) {
+    const partes = ratearPago(itens.map((it, i) => ({ id: String(i), valor_inicial: it.valor_inicial })), dados.valorPagoUS);
+    partes.forEach((p, i) => { itens[i].valor_final = p.valor_final; });
+  }
+  await criarItens(nsis.servico, itens);
+
+  const { error } = await supabase
+    .from('neo_nsis')
+    .update({ supervisor_equipe: dados.supervisor?.trim() || null })
+    .eq('servico', nsis.servico);
+  if (error) throw new Error('Os códigos foram salvos, mas falhou gravar o supervisor: ' + error.message);
+}
+
+/** Etapa 2 (NSIS que não é NSRI): NSPR e valor pago, em US, para a NSIS inteira. */
+export async function informarNspr(itens: ItemNsis[], nspr: string, valorPagoUS: number): Promise<void> {
+  const numero = nspr.trim();
+  if (!numero) throw new Error('Informe a NSPR.');
+  if (!valorPagoValido(valorPagoUS)) throw new Error('Informe o valor pago (zero é aceito).');
+  if (itens.length < 1) throw new Error('A NSIS não tem códigos lançados.');
+  await confirmarPago(itens, numero, valorPagoUS);
+}
+
+/** Etapa 3: data de lançamento no Salesforce (YYYY-MM-DD), não vazia e não futura (fuso de Brasília). */
+export async function informarLancamentoSf(servico: string, data: string): Promise<void> {
+  const dia = (data ?? '').trim();
+  if (!dia) throw new Error('Informe a data de lançamento no Salesforce.');
+  const [a, m, d] = dia.split('-').map(Number);
+  const real = DATA_VALIDA.test(dia) && new Date(Date.UTC(a, m - 1, d)).toISOString().slice(0, 10) === dia;
+  if (!real) throw new Error('Data de lançamento inválida.');
+  const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  if (dia > hoje) throw new Error('A data de lançamento não pode ser futura.');
+  const { error } = await supabase.from('neo_nsis').update({ data_lancamento_sf: dia }).eq('servico', servico);
+  if (error) throw new Error('Falha ao salvar a data de lançamento: ' + error.message);
+}
+
+/** Etapa 4: apropriação (AP) em todos os códigos da NSIS. */
+export async function informarApropriacao(itens: ItemNsis[], ap: string): Promise<void> {
+  const numero = normalizarAP(ap);
+  if (!numero) throw new Error('Informe a apropriação.');
+  if (itens.length < 1) throw new Error('A NSIS não tem códigos lançados.');
+  await atualizarItens(itens.map((it) => it.id), { fatura: numero });
 }
 
 export async function excluirItem(id: string): Promise<void> {

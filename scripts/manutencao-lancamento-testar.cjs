@@ -6,11 +6,13 @@ require.extensions['.ts'] = (m, f) => m._compile(ts.transpileModule(fs.readFileS
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText, f);
 const {
-  FATORES, fatorPadrao, textoFator, calcularValor, totalPedido, agruparLancamentos, ratearPago,
+  FATORES, FATORES_NOVOS, fatorPadrao, textoFator, calcularValor, totalPedido, agruparLancamentos, ratearPago,
 } = require('../src/lib/fechamentoCobranca.ts');
 
 // ─── Fator ──────────────────────────────────────────────────────────────────
 assert.deepEqual(FATORES.map((f) => f.valor), [1, 1.2, 1.4]);
+assert.deepEqual(FATORES_NOVOS.map((f) => f.valor), [1, 1.2], 'fluxo novo: só Urbano e CSC e Rural e CSC');
+assert.deepEqual(FATORES_NOVOS.map((f) => f.rotulo), ['Urbano e CSC', 'Rural e CSC']);
 assert.equal(fatorPadrao('R'), 1.2, 'zona rural abre em 1,2');
 assert.equal(fatorPadrao('U'), 1, 'zona urbana abre em 1,0');
 assert.equal(fatorPadrao(null), 1, 'sem zona abre em 1,0');

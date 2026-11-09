@@ -14,6 +14,12 @@ export const FATORES: { valor: Fator; rotulo: string; legenda: string }[] = [
   { valor: 1.4, rotulo: '× 1,4', legenda: 'Rural e COD' },
 ];
 
+/** Fluxo novo da fila: só dois fatores. Os itens antigos com 1,4 continuam lidos e calculados como estão. */
+export const FATORES_NOVOS: { valor: 1 | 1.2; rotulo: string; legenda: string }[] = [
+  { valor: 1, rotulo: 'Urbano e CSC', legenda: 'Fator × 1,0' },
+  { valor: 1.2, rotulo: 'Rural e CSC', legenda: 'Fator × 1,2' },
+];
+
 const quatroCasas = (v: number) => Math.round(v * 10000) / 10000;
 
 /** Fator sugerido ao abrir o lançamento: a zona está no relatório, o despacho quem fecha informa. */
