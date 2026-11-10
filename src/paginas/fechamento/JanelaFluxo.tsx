@@ -6,6 +6,7 @@ import {
   formatarUS, formatarReais, emReais, lerNumero,
   type Nsis, type ItemNsis, type Etapa,
 } from '@/lib/fechamento';
+import { useSessao } from '@/contexto/Sessao';
 import { listarContrato, type CodigoContrato } from '@/lib/contrato';
 import { FATORES_NOVOS, calcularValor, fatorPadrao, totalPedido } from '@/lib/fechamentoCobranca';
 import {
@@ -133,6 +134,8 @@ function ResumoPasso({ passo, titulo, nsis, itens, onCorrigir, onAlterado }: {
   passo: Passo; titulo: string; nsis: Nsis; itens: ItemNsis[]; onCorrigir: () => void; onAlterado: () => void;
 }) {
   const { salvando, erro, executar } = useEnvio(onAlterado);
+  const { acesso } = useSessao();
+  const admin = acesso?.papel === 'ADMIN'; // desfazer etapa é só do administrador
   const nsri = ehNsri(nsis);
   const valorUS = nsis.valor_us_reais;
   const pago = Math.round(itens.reduce((s, it) => s + (it.valor_final ?? 0), 0) * 10000) / 10000;
@@ -163,7 +166,7 @@ function ResumoPasso({ passo, titulo, nsis, itens, onCorrigir, onAlterado }: {
           <button type="button" onClick={onCorrigir} disabled={salvando} className="flex items-center gap-1 text-xs font-semibold text-sinal hover:underline disabled:opacity-50">
             <Pencil size={12} /> Corrigir
           </button>
-          {passo !== 'FECHAR' && (
+          {passo !== 'FECHAR' && admin && (
             <button type="button" onClick={desfazer} disabled={salvando} className="flex items-center gap-1 text-xs font-semibold text-aco hover:text-erro disabled:opacity-50">
               {salvando ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Desfazer esta etapa
             </button>

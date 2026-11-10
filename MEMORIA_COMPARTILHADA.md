@@ -112,6 +112,22 @@ Só leitura de `Importação/Disponibilidade Contrato 7360_Macro.xlsm`; nada foi
 - **REA (`C:\Engenharia Reversa\rea-main`):** é para binários e aplicativos; não foi usada nem é necessária para esta planilha.
 - **Cuidado:** a pasta `Importação/` não está no `.gitignore`, e a planilha tem rótulo de LGPD, nomes e dados de saúde. Não incluir no commit.
 
+## Conferência da frota: botão "Baixar Excel" — 10/11/2026 (Claude)
+
+- Pedido do Matheus: a aba de conferência (`/disponibilidade`) não tinha download para Excel.
+- **Botão** "Baixar Excel" no cabeçalho de `src/paginas/disponibilidade/Conferencia.tsx`, nas duas visões. Baixa o que está em tela,
+  respeitando supervisor e filtro de frotas/situação. Mês: `conferencia-frota-AAAA-MM[-supervisor].xlsx`; dia: `conferencia-frota-AAAA-MM-DD[-supervisor].xlsx`.
+- **Código:** `src/lib/disponibilidadeExcel.ts` (`exportarConferenciaMes`, `exportarConferenciaDia`). Sem lógica nova de regra: usa `ehMultavel`,
+  `SIGLAS` e as mesmas cores da tela (verde cadastrou, vermelho multável, amarelo contestável).
+- **Abas do mês:** "Grade do mês" (uma linha por frota, um dia por coluna com a sigla colorida, observação como nota na célula, totais por frota
+  e por dia, legenda, painel congelado, filtro por frota/placa/supervisor/região); "Resumo" (indicadores, por supervisor, por causa);
+  "Ocorrências" (uma linha por ocorrência com data de verdade e valor numérico, para filtro e tabela dinâmica). Multa sai negativa, como na tela.
+  Dia: uma aba com situação, causa, tipo, valor e observação.
+- **Decisão:** biblioteca nova `exceljs` (import dinâmico, pacote separado de ~271 kB gzip que só baixa no clique). O `xlsx` 0.18.5 já usado nas outras
+  exportações não grava cor nem painel congelado; `xlsx-js-style` grava cor mas não congela painel, por isso foi descartado. As outras telas seguem no `xlsx`.
+- **Verificado:** `npm run typecheck` e `vite build` passam; planilhas geradas em Node com dados de exemplo e relidas (valores, totais, cores, filtro,
+  painel congelado, impressão paisagem). **Não verificado:** abrir no Excel de verdade e clicar no botão no navegador com dados reais do Supabase.
+
 ## Menu lateral recolhível só com ícones — 09/11/2026 (Claude)
 
 - Pedido do Matheus: a sidebar recolhe e fica em fila (coluna) mostrando só os ícones.
@@ -839,3 +855,26 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
   +R$ 143.146,98 → R$ 2.760.989,50; pago com fator = crédito (nenhuma linha paga sem preço).
 - Teste novo `scripts/faturamento-aditivo-testar.cjs`; prova real, glosa, rodada2, serviços, texto e
   zero-fator passam com a 050. Documentação (Painel e Tabelas do contrato) e relatório atualizados.
+
+## Fonte da interface: Inter (10/11/2026)
+- Matheus testou a fonte do Visão de Dono (Arial) e depois a **Inter**; ficou com a **Inter**. Mudança em
+  `src/index.css` (`--font-sans`) e `index.html` (link do Google Fonts). JetBrains Mono segue nos códigos.
+- **Manrope continua carregada de propósito:** o logo `src/components/NeoLogo.tsx` usa `fontFamily="Manrope"`.
+  Não tirar do link sem trocar o logo. Docs/vídeo (`docs/modelos`, `video/central-neo`) ainda citam Manrope.
+- Fila de NSIS (`Fila.tsx`, classe `grade-nsis`): colunas auto, `nowrap`, sem largura fixa; só Observação
+  quebra linha. Inter é um pouco mais larga: a tabela pode abrir rolagem horizontal antes. Não conferido
+  visualmente ainda.
+
+## Fila de NSIS: excluir e mover de etapa, só ADMIN (10/11/2026)
+- Pedido do Matheus: apagar NSIS de teste e, quando avança etapa sem querer, ir para **qualquer etapa anterior**
+  (não só uma). Só voltar: avançar exige os dados da etapa (NSPR, data do Salesforce, AP), que o fluxo normal pede.
+- Código: `supabase/migrations/057_nsis_admin.sql` (**NÃO aplicada**; `migrar.cjs` segue proibido, aplicar só
+  o 057 com autorização do Matheus), `src/lib/fechamento.ts` (`excluirNsis`, `moverEtapa`, `ETAPAS_DE_DESTINO`),
+  `src/paginas/fechamento/AcoesAdmin.tsx` (bloco "Somente administrador" no fim da janela da NSIS),
+  `JanelaFluxo.tsx` (o "Desfazer esta etapa" agora só aparece para ADMIN).
+- Banco: `neo_excluir_nsis(servico)` e `neo_mover_etapa(servico, etapa)` (security definer, conferem `neo_is_admin()`),
+  tabela `neo_nsis_log` (quem, quando, cópia jsonb; só admin lê) e DELETE em `neo_nsis` só para admin (RLS).
+  Voltar etapa usa as mesmas gravações do avanço normal; a trava dele no banco está só na função, não em RLS.
+- Mover só vale para NSIS do fluxo novo e fora de "sem cobrança". Voltar para "A fechar" apaga os itens e o supervisor.
+  Na NSRI não há destino NSPR e o valor pago (nasce na etapa 1) fica.
+- Verificado: `npm run typecheck` passou. Não testado no banco nem na tela (057 sem aplicar).

@@ -658,6 +658,21 @@ export async function excluirItem(id: string): Promise<void> {
   if (error) throw new Error('Falha ao excluir o item: ' + error.message);
 }
 
+/** Só ADMIN (a função do banco confere): apaga a NSIS e os itens, guardando uma cópia em neo_nsis_log. */
+export async function excluirNsis(servico: string): Promise<void> {
+  const { error } = await supabase.rpc('neo_excluir_nsis', { p_servico: servico });
+  if (error) throw new Error('Falha ao excluir a NSIS: ' + error.message);
+}
+
+/** Etapas do fluxo novo para onde um ADMIN pode voltar uma NSIS, na ordem do fluxo. */
+export const ETAPAS_DE_DESTINO: Etapa[] = ['A_FECHAR', 'AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO'];
+
+/** Só ADMIN (a função do banco confere): volta a NSIS do fluxo novo para uma etapa anterior e apaga o que as seguintes informaram. */
+export async function moverEtapa(servico: string, etapa: Etapa): Promise<void> {
+  const { error } = await supabase.rpc('neo_mover_etapa', { p_servico: servico, p_etapa: etapa });
+  if (error) throw new Error('Falha ao mover a etapa: ' + error.message);
+}
+
 /** motivo = null reabre a NSIS. */
 export async function definirSemCobranca(servico: string, motivo: string | null): Promise<void> {
   const { error } = await supabase

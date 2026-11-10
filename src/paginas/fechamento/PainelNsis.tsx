@@ -16,6 +16,7 @@ import {
   ROTULO_SECAO, CAMPO, ROTULO_CAMPO, impedirEnvioPeloEnter, EditorCodigos, SeletorCodigo, SeletorFator, valorDaLinha, type LinhaLancamento,
 } from './ComponentesLancamento';
 import JanelaFluxo from './JanelaFluxo';
+import AcoesAdmin from './AcoesAdmin';
 
 interface Props {
   servico: string;
@@ -219,6 +220,9 @@ export default function PainelNsis({ servico, onFechar, onAlterado }: Props) {
                 </div>
               )}
             </section>
+
+            <AcoesAdmin nsis={nsis} qtdItens={itens.length} fluxoNovo={fluxoNovo} onAlterado={aposMudanca}
+              onExcluida={() => { onAlterado(); onFechar(); }} />
           </>
         )}
       </div>

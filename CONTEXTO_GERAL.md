@@ -134,7 +134,7 @@ Conceito **"o círculo que fecha"**: um anel aberto (a nota pendente) com um pon
 | `cobre` | `#D9822B` | valores em US, divergências |
 
 Etapas: a fechar (petróleo), NSMP (âmbar), NSPR (violeta), fatura (azul), faturada (verde), sem cobrança (cinza).
-Fontes: **Manrope** (interface) e **JetBrains Mono** (números de serviço, NSMP, NSPR, AP, serial, matrícula).
+Fontes: **Inter** (interface; trocada da Manrope em 10/11/2026, a Manrope segue carregada só para o logo `NeoLogo`) e **JetBrains Mono** (números de serviço, NSMP, NSPR, AP, serial, matrícula).
 
 ## 6. Rodar e publicar
 
