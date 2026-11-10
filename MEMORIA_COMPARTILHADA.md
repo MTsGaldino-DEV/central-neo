@@ -868,8 +868,8 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
 ## Fila de NSIS: excluir e mover de etapa, só ADMIN (10/11/2026)
 - Pedido do Matheus: apagar NSIS de teste e, quando avança etapa sem querer, ir para **qualquer etapa anterior**
   (não só uma). Só voltar: avançar exige os dados da etapa (NSPR, data do Salesforce, AP), que o fluxo normal pede.
-- Código: `supabase/migrations/057_nsis_admin.sql` (**NÃO aplicada**; `migrar.cjs` segue proibido, aplicar só
-  o 057 com autorização do Matheus), `src/lib/fechamento.ts` (`excluirNsis`, `moverEtapa`, `ETAPAS_DE_DESTINO`),
+- Código: `supabase/migrations/057_nsis_admin.sql` (**aplicada em 10/11/2026**, a pedido do Matheus, por script
+  que rodou só o 057 e o registrou em `neo_interno.migracoes`; `migrar.cjs` segue proibido), `src/lib/fechamento.ts` (`excluirNsis`, `moverEtapa`, `ETAPAS_DE_DESTINO`),
   `src/paginas/fechamento/AcoesAdmin.tsx` (bloco "Somente administrador" no fim da janela da NSIS),
   `JanelaFluxo.tsx` (o "Desfazer esta etapa" agora só aparece para ADMIN).
 - Banco: `neo_excluir_nsis(servico)` e `neo_mover_etapa(servico, etapa)` (security definer, conferem `neo_is_admin()`),
@@ -877,4 +877,6 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
   Voltar etapa usa as mesmas gravações do avanço normal; a trava dele no banco está só na função, não em RLS.
 - Mover só vale para NSIS do fluxo novo e fora de "sem cobrança". Voltar para "A fechar" apaga os itens e o supervisor.
   Na NSRI não há destino NSPR e o valor pago (nasce na etapa 1) fica.
-- Verificado: `npm run typecheck` passou. Não testado no banco nem na tela (057 sem aplicar).
+- Verificado: `npm run typecheck` passou. Funções testadas no banco real em transação desfeita (12 checagens: usuário comum
+  recusado ao mover e ao excluir, DELETE direto barrado pela RLS, FATURADA → AP → Salesforce → NSPR → A fechar apagando só o
+  devido, recusa de "mover" para frente, exclusão com itens, 5 linhas de log com cópia). Falta Matheus ver a tela como ADMIN.
