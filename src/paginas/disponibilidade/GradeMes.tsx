@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState, type MouseEvent } from 'react';
+import { Power, PowerOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
-  CONTESTAVEIS, INICIO_CONTROLE, MULTAVEIS, NOMES_MES, SIGLAS, SUPERVISORES, brlNegativo, chaveDia, dataDe, diasDoMes, ehMultavel,
+  CONTESTAVEIS, INICIO_CONTROLE, MULTAVEIS, NOMES_MES, SIGLAS, SUPERVISORES, brlNegativo, chaveDia, dataDe, desativadaDesde, diasDoMes, ehMultavel, equipeDesativada,
   type Frota,
 } from '@/lib/disponibilidadeRegras';
 import { FaixaResumo, ItemResumo, Pilula } from './Comuns';
@@ -14,7 +15,7 @@ import { useCruz } from './useCruz';
 const LETRA_SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const curta = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
-export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar, sup, setSup, ver, setVer, abrirDia }: PropsVisao & {
+export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar, estados, alterarEquipe, sup, setSup, ver, setVer, abrirDia }: PropsVisao & {
   ano: number; mes: number; hoje: string; ver: string; setVer: (v: string) => void; abrirDia: (dia: string) => void;
 }) {
   const dias = useMemo(() => diasDoMes(ano, mes), [ano, mes]);
@@ -29,7 +30,8 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
   const foraDoPeriodo = (k: string) => k < INICIO_CONTROLE || k > hoje;
   const visiveis = frotas.filter(f => sup === 'T' || f.supervisor === sup);
   const validos = chaves.filter(k => !foraDoPeriodo(k));
-  const conferidos = validos.filter(k => visiveis.every(f => ler(k, f.frota))).length;
+  // Equipe desativada no dia não precisa de conferência.
+  const conferidos = validos.filter(k => visiveis.every(f => ler(k, f.frota) || equipeDesativada(estados, f.frota, k))).length;
 
   let multaveis = 0, contestaveis = 0;
   const comMulta = new Set<number>();
@@ -64,7 +66,18 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
 
   const lancAlvo = alvo ? ler(alvo.dia, alvo.frota) : undefined;
   const frotaAlvo = alvo ? frotas.find(f => f.frota === alvo.frota) : undefined;
+  const desdeAlvo = alvo ? desativadaDesde(estados, alvo.frota, alvo.dia) : null;
   const textoAlvo = alvo ? dataDe(alvo.dia).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' }) : '';
+
+  const desativar = () => {
+    if (!alvo) return;
+    const temMarcas = chaves.some(k => k >= alvo.dia && ler(k, alvo.frota));
+    const quando = dataDe(alvo.dia).toLocaleDateString('pt-BR');
+    if (temMarcas && !window.confirm(`As marcações desta equipe a partir de ${quando} serão apagadas. Continuar?`)) return;
+    alterarEquipe(alvo.frota, alvo.dia, false);
+    setAlvo(null);
+  };
+  const reativar = () => { if (!alvo) return; alterarEquipe(alvo.frota, alvo.dia, true); setAlvo(null); };
 
   return (
     <>
@@ -89,6 +102,7 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
         {CONTESTAVEIS.map(c => <span key={c} className="inline-flex items-center gap-1.5"><code className="disp-sigla c">{SIGLAS[c]}</code>{c}</span>)}
         <span className="inline-flex items-center gap-1.5"><code className="disp-sigla p">&nbsp;&nbsp;</code>Falta conferir</span>
         <span className="inline-flex items-center gap-1.5"><code className="disp-sigla ok">&nbsp;&nbsp;</code>Cadastrou</span>
+        <span className="inline-flex items-center gap-1.5"><code className="disp-sigla d">&nbsp;&nbsp;</code>Equipe desativada</span>
       </div>
 
       <div className="disp-rolo">
@@ -120,7 +134,9 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
                       const k = chaves[i], l = ler(k, f.frota), fora = foraDoPeriodo(k);
                       const inicio = `${f.frota} · ${datas[i]} · `;
                       let cl = '', sigla = '', dicaTxt = inicio + 'fora do período';
-                      if (!fora) {
+                      // Desativada vale até alguém reativar, inclusive nos dias que ainda não chegaram.
+                      if (k >= INICIO_CONTROLE && equipeDesativada(estados, f.frota, k)) { cl = 'd'; dicaTxt = inicio + 'equipe desativada'; }
+                      else if (!fora) {
                         if (!l) { cl = 'p'; dicaTxt = inicio + 'falta conferir'; }
                         else if (l.situacao === 'CADASTROU') { cl = 'ok'; dicaTxt = inicio + 'cadastrou'; }
                         else {
@@ -169,11 +185,25 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
             <div key={`${alvo.dia}|${alvo.frota}`}>
               <h3 className="font-codigo text-sm font-extrabold">Frota {alvo.frota}</h3>
               <p className="mb-2.5 text-xs text-aco first-letter:uppercase">{textoAlvo} · {frotaAlvo.horario}</p>
-              <Button variant="outline" size="sm" className="mb-3 border-concluido-marca bg-concluido-fundo text-concluido hover:bg-concluido-fundo hover:text-concluido"
-                onClick={() => { gravar([{ dia: alvo.dia, frota: alvo.frota, situacao: 'CADASTROU', causa: null, observacao: null }]); setAlvo(null); }}>Cadastrou</Button>
-              <Motivos valor={valor} causa={lancAlvo?.causa} observacao={lancAlvo?.observacao}
-                onEscolher={(causa, observacao) => { gravar([{ dia: alvo.dia, frota: alvo.frota, situacao: 'OCORRENCIA', causa, observacao }]); setAlvo(null); }}
-                onLimpar={lancAlvo ? () => { desmarcar(alvo.dia, alvo.frota); setAlvo(null); } : undefined} />
+              {desdeAlvo ? (
+                <>
+                  <p className="mb-3 flex items-start gap-2 text-[13px] leading-snug text-aco"><PowerOff className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" /><span>Equipe desativada desde <b className="text-tinta">{dataDe(desdeAlvo).toLocaleDateString('pt-BR')}</b>. Esses dias não entram na conta.</span></p>
+                  <Button variant="outline" size="sm" className="w-full font-bold" onClick={reativar}><Power />Reativar a equipe</Button>
+                  <p className="mt-2 text-[11.5px] leading-snug text-aco">A partir de {dataDe(alvo.dia).toLocaleDateString('pt-BR')} o quadradinho fica sem dados e a equipe volta a contar.</p>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" className="mb-3 border-concluido-marca bg-concluido-fundo text-concluido hover:bg-concluido-fundo hover:text-concluido"
+                    onClick={() => { gravar([{ dia: alvo.dia, frota: alvo.frota, situacao: 'CADASTROU', causa: null, observacao: null }]); setAlvo(null); }}>Cadastrou</Button>
+                  <Motivos valor={valor} causa={lancAlvo?.causa} observacao={lancAlvo?.observacao}
+                    onEscolher={(causa, observacao) => { gravar([{ dia: alvo.dia, frota: alvo.frota, situacao: 'OCORRENCIA', causa, observacao }]); setAlvo(null); }}
+                    onLimpar={lancAlvo ? () => { desmarcar(alvo.dia, alvo.frota); setAlvo(null); } : undefined} />
+                  <div className="mt-3 border-t border-linha pt-3">
+                    <Button variant="outline" size="sm" className="w-full font-bold text-aco" onClick={desativar}><PowerOff />Desativar equipe</Button>
+                    <p className="mt-2 text-[11.5px] leading-snug text-aco">A partir de {dataDe(alvo.dia).toLocaleDateString('pt-BR')} a equipe fica desativada, todo dia, até alguém reativar. Apaga as marcações dela daqui em diante.</p>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </PopoverContent>

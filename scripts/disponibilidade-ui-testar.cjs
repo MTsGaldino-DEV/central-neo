@@ -25,7 +25,7 @@ function banco() {
     const dia = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     for (const f of dados.frotas) if (!linhas.has(k(dia, f.frota))) linhas.set(k(dia, f.frota), { dia, frota: f.frota, situacao: 'CADASTROU', causa: null, observacao: null });
   }
-  return { linhas, k, config: { valor_ocorrencia: 864, meta_mensal: 30000 }, escritas: [], falhar: false };
+  return { linhas, k, estados: [], config: { valor_ocorrencia: 864, meta_mensal: 30000 }, escritas: [], falhar: false };
 }
 
 async function novoContexto(browser, db, largura, altura, papel, modulos) {
@@ -49,6 +49,20 @@ async function novoContexto(browser, db, largura, altura, papel, modulos) {
       } else if (recurso === 'neo_disp_config') {
         if (metodo === 'PATCH') { assert.equal(papel, 'ADMIN', 'só o admin altera a meta'); Object.assign(db.config, req.postDataJSON()); db.escritas.push({ meta: db.config.meta_mensal }); corpo = [{ id: 1 }]; }
         else corpo = db.config;
+      } else if (recurso === 'neo_disp_equipe_estado') {
+        corpo = [...db.estados].sort((a, b) => a.frota - b.frota || a.dia.localeCompare(b.dia));
+      } else if (recurso === 'neo_disp_equipe_alterar') {
+        // Imita a RPC 058: grava a mudança e, ao desativar, apaga as marcações dos dias que ficaram desativados.
+        const { p_frota, p_dia, p_ativa } = req.postDataJSON();
+        db.escritas.push({ rpc: recurso, p_frota, p_dia, p_ativa });
+        if (db.falhar) { status = 500; corpo = { message: 'falha simulada', code: 'XX000' }; }
+        else {
+          db.estados = db.estados.filter((e) => !(e.frota === p_frota && e.dia === p_dia)).concat({ frota: p_frota, dia: p_dia, ativa: p_ativa });
+          const off = (f, d) => { let r = false; for (const e of db.estados.filter((x) => x.frota === f).sort((a, b) => a.dia.localeCompare(b.dia))) { if (e.dia > d) break; r = !e.ativa; } return r; };
+          let apagadas = 0;
+          if (!p_ativa) for (const [chave, l] of [...db.linhas]) if (l.frota === p_frota && l.dia >= p_dia && off(l.frota, l.dia)) { db.linhas.delete(chave); apagadas++; }
+          corpo = apagadas;
+        }
       } else if (recurso === 'neo_disp_lancamentos') {
         db.escritas.push({ metodo, corpo: req.postData(), consulta: url.search });
         if (db.falhar) { status = 500; corpo = { message: 'falha simulada', code: 'XX000' }; }
@@ -172,6 +186,85 @@ const celula = (page, f, d) => page.locator(`.disp-cel[data-frota="${f}"][data-d
       await pop3.waitFor({ state: 'detached' });
       assert.match(await celula(page, 4052, '2026-11-03').getAttribute('class'), /\bok\b/);
       assert.equal(db.linhas.get('2026-11-03|4052').situacao, 'CADASTROU');
+
+      // Desativar equipe (Matheus, 11/11/2026): clicar no dia da equipe, "Desativar equipe"; vale daí em diante até reativar.
+      {
+        const classe = async (f, d) => (await celula(page, f, d).getAttribute('class')).split(/\s+/);
+        await celula(page, 4052, '2026-11-03').click();
+        const popD = page.locator('[data-slot="popover-content"]');
+        await popD.getByRole('button', { name: 'Desativar equipe' }).waitFor();
+        await page.waitForTimeout(100);
+        await page.screenshot({ path: path.join(saida, `disp-desativar-opcao-${nome}.png`) });
+        // Havia marcação a partir do dia: pede confirmação e apaga.
+        let aviso = '';
+        page.once('dialog', (dlg) => { aviso = dlg.message(); void dlg.accept(); });
+        await popD.getByRole('button', { name: 'Desativar equipe' }).click();
+        await popD.waitFor({ state: 'detached' });
+        assert.match(aviso, /serão apagadas/, 'avisa que apaga as marcações');
+        assert.equal(db.linhas.has('2026-11-03|4052'), false, 'marcação do dia some');
+        assert.deepEqual(db.estados, [{ frota: 4052, dia: '2026-11-03', ativa: false }]);
+        for (const d of ['2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']) assert.ok((await classe(4052, d)).includes('d'), `desativada em ${d}`);
+        const futuro = celula(page, 4052, '2026-11-07');
+        assert.ok((await classe(4052, '2026-11-07')).includes('d'), 'os dias que ainda não chegaram já aparecem desativados');
+        assert.equal(await futuro.isDisabled(), true, 'e continuam sem abrir');
+        assert.match(await futuro.getAttribute('aria-label'), /equipe desativada/);
+        assert.ok(!(await classe(4052, '2026-11-02')).includes('d'), 'antes do dia fica como estava');
+        assert.equal((await pintura('.disp-cel.d')).imagem.startsWith('url("data:image/svg'), true, 'ícone próprio');
+        assert.equal(await celula(page, 4052, '2026-11-04').textContent(), '');
+        await page.mouse.move(0, 0);
+        await page.waitForTimeout(150);
+        await page.screenshot({ path: path.join(saida, `disp-desativada-${nome}.png`) });
+
+        // Dia desativado oferece só reativar
+        await celula(page, 4052, '2026-11-05').click();
+        const popR = page.locator('[data-slot="popover-content"]');
+        await popR.getByRole('button', { name: 'Reativar a equipe' }).waitFor();
+        assert.match(await texto(popR), /desativada desde 03\/11\/2026/);
+        assert.equal(await popR.getByRole('button', { name: 'Cadastrou', exact: true }).count(), 0);
+        assert.equal(await popR.getByRole('button', { name: 'Desativar equipe' }).count(), 0);
+        await page.waitForTimeout(100);
+        await page.screenshot({ path: path.join(saida, `disp-reativar-opcao-${nome}.png`) });
+        await page.keyboard.press('Escape');
+        await popR.waitFor({ state: 'detached' });
+
+        // Na lista do dia, a equipe aparece desativada e não conta como falta conferir
+        await page.locator('[data-ir-dia="2026-11-05"]').click();
+        await page.getByRole('heading', { name: 'Conferência do dia' }).waitFor();
+        const linhaD = page.locator('[data-frota="4052"]');
+        assert.equal(await linhaD.getAttribute('data-desativada'), 'sim');
+        assert.match(await texto(linhaD), /Desativada desde 03\/11/);
+        assert.equal(await linhaD.getByRole('button', { name: 'Cadastrou', exact: true }).count(), 0);
+        assert.match(await texto(page.locator('section').first()), /Conferidas0 de 611 equipe desativada/);
+        await page.getByRole('button', { name: /Marcar 61 que faltam/ }).waitFor();
+        await page.waitForTimeout(100);
+        await page.screenshot({ path: path.join(saida, `disp-dia-desativada-${nome}.png`) });
+        await semRolagem('dia desativada');
+        // Reativar pela lista a partir do dia 05: dias 03 e 04 seguem desativados
+        await linhaD.getByRole('button', { name: 'Reativar equipe' }).click();
+        await linhaD.getByRole('button', { name: 'Cadastrou', exact: true }).waitFor();
+        assert.deepEqual(db.estados, [{ frota: 4052, dia: '2026-11-03', ativa: false }, { frota: 4052, dia: '2026-11-05', ativa: true }]);
+        assert.match(await texto(page.locator('section').first()), /Conferidas0 de 62/);
+        await page.getByRole('radio', { name: 'Mês inteiro' }).click();
+        await page.getByRole('heading', { name: 'Conferência do mês' }).waitFor();
+        assert.ok((await classe(4052, '2026-11-04')).includes('d'));
+        assert.ok(!(await classe(4052, '2026-11-05')).includes('d'), 'reativar deixa o dia sem dados');
+        assert.ok((await classe(4052, '2026-11-05')).includes('p'));
+        assert.ok(!(await classe(4052, '2026-11-07')).includes('d'), 'depois de reativar, o futuro deixa de ser desativado');
+
+        // Reativar pelo dia 03 volta tudo ao normal
+        await celula(page, 4052, '2026-11-03').click();
+        await page.locator('[data-slot="popover-content"]').getByRole('button', { name: 'Reativar a equipe' }).click();
+        assert.ok(!(await classe(4052, '2026-11-03')).includes('d'));
+        assert.ok((await classe(4052, '2026-11-03')).includes('p'));
+
+        // Falha no banco: volta como estava e avisa
+        db.falhar = true;
+        await celula(page, 4822, '2026-11-04').click();
+        await page.locator('[data-slot="popover-content"]').getByRole('button', { name: 'Desativar equipe' }).click();
+        await page.getByRole('alert').waitFor();
+        assert.ok(!(await classe(4822, '2026-11-04')).includes('d'), 'desativação recusada volta atrás');
+        db.falhar = false;
+      }
 
       // Contestável em amarelo e "Falta conferir" no fundo das pílulas ativas, lado a lado
       await celula(page, 4174, '2026-11-04').click();

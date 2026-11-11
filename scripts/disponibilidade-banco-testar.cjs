@@ -1,4 +1,4 @@
-// Migrations 054 e 055 (disponibilidade) em transação SEMPRE desfeita. Não usa migrar.cjs, que hoje reaplicaria a 051.
+// Migrations 054, 055 e 058 (disponibilidade) em transação SEMPRE desfeita. Não usa migrar.cjs, que hoje reaplicaria a 051.
 // Depois de aplicadas, o teste vale sobre o banco e continua sem gravar nada.
 const fs = require('fs');
 const path = require('path');
@@ -14,7 +14,7 @@ const TOTAIS = { 3: 22464, 4: 59616, 5: 34560, 6: 20736, 7: 30240, 8: 36288, 9: 
 const MULT = ['Veículo Quebrado', 'Atraso superior a 4h', 'Descadastramento Antecipado'];
 
 (async () => {
-  let aplicadaAntes = false;
+  let aplicadaAntes = false, aplicada058Antes = false;
   try {
     await sql.begin(async (t) => {
       const [{ existe }] = await t`select to_regclass('public.neo_disp_lancamentos') is not null existe`;
@@ -23,6 +23,9 @@ const MULT = ['Veículo Quebrado', 'Atraso superior a 4h', 'Descadastramento Ant
         await t.unsafe(ler('054_disponibilidade.sql'));
         await t.unsafe(ler('055_disponibilidade_historico.sql'));
       }
+      const [{ tem058 }] = await t`select to_regclass('public.neo_disp_equipe_estado') is not null tem058`;
+      aplicada058Antes = tem058;
+      if (!tem058) await t.unsafe(ler('058_disponibilidade_equipe_desativada.sql'));
 
       // RLS ligada nas três tabelas
       const rls = await t`select relname, relrowsecurity from pg_class where oid in ('public.neo_disp_frotas'::regclass, 'public.neo_disp_lancamentos'::regclass, 'public.neo_disp_config'::regclass)`;
@@ -82,6 +85,14 @@ const MULT = ['Veículo Quebrado', 'Atraso superior a 4h', 'Descadastramento Ant
         await assert.rejects(s`insert into public.neo_disp_lancamentos (dia, frota, situacao) values (${hoje}, 4052, 'CADASTROU')`, /row-level security/);
       });
 
+      // Equipe desativada (058): sem o módulo, nem lê nem altera
+      await como(usuario, async (s) => {
+        const [{ n }] = await s`select count(*)::int n from public.neo_disp_equipe_estado`;
+        assert.equal(n, 0, 'sem o módulo não vê as mudanças');
+        await assert.rejects(s.savepoint((x) => x`select public.neo_disp_equipe_alterar(4052, ${hoje}::date, false)`), /Sem acesso/);
+        await assert.rejects(s.savepoint((x) => x`insert into public.neo_disp_equipe_estado (frota, dia, ativa) values (4052, ${hoje}, false)`), /row-level security/);
+      });
+
       // Com o módulo: marca, troca, limpa; não altera a meta; não marca o futuro nem ocorrência sem causa
       await t`update public.neo_acessos set modulos = array['disponibilidade'] where user_id = ${usuario}`;
       const comModulo = await como(usuario, async (s) => {
@@ -114,6 +125,56 @@ const MULT = ['Veículo Quebrado', 'Atraso superior a 4h', 'Descadastramento Ant
         await assert.rejects(s`insert into public.neo_disp_lancamentos (dia, frota, situacao) values ('2026-03-22', 4052, 'CADASTROU')`, /check/);
       });
 
+      // Equipe desativada (058): vale daí em diante, apaga o que já havia, bloqueia marcação e reativa deixando o dia sem dados
+      const ontem = (await t`select ((now() at time zone 'America/Sao_Paulo')::date - 1)::text d`)[0].d;
+      const eq = await como(usuario, async (s) => {
+        const rejeita = (q, re) => assert.rejects(s.savepoint(q), re);
+        const r = {};
+        const conta = async (...dias) => (await s`select count(*)::int n from public.neo_disp_lancamentos where frota = 4052 and dia = any(${dias}::date[])`)[0].n;
+        const ativa = async (d) => !(await s`select public.neo_disp_desativada(4052, ${d}::date) v`)[0].v;
+        await s`delete from public.neo_disp_lancamentos where frota = 4052 and dia = any(${[ontem, hoje]}::date[])`;
+        await s`insert into public.neo_disp_lancamentos (dia, frota, situacao) values (${ontem}, 4052, 'CADASTROU'), (${hoje}, 4052, 'CADASTROU')`;
+        r.antes = await conta(ontem, hoje);
+        r.apagadas = (await s`select public.neo_disp_equipe_alterar(4052, ${hoje}::date, false) n`)[0].n;
+        r.restam = await conta(ontem, hoje);
+        r.ativaOntem = await ativa(ontem);
+        r.ativaHoje = await ativa(hoje);
+        await rejeita((x) => x`insert into public.neo_disp_lancamentos (dia, frota, situacao) values (${hoje}, 4052, 'CADASTROU')`, /row-level security/);
+        await rejeita((x) => x`insert into public.neo_disp_lancamentos (dia, frota, situacao, causa) values (${hoje}, 4052, 'OCORRENCIA', 'Atestado')`, /row-level security/);
+        r.outraFrotaAceita = (await s`insert into public.neo_disp_lancamentos (dia, frota, situacao) values (${hoje}, 4174, 'CADASTROU') on conflict (dia, frota) do update set situacao = 'CADASTROU' returning frota`).length;
+        r.apagarEstado = (await s`delete from public.neo_disp_equipe_estado where frota = 4052 returning frota`).length;
+        await rejeita((x) => x`select public.neo_disp_equipe_alterar(4052, ${amanha}::date, false)`, /dia futuro/);
+        await s`select public.neo_disp_equipe_alterar(4052, ${hoje}::date, true)`;
+        r.ativaHojeDepois = await ativa(hoje);
+        r.hojeSemDados = await conta(hoje);
+        r.aceitaDepois = (await s`insert into public.neo_disp_lancamentos (dia, frota, situacao) values (${hoje}, 4052, 'CADASTROU') returning frota`).length;
+        return r;
+      });
+      assert.deepEqual({ ...eq }, {
+        antes: 2, apagadas: 1, restam: 1, ativaOntem: true, ativaHoje: false, outraFrotaAceita: 1, apagarEstado: 0,
+        ativaHojeDepois: true, hojeSemDados: 0, aceitaDepois: 1,
+      });
+
+      // Retroativo: desativar em 20/10 apaga o histórico dali em diante; reativar em 25/10 devolve o dia 25 sem dados e o painel deixa de contar os dias desativados
+      const retro = await como(usuario, async (s) => {
+        const qtd = async () => (await s`select count(*)::int n from public.neo_disp_lancamentos where frota = 4052 and dia >= '2026-10-20' and dia <= ${ontem}`)[0].n;
+        const antes = await qtd();
+        const antesOut = (await s`select count(*)::int n from public.neo_disp_lancamentos where frota = 4052 and dia between '2026-10-20' and '2026-10-31'`)[0].n;
+        const noMes = (await s`select jsonb_array_length(public.neo_disp_mes(2026, 10)) n`)[0].n;
+        const apagadas = (await s`select public.neo_disp_equipe_alterar(4052, '2026-10-20'::date, false) n`)[0].n;
+        const depois = await qtd();
+        const noMesDepois = (await s`select jsonb_array_length(public.neo_disp_mes(2026, 10)) n`)[0].n;
+        await s`select public.neo_disp_equipe_alterar(4052, '2026-10-25'::date, true)`;
+        const d = async (dia) => (await s`select public.neo_disp_desativada(4052, ${dia}::date) v`)[0].v;
+        return { antes, antesOut, apagadas, depois, apagouDoMes: noMes - noMesDepois, d24: await d('2026-10-24'), d25: await d('2026-10-25'), d19: await d('2026-10-19') };
+      });
+      assert.ok(retro.antes > 0, 'havia histórico de 20/10 em diante');
+      assert.equal(retro.apagadas, retro.antes, 'apagou tudo o que ficou desativado');
+      assert.equal(retro.depois, 0);
+      assert.equal(retro.apagouDoMes, retro.antesOut, 'a RPC de outubro deixa de devolver os dias apagados');
+      assert.equal(retro.antesOut, 12, 'outubro tem 12 dias de 20 a 31');
+      assert.deepEqual({ d19: retro.d19, d24: retro.d24, d25: retro.d25 }, { d19: false, d24: true, d25: false });
+
       // Admin altera a meta
       const metaAdmin = await como(admin, async (s) => {
         const [r] = await s`update public.neo_disp_config set meta_mensal = 25000 returning meta_mensal::float8 m, atualizado_por::text por`;
@@ -138,6 +199,8 @@ const MULT = ['Veículo Quebrado', 'Atraso superior a 4h', 'Descadastramento Ant
   }
   const [{ existe }] = await sql`select to_regclass('public.neo_disp_lancamentos') is not null existe`;
   assert.equal(existe, aplicadaAntes, 'o teste não pode deixar nada no banco');
-  console.log(`PASSOU (transação desfeita; migrations ${aplicadaAntes ? 'já aplicadas' : 'não aplicadas'} no banco)`);
+  const [{ tem058 }] = await sql`select to_regclass('public.neo_disp_equipe_estado') is not null tem058`;
+  assert.equal(tem058, aplicada058Antes, 'a 058 também não pode ficar no banco por causa do teste');
+  console.log(`PASSOU (transação desfeita; 054/055 ${aplicadaAntes ? 'já aplicadas' : 'não aplicadas'}, 058 ${aplicada058Antes ? 'já aplicada' : 'não aplicada'} no banco)`);
   await sql.end();
 })().catch(async (e) => { console.error('FALHOU:', e.message); process.exitCode = 1; await sql.end(); });

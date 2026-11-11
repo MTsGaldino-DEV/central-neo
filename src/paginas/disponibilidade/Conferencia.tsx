@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ptBR } from 'react-day-picker/locale';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AvisoErro } from '@/components/faturamento/AvisoErro';
-import { limpar, lerConfig, lerFrotas, lerMes, marcar } from '@/lib/disponibilidade';
+import { definirEquipeAtiva, lerConfig, lerEstados, lerFrotas, lerMes, limpar, marcar } from '@/lib/disponibilidade';
 import {
-  INICIO_CONTROLE, NOMES_MES, chaveDia, chaveMes, dataDe, diasDoMes, ehMultavel, somarDias,
-  type ConfigDisp, type Frota, type Lancamento,
+  INICIO_CONTROLE, NOMES_MES, agruparEstados, chaveDia, chaveMes, comEstadoEquipe, dataDe, diasDoMes, ehMultavel, equipeDesativada, somarDias,
+  type ConfigDisp, type EstadosEquipe, type Frota, type Lancamento,
 } from '@/lib/disponibilidadeRegras';
 import { traduzirErro, type ErroAmigavel } from '@/lib/erros';
 import { GradeMes } from './GradeMes';
@@ -49,16 +49,18 @@ export default function ConferenciaDisp() {
 
   const [frotas, setFrotas] = useState<Frota[] | null>(null);
   const [config, setConfig] = useState<ConfigDisp | null>(null);
+  const [estados, setEstados] = useState<EstadosEquipe | null>(null);
   const [porMes, setPorMes] = useState<Record<string, MapaMes>>({});
   const [falha, setFalha] = useState<ErroAmigavel | null>(null);
   const [tentativa, setTentativa] = useState(0);
   const [calAberto, setCalAberto] = useState(false);
   const [calMes, setCalMes] = useState<Date>(dataDe(dia));
+  const [exportando, setExportando] = useState(false);
 
   useEffect(() => {
     let vivo = true;
-    Promise.all([lerFrotas(), lerConfig()])
-      .then(([f, c]) => { if (vivo) { setFrotas(f); setConfig(c); } })
+    Promise.all([lerFrotas(), lerConfig(), lerEstados()])
+      .then(([f, c, e]) => { if (vivo) { setFrotas(f); setConfig(c); setEstados(agruparEstados(e)); } })
       .catch(e => { if (vivo) setFalha(traduzirErro(e, ONDE)); });
     return () => { vivo = false; };
   }, [tentativa]);
@@ -97,8 +99,52 @@ export default function ConferenciaDisp() {
   const gravar = useCallback((linhas: Lancamento[]) => { void aplicar(linhas.map(l => ({ dia: l.dia, frota: l.frota, linha: l })), () => marcar(linhas)); }, [aplicar]);
   const desmarcar = useCallback((d: string, frota: number) => { void aplicar([{ dia: d, frota, linha: null }], () => limpar(d, frota)); }, [aplicar]);
 
-  const pronto = !!frotas && !!config && !!porMes[mesDados];
+  /**
+   * Desativa ou reativa a equipe a partir do dia. Mostra na hora; se o banco recusar, volta como estava e avisa.
+   * Ao desativar, as marcações dos dias que passam a valer como desativados somem (o banco também as apaga).
+   */
+  const alterarEquipe = useCallback(async (frota: number, d: string, ativa: boolean) => {
+    if (!estados) return;
+    setFalha(null);
+    const novos = comEstadoEquipe(estados, frota, d, ativa);
+    const apagadas: Lancamento[] = [];
+    if (!ativa) {
+      for (const m of Object.values(porMes)) for (const l of Object.values(m)) {
+        if (l.frota === frota && l.dia >= d && equipeDesativada(novos, frota, l.dia)) apagadas.push(l);
+      }
+    }
+    setEstados(novos);
+    if (apagadas.length) setPorMes(atual => {
+      const n = { ...atual };
+      for (const l of apagadas) { const k = l.dia.slice(0, 7), m = { ...(n[k] ?? {}) }; delete m[chaveLinha(l.dia, l.frota)]; n[k] = m; }
+      return n;
+    });
+    try { await definirEquipeAtiva(frota, d, ativa); }
+    catch (e) {
+      setEstados(estados);
+      if (apagadas.length) setPorMes(atual => {
+        const n = { ...atual };
+        for (const l of apagadas) { const k = l.dia.slice(0, 7); n[k] = { ...(n[k] ?? {}), [chaveLinha(l.dia, l.frota)]: l }; }
+        return n;
+      });
+      setFalha(traduzirErro(e, ONDE));
+    }
+  }, [estados, porMes]);
+
+  const pronto = !!frotas && !!config && !!estados && !!porMes[mesDados];
   const valor = config?.valor_ocorrencia ?? 0;
+
+  /** Baixa a visão em tela (mês ou dia) com os filtros ativos. exceljs só é carregado aqui. */
+  const baixarExcel = async () => {
+    if (!frotas || !estados || exportando) return;
+    setExportando(true);
+    try {
+      const { exportarConferenciaMes, exportarConferenciaDia } = await import('@/lib/disponibilidadeExcel');
+      if (visao === 'mes') await exportarConferenciaMes({ ano, mes, hoje, frotas, valor, ler, estados, sup, ver: verMes });
+      else await exportarConferenciaDia({ dia, frotas, valor, ler, estados, sup, ver: verDia });
+    } catch (e) { setFalha(traduzirErro(e, ONDE)); }
+    finally { setExportando(false); }
+  };
 
   const mudarMes = (delta: number) => {
     const d = new Date(ano, mes + delta, 1);
@@ -108,17 +154,19 @@ export default function ConferenciaDisp() {
   // Pontos do mini calendário: conferido, com multa ou em andamento.
   const situacaoDias = useMemo(() => {
     const r = { conferido: [] as Date[], multa: [] as Date[], andamento: [] as Date[] };
-    if (!frotas) return r;
+    if (!frotas || !estados) return r;
     for (const d of diasDoMes(calMes.getFullYear(), calMes.getMonth())) {
       const k = chaveDia(d);
-      const linhas = frotas.map(f => porMes[k.slice(0, 7)]?.[chaveLinha(k, f.frota)]).filter(Boolean);
+      // Equipe desativada no dia não precisa de conferência.
+      const exigidas = frotas.filter(f => !equipeDesativada(estados, f.frota, k));
+      const linhas = exigidas.map(f => porMes[k.slice(0, 7)]?.[chaveLinha(k, f.frota)]).filter(Boolean);
       if (!linhas.length) continue;
-      if (linhas.length < frotas.length) r.andamento.push(d);
+      if (linhas.length < exigidas.length) r.andamento.push(d);
       else if (linhas.some(l => ehMultavel(l?.causa))) r.multa.push(d);
       else r.conferido.push(d);
     }
     return r;
-  }, [calMes, frotas, porMes]);
+  }, [calMes, frotas, estados, porMes]);
 
   const textoDia = dataDe(dia).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
   const distancia = Math.round((dataDe(hoje).getTime() - dataDe(dia).getTime()) / 864e5);
@@ -141,6 +189,12 @@ export default function ConferenciaDisp() {
             <ToggleGroupItem value="mes" className="flex-1 rounded-md px-3.5 font-bold text-aco data-[state=on]:bg-white data-[state=on]:text-tinta data-[state=on]:shadow-sm md:flex-none">Mês inteiro</ToggleGroupItem>
             <ToggleGroupItem value="dia" className="flex-1 rounded-md px-3.5 font-bold text-aco data-[state=on]:bg-white data-[state=on]:text-tinta data-[state=on]:shadow-sm md:flex-none">Dia</ToggleGroupItem>
           </ToggleGroup>
+
+          <Button variant="outline" className="font-bold" disabled={!pronto || exportando} onClick={() => void baixarExcel()}
+            title={visao === 'mes' ? 'Baixar o mês em Excel (grade, resumo e ocorrências)' : 'Baixar o dia em Excel'}>
+            {exportando ? <Loader2 className="animate-spin motion-reduce:animate-none" /> : <FileSpreadsheet />}
+            {exportando ? 'Gerando…' : 'Baixar Excel'}
+          </Button>
 
           {visao === 'mes' ? (
             <div className="flex w-full items-center justify-between gap-1 rounded-[10px] border border-linha bg-white p-1 md:w-auto">
@@ -191,13 +245,13 @@ export default function ConferenciaDisp() {
 
       {!pronto && !falha && <div className="flex justify-center p-16 text-aco" role="status"><Loader2 size={18} className="animate-spin motion-reduce:animate-none" /><span className="sr-only">Carregando a conferência</span></div>}
 
-      {pronto && frotas && (visao === 'mes' ? (
+      {pronto && frotas && estados && (visao === 'mes' ? (
         <GradeMes ano={ano} mes={mes} hoje={hoje} frotas={frotas} valor={valor} ler={ler} gravar={gravar} desmarcar={desmarcar}
-          sup={sup} setSup={s => alterar({ sup: s === 'T' ? null : s })} ver={verMes} setVer={v => alterar({ frotas: v === 'T' ? null : v })}
+          estados={estados} alterarEquipe={alterarEquipe} sup={sup} setSup={s => alterar({ sup: s === 'T' ? null : s })} ver={verMes} setVer={v => alterar({ frotas: v === 'T' ? null : v })}
           abrirDia={d => alterar({ visao: 'dia', dia: d })} />
       ) : (
         <ListaDia dia={dia} frotas={frotas} valor={valor} ler={ler} gravar={gravar} desmarcar={desmarcar}
-          sup={sup} setSup={s => alterar({ sup: s === 'T' ? null : s })} ver={verDia} setVer={v => alterar({ ver: v === 'T' ? null : v })} />
+          estados={estados} alterarEquipe={alterarEquipe} sup={sup} setSup={s => alterar({ sup: s === 'T' ? null : s })} ver={verDia} setVer={v => alterar({ ver: v === 'T' ? null : v })} />
       ))}
     </div>
   );

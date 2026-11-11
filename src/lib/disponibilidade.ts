@@ -1,6 +1,6 @@
 // Leitura e gravação da disponibilidade da frota no CENTRAL-NEO. A proteção de verdade é a RLS (migration 054).
 import { supabase } from './supabase';
-import type { ConfigDisp, Frota, Lancamento, Ocorrencia } from './disponibilidadeRegras';
+import type { ConfigDisp, EstadoEquipe, Frota, Lancamento, Ocorrencia } from './disponibilidadeRegras';
 
 export async function lerFrotas(): Promise<Frota[]> {
   const { data, error } = await supabase.from('neo_disp_frotas').select('*').eq('ativo', true).order('ordem');
@@ -37,6 +37,20 @@ export async function salvarMeta(meta: number): Promise<void> {
 export async function marcar(linhas: Lancamento[]): Promise<void> {
   const { error } = await supabase.from('neo_disp_lancamentos').upsert(linhas, { onConflict: 'dia,frota' });
   if (error) throw error;
+}
+
+/** Todas as mudanças de estado das equipes (poucas linhas: só existe quando alguém desativa ou reativa). */
+export async function lerEstados(): Promise<EstadoEquipe[]> {
+  const { data, error } = await supabase.from('neo_disp_equipe_estado').select('frota, dia, ativa').order('frota').order('dia');
+  if (error) throw error;
+  return (data ?? []) as EstadoEquipe[];
+}
+
+/** Desativa (`ativa` falso) ou reativa a equipe a partir do dia. Devolve quantas marcações foram apagadas. */
+export async function definirEquipeAtiva(frota: number, dia: string, ativa: boolean): Promise<number> {
+  const { data, error } = await supabase.rpc('neo_disp_equipe_alterar', { p_frota: frota, p_dia: dia, p_ativa: ativa });
+  if (error) throw error;
+  return Number(data ?? 0);
 }
 
 export async function limpar(dia: string, frota: number): Promise<void> {

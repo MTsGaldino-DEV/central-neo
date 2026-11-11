@@ -1,6 +1,6 @@
 # Memória compartilhada — Central NEO
 
-Atualizada em 06/11/2026 pelo Claude (Disponibilidade da frota e correção da troca de aba; registros do Codex sobre colaboradores preservados). Este arquivo é o ponto de continuidade entre
+Atualizada em 11/11/2026 pelo Claude (equipe desativada na Disponibilidade; registros anteriores e do Codex preservados). Este arquivo é o ponto de continuidade entre
 Codex e Claude neste repositório. Guarda decisões e estado de trabalho, não o
 histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
@@ -85,6 +85,37 @@ Falta dar o módulo `disponibilidade` em Logins e acessos a quem vai usar (ADMIN
 - **Cadastrou na grade (06/11/2026, pedido de Matheus):** célula verde com check (`.disp-cel.ok`, check como imagem de fundo por causa das quase 2 mil células), em vez de branca. A legenda trocou "Em branco: cadastrou" por "Cadastrou". Contestável passou de verde para amarelo de alerta (`#ffeb9c`, texto `#7a4600`) em toda a Disponibilidade, a pedido de Matheus, para não se confundir com o Cadastrou; "Falta conferir" passou para o fundo das pílulas ativas (`--color-sinal-fundo`, borda `#a9d6de`, sem sigla), também a pedido de Matheus; o "Conferir à mão" do Faturamento não mudou.
 - **Pendências:** horários da grade parecem desatualizados em 6 frotas (a correção é por migration; não há tela de frotas); o painel mostra só o ano atual;
   confirmar quem pode marcar (hoje, quem tem o módulo).
+
+## Equipe desativada na Disponibilidade — 11/11/2026 (Claude)
+
+**Estado: código pronto, SEM commit; migration 058 escrita e testada em transação desfeita, NÃO aplicada no banco.** Matheus aplica com
+`node .tmp-faturamento/aplicar-058.cjs` (aplica só a 058 e registra; confere que os lançamentos não mudaram). Sem a 058 a aba Conferência
+quebra ao carregar (lê `neo_disp_equipe_estado`), então **aplicar antes de publicar o front**.
+
+- **Pedido do Matheus:** clicar no dia da equipe → "Desativar equipe"; dali em diante todo dia fica "Desativada" (ícone próprio) até alguém clicar
+  num dia e "Reativar a equipe"; aí o quadradinho fica sem dados e a equipe volta a contar.
+- **Modelo (058):** tabela `neo_disp_equipe_estado (frota, dia, ativa)` = log de mudanças. O estado de um dia é o da última mudança até ele; sem
+  mudança = ativa. Os dias desativados **não viram linhas** em `neo_disp_lancamentos`: valem por derivação e já cobrem os dias futuros.
+  `neo_disp_desativada(frota, dia)` e `neo_disp_equipe_alterar(frota, dia, ativa)` (devolve quantas marcações apagou).
+- **Regras decididas pelo Claude (a confirmar pelo uso):** desativar **apaga** as marcações da equipe nos dias que ficam desativados (senão multa e
+  painel contariam dia que não vale); a tela pede confirmação quando há marcação visível. Dia desativado não aceita marcação (RLS dos lançamentos
+  alterada na 058 + botões escondidos). Pode desativar/reativar em dia passado (retroativo), nunca em dia futuro. Reativar no dia D deixa só o
+  D em diante ativo; desativações/reativações já gravadas depois de D continuam valendo. Quem tem o módulo `disponibilidade` pode desativar
+  (mesma regra de marcar; a pendência "quem pode marcar" continua aberta). O `Equipe Desativada` antigo em `causa` (1 linha de 31/03, frota 4621)
+  segue como histórico contestável, sem mudança.
+- **Onde aparece:** grade do mês (célula cinza com ícone de desligar, também nos dias futuros; popover da célula ganhou "Desativar equipe" ou, se já
+  desativada, "Reativar a equipe"); lista do dia (selo "Desativada desde dd/mm" + botão Reativar; ícone discreto para desativar, com confirmação);
+  legenda; "Dias conferidos"/"Conferidas N de M"/mini calendário/Marcar as que faltam e Falta conferir **ignoram** equipe desativada; exportação
+  em Excel mostra "DES" (mês) e "Desativada desde" (dia). Painel não mudou (só conta ocorrências; o "de N frotas" do KPI ainda conta todas).
+- **Código:** `src/lib/disponibilidadeRegras.ts` (`equipeDesativada`, `desativadaDesde`, `comEstadoEquipe`), `disponibilidade.ts`
+  (`lerEstados`, `definirEquipeAtiva`), `Conferencia.tsx` (`alterarEquipe`, com desfazer local se o banco recusar), `GradeMes.tsx`, `ListaDia.tsx`,
+  `disponibilidadeExcel.ts`, `disponibilidade.css` (`.disp-cel.d`).
+- **Verificado:** `disponibilidade-banco-testar` (054/055/058 em transação desfeita; apagar ao desativar, RLS, futuro recusado, retroativo no histórico
+  real, nada deixado no banco), `disponibilidade-ui-testar` (1440, 1920 e 390 px, Supabase simulado; capturas `disp-desativ*`/`disp-*desativada*`
+  conferidas), `disponibilidade-cruz-testar`, typecheck e `vite build`. **Não verificado:** gravação com banco real e login real; abrir o Excel com
+  equipe desativada de verdade (só typecheck).
+- **Pendências:** aplicar a 058; Matheus ver com o mouse real; decidir quem pode desativar (hoje, quem tem o módulo); se o "de N frotas" do Painel
+  deve descontar as desativadas.
 
 ## Correção: trocar de aba perdia a tela — 06/11/2026 (Claude)
 

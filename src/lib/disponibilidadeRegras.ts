@@ -21,6 +21,44 @@ export interface ConfigDisp { valor_ocorrencia: number; meta_mensal: number }
 
 export const ehMultavel = (causa: string | null | undefined) => !!causa && (MULTAVEIS as readonly string[]).includes(causa);
 
+/** "A partir de `dia` a equipe fica ativa ou desativada, até a mudança seguinte." Sem mudança = ativa. */
+export interface EstadoEquipe { frota: number; dia: string; ativa: boolean }
+/** Mudanças por frota, em ordem de dia. */
+export type EstadosEquipe = Record<number, EstadoEquipe[]>;
+
+export function agruparEstados(lista: EstadoEquipe[]): EstadosEquipe {
+  const r: EstadosEquipe = {};
+  for (const e of lista) (r[e.frota] ??= []).push(e);
+  for (const l of Object.values(r)) l.sort((a, b) => (a.dia < b.dia ? -1 : a.dia > b.dia ? 1 : 0));
+  return r;
+}
+
+/** A equipe está desativada neste dia? Vale também para dias que ainda não chegaram. */
+export function equipeDesativada(estados: EstadosEquipe, frota: number, dia: string): boolean {
+  const l = estados[frota];
+  if (!l) return false;
+  let desativada = false;
+  for (const e of l) { if (e.dia > dia) break; desativada = !e.ativa; }
+  return desativada;
+}
+
+/** Dia em que começou a desativação em vigor neste dia, ou null se a equipe está ativa. */
+export function desativadaDesde(estados: EstadosEquipe, frota: number, dia: string): string | null {
+  let desde: string | null = null;
+  for (const e of estados[frota] ?? []) {
+    if (e.dia > dia) break;
+    if (!e.ativa) desde ??= e.dia; else desde = null;
+  }
+  return desde;
+}
+
+/** Estados depois de desativar (`ativa` falso) ou reativar a equipe a partir de `dia`. */
+export function comEstadoEquipe(estados: EstadosEquipe, frota: number, dia: string, ativa: boolean): EstadosEquipe {
+  const lista = [...(estados[frota] ?? []).filter(e => e.dia !== dia), { frota, dia, ativa }];
+  lista.sort((a, b) => (a.dia < b.dia ? -1 : a.dia > b.dia ? 1 : 0));
+  return { ...estados, [frota]: lista };
+}
+
 export const chaveDia = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 export const dataDe = (chave: string) => { const [a, m, d] = chave.split('-').map(Number); return new Date(a, m - 1, d); };
 export const chaveMes = (ano: number, mes: number) => `${ano}-${String(mes + 1).padStart(2, '0')}`;

@@ -38,6 +38,7 @@ async function abrir(browser, largura, altura) {
       else if (recurso === 'neo_disp_frotas') corpo = dados.frotas.map((f) => ({ ...f, ativo: true }));
       else if (recurso === 'neo_disp_mes') { const { p_ano, p_mes } = req.postDataJSON(); corpo = linhasDoMes(`${p_ano}-${String(p_mes).padStart(2, '0')}`); }
       else if (recurso === 'neo_disp_ano') corpo = [];
+      else if (recurso === 'neo_disp_equipe_estado') corpo = [];
       else if (recurso === 'neo_disp_config') corpo = { valor_ocorrencia: 864, meta_mensal: 30000 };
       else throw Error('Requisição inesperada: ' + recurso);
     }

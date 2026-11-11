@@ -34,6 +34,8 @@
 .disp-cel.ok, .disp-sigla.ok { background: #dcf5e4 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23047857' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E") center / 12px 12px no-repeat; }
 .disp-cel.p, .disp-sigla.p { background: var(--color-sinal-fundo); box-shadow: inset 0 0 0 1px #a9d6de; }
 .disp-cel.p:hover { box-shadow: inset 0 0 0 2px var(--color-sinal); }
+/* Equipe desativada: cinza com o ícone de desligar, como imagem de fundo pelo mesmo motivo do check. Vale também nos dias futuros (botão desabilitado). */
+.disp-cel.d, .disp-cel.d:disabled, .disp-sigla.d { background: #e3e9ec url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235c6b72' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v5.5'/%3E%3Cpath d='M4.6 4.4a5.2 5.2 0 1 0 6.8 0'/%3E%3C/svg%3E") center / 11px 11px no-repeat; }
 .disp-cel:disabled { cursor: default; pointer-events: none; background: repeating-linear-gradient(135deg, #f4f7f8 0 4px, #fff 4px 8px); }
 .disp-grade tfoot td { position: sticky; bottom: 0; z-index: 2; background: #fbfcfc; border-top: 1px solid var(--color-linha); border-bottom: 0; height: 30px; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 11.5px; }
 .disp-grade tfoot .disp-fixa { z-index: 5; background: #fbfcfc; font-size: 10.5px; color: var(--color-aco); }

@@ -19,6 +19,7 @@
     "clsx": "^2.1.1",
     "d3-shape": "^3.2.0",
     "date-fns": "^4.4.0",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.16.0",
     "motion": "^13.0.0",
     "pdfjs-dist": "^4.10.38",
