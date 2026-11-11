@@ -134,8 +134,9 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
                       const k = chaves[i], l = ler(k, f.frota), fora = foraDoPeriodo(k);
                       const inicio = `${f.frota} · ${datas[i]} · `;
                       let cl = '', sigla = '', dicaTxt = inicio + 'fora do período';
-                      // Desativada vale até alguém reativar, inclusive nos dias que ainda não chegaram.
-                      if (k >= INICIO_CONTROLE && equipeDesativada(estados, f.frota, k)) { cl = 'd'; dicaTxt = inicio + 'equipe desativada'; }
+                      // Desativada vale até alguém reativar, mas o ícone só aparece nos dias já liberados (até hoje):
+                      // dia fora do período fica listrado, sem ícone, e ganha o ícone sozinho quando a agenda abrir.
+                      if (!fora && equipeDesativada(estados, f.frota, k)) { cl = 'd'; dicaTxt = inicio + 'equipe desativada'; }
                       else if (!fora) {
                         if (!l) { cl = 'p'; dicaTxt = inicio + 'falta conferir'; }
                         else if (l.situacao === 'CADASTROU') { cl = 'ok'; dicaTxt = inicio + 'cadastrou'; }
