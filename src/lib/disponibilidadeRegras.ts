@@ -33,7 +33,7 @@ export function agruparEstados(lista: EstadoEquipe[]): EstadosEquipe {
   return r;
 }
 
-/** A equipe está desativada neste dia? Vale também para dias que ainda não chegaram. */
+/** A equipe está desativada neste dia? Vale daí em diante, mesmo para dias que ainda não chegaram; a tela só mostra os já liberados. */
 export function equipeDesativada(estados: EstadosEquipe, frota: number, dia: string): boolean {
   const l = estados[frota];
   if (!l) return false;

@@ -160,9 +160,9 @@ export async function exportarConferenciaMes({ ano, mes, hoje, frotas, valor, le
       const l = ler(k, f.frota);
       c.alignment = { horizontal: 'center', vertical: 'middle' };
       c.border = bordas;
-      // Desativada vale até alguém reativar, inclusive nos dias que ainda não chegaram.
-      if (k >= INICIO_CONTROLE && equipeDesativada(estados, f.frota, k)) { c.value = 'DES'; pintar(c, COR.desativada.fundo, COR.desativada.fonte, { bold: true, size: 9 }); return; }
+      // Dia fora do período fica cinza, sem marca; a equipe desativada ganha o "DES" sozinha quando o dia for liberado.
       if (fora(k)) { c.fill = solido(COR.cinza); return; }
+      if (equipeDesativada(estados, f.frota, k)) { c.value = 'DES'; pintar(c, COR.desativada.fundo, COR.desativada.fonte, { bold: true, size: 9 }); return; }
       if (!l) { c.value = '?'; pintar(c, COR.falta.fundo, COR.falta.fonte); return; }
       if (l.situacao === 'CADASTROU') { c.value = '✓'; pintar(c, COR.ok.fundo, COR.ok.fonte, { bold: true }); return; }
       const m = ehMultavel(l.causa);

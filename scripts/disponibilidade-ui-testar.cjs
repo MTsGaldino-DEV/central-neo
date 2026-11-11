@@ -205,9 +205,10 @@ const celula = (page, f, d) => page.locator(`.disp-cel[data-frota="${f}"][data-d
         assert.deepEqual(db.estados, [{ frota: 4052, dia: '2026-11-03', ativa: false }]);
         for (const d of ['2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']) assert.ok((await classe(4052, d)).includes('d'), `desativada em ${d}`);
         const futuro = celula(page, 4052, '2026-11-07');
-        assert.ok((await classe(4052, '2026-11-07')).includes('d'), 'os dias que ainda não chegaram já aparecem desativados');
-        assert.equal(await futuro.isDisabled(), true, 'e continuam sem abrir');
-        assert.match(await futuro.getAttribute('aria-label'), /equipe desativada/);
+        assert.ok(!(await classe(4052, '2026-11-07')).includes('d'), 'dia fora do período não ganha ícone');
+        assert.equal(await futuro.isDisabled(), true, 'e continua sem abrir');
+        assert.match(await futuro.getAttribute('aria-label'), /fora do período/);
+        assert.equal((await pintura('.disp-cel:disabled')).imagem.startsWith('url('), false, 'listrado, sem ícone');
         assert.ok(!(await classe(4052, '2026-11-02')).includes('d'), 'antes do dia fica como estava');
         assert.equal((await pintura('.disp-cel.d')).imagem.startsWith('url("data:image/svg'), true, 'ícone próprio');
         assert.equal(await celula(page, 4052, '2026-11-04').textContent(), '');
@@ -249,7 +250,6 @@ const celula = (page, f, d) => page.locator(`.disp-cel[data-frota="${f}"][data-d
         assert.ok((await classe(4052, '2026-11-04')).includes('d'));
         assert.ok(!(await classe(4052, '2026-11-05')).includes('d'), 'reativar deixa o dia sem dados');
         assert.ok((await classe(4052, '2026-11-05')).includes('p'));
-        assert.ok(!(await classe(4052, '2026-11-07')).includes('d'), 'depois de reativar, o futuro deixa de ser desativado');
 
         // Reativar pelo dia 03 volta tudo ao normal
         await celula(page, 4052, '2026-11-03').click();

@@ -95,7 +95,7 @@ quebra ao carregar (lê `neo_disp_equipe_estado`), então **aplicar antes de pub
 - **Pedido do Matheus:** clicar no dia da equipe → "Desativar equipe"; dali em diante todo dia fica "Desativada" (ícone próprio) até alguém clicar
   num dia e "Reativar a equipe"; aí o quadradinho fica sem dados e a equipe volta a contar.
 - **Modelo (058):** tabela `neo_disp_equipe_estado (frota, dia, ativa)` = log de mudanças. O estado de um dia é o da última mudança até ele; sem
-  mudança = ativa. Os dias desativados **não viram linhas** em `neo_disp_lancamentos`: valem por derivação e já cobrem os dias futuros.
+  mudança = ativa. Os dias desativados **não viram linhas** em `neo_disp_lancamentos`: valem por derivação e cobrem os dias futuros (a tela só desenha os já liberados).
   `neo_disp_desativada(frota, dia)` e `neo_disp_equipe_alterar(frota, dia, ativa)` (devolve quantas marcações apagou).
 - **Regras decididas pelo Claude (a confirmar pelo uso):** desativar **apaga** as marcações da equipe nos dias que ficam desativados (senão multa e
   painel contariam dia que não vale); a tela pede confirmação quando há marcação visível. Dia desativado não aceita marcação (RLS dos lançamentos
@@ -103,7 +103,7 @@ quebra ao carregar (lê `neo_disp_equipe_estado`), então **aplicar antes de pub
   D em diante ativo; desativações/reativações já gravadas depois de D continuam valendo. Quem tem o módulo `disponibilidade` pode desativar
   (mesma regra de marcar; a pendência "quem pode marcar" continua aberta). O `Equipe Desativada` antigo em `causa` (1 linha de 31/03, frota 4621)
   segue como histórico contestável, sem mudança.
-- **Onde aparece:** grade do mês (célula cinza com ícone de desligar, também nos dias futuros; popover da célula ganhou "Desativar equipe" ou, se já
+- **Onde aparece:** grade do mês (célula cinza com ícone de desligar só nos dias já liberados (até hoje; dia fora do período fica listrado, sem ícone, e ganha o ícone sozinho quando a agenda abrir — ajuste pedido por Matheus em 11/11/2026); popover da célula ganhou "Desativar equipe" ou, se já
   desativada, "Reativar a equipe"); lista do dia (selo "Desativada desde dd/mm" + botão Reativar; ícone discreto para desativar, com confirmação);
   legenda; "Dias conferidos"/"Conferidas N de M"/mini calendário/Marcar as que faltam e Falta conferir **ignoram** equipe desativada; exportação
   em Excel mostra "DES" (mês) e "Desativada desde" (dia). Painel não mudou (só conta ocorrências; o "de N frotas" do KPI ainda conta todas).
