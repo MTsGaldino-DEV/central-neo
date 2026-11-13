@@ -2,11 +2,11 @@
 // Origem: planilha "Disponibilidade Contrato 7360" (docs/disponibilidade-frota-analise.md).
 
 export const MULTAVEIS = ['Veículo Quebrado', 'Atraso superior a 4h', 'Descadastramento Antecipado'] as const;
-export const CONTESTAVEIS = ['Atestado', 'Treinamento', 'Folga TAC', 'Férias', 'Suspensão', 'ASO', 'Interstício'] as const;
+export const CONTESTAVEIS = ['Atestado', 'Treinamento', 'Folga TAC', 'Folga de fim de escala', 'Férias', 'Suspensão', 'ASO', 'Interstício'] as const;
 
 export const SIGLAS: Record<string, string> = {
   'Veículo Quebrado': 'VQ', 'Atraso superior a 4h': '4H', 'Descadastramento Antecipado': 'DA',
-  Atestado: 'AT', Treinamento: 'TR', 'Folga TAC': 'FT', Férias: 'FE', Suspensão: 'SU', ASO: 'ASO', Interstício: 'IN',
+  Atestado: 'AT', Treinamento: 'TR', 'Folga TAC': 'FT', 'Folga de fim de escala': 'FF', Férias: 'FE', Suspensão: 'SU', ASO: 'ASO', Interstício: 'IN',
   'Equipe Desativada': 'ED',
 };
 
@@ -160,7 +160,7 @@ export function resumoPainel(frotas: Frota[], ocorrencias: Ocorrencia[], ano: nu
     causasContestaveis: [
       { nome: 'Atestado / ASO', qtd: conta('Atestado') + conta('ASO') },
       { nome: 'Treinamento', qtd: conta('Treinamento') },
-      { nome: 'Férias / Folga TAC', qtd: conta('Férias') + conta('Folga TAC') },
+      { nome: 'Férias / Folgas', qtd: conta('Férias') + conta('Folga TAC') + conta('Folga de fim de escala') },
       { nome: 'Suspensão / Interstício / outros', qtd: conta('Suspensão') + conta('Interstício') + conta('Equipe Desativada') },
     ],
     impacto: {

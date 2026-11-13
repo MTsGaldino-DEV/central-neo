@@ -86,6 +86,20 @@ Falta dar o módulo `disponibilidade` em Logins e acessos a quem vai usar (ADMIN
 - **Pendências:** horários da grade parecem desatualizados em 6 frotas (a correção é por migration; não há tela de frotas); o painel mostra só o ano atual;
   confirmar quem pode marcar (hoje, quem tem o módulo).
 
+## Conferência: motivo "Folga de fim de escala" — 13/11/2026 (Claude)
+
+**Estado: código pronto, SEM commit; migration 059 escrita e testada em transação desfeita, NÃO aplicada.** Matheus aplica com
+`node .tmp-faturamento/aplicar-059.cjs` (aplica só a 059 e registra; `--testar` roda e desfaz). Sem a 059, escolher o motivo novo falha na gravação
+(check de `neo_disp_lancamentos.causa`), então **aplicar antes de publicar o front**.
+
+- **Pedido do Matheus:** na conferência da frota, uma opção para quem não cadastrou por estar na folga de fim de escala.
+- **Interpretação do Claude (a confirmar pelo uso):** novo motivo **contestável** (R$ 0, amarelo), sigla **FF**, ao lado de Folga TAC. Não é
+  multável. No Painel entra no grupo "Férias / Folgas" (antes "Férias / Folga TAC"). Se a folga de fim de escala devia deixar o dia fora da
+  conta, como "Equipe desativada", é outra decisão.
+- **Código:** `src/lib/disponibilidadeRegras.ts` (`CONTESTAVEIS`, `SIGLAS`, grupo do Painel); chips, legenda e Excel leem essas listas e não mudaram.
+- **Verificado:** typecheck; 059 aplicada e desfeita sobre o banco real (lançamentos 14.161 / ocorrências 1.057 iguais, 1 constraint de causa, causa nova
+  aceita, inventada recusada). **Não verificado:** tela no navegador e Excel com o motivo novo.
+
 ## Equipe desativada na Disponibilidade — 11/11/2026 (Claude)
 
 **Estado: código pronto, SEM commit; migration 058 escrita e testada em transação desfeita, NÃO aplicada no banco.** Matheus aplica com
