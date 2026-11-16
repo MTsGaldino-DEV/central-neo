@@ -12,7 +12,7 @@ assert.deepEqual(
   COLUNAS_FLUXO.map((c) => [c.id, c.rotulo]),
   [
     ['servico', 'N° Serviço'], ['tipo_serv', 'Tipo'], ['localidade', 'Localidade'], ['termino', 'DT execução'],
-    ['equipes', 'Equipe'], ['nsmps', 'NSMP'], ['nsprs', 'NSPR'],
+    ['equipes', 'Equipe'], ['nsmps', 'NSMP'], ['nsprs', 'NSPR/NSMC'],
     ['valor_lancamento', 'Lançamento Salesforce'], ['valor_pago', 'Valor pago'], ['data_lancamento_sf', 'Data lançamento SF'],
     ['faturas', 'Apropriação'], ['observacao', 'Observação'], ['etapa', 'Etapa'],
   ],

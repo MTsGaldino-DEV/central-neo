@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Search, Download, Plus, Loader2, RefreshCw, FileSpreadsheet, AlertTriangle, X, Copy, Check, Inbox, CalendarRange, FilterX, SlidersHorizontal, ArrowUp, ArrowDown,
+  Search, Download, Plus, Loader2, RefreshCw, FileSpreadsheet, AlertTriangle, X, Copy, Check, Inbox, CalendarRange, FilterX, SlidersHorizontal, ArrowUp, ArrowDown, Trash2,
 } from 'lucide-react';
+import { useSessao } from '@/contexto/Sessao';
 import { Pagination } from '@/components/Pagination';
 import { ListaSuspensa } from '@/components/ui/lista-suspensa';
 import EtapaChip from '@/components/fechamento/EtapaChip';
@@ -10,7 +11,7 @@ import FiltroColuna from '@/components/fechamento/FiltroColuna';
 import PainelNsis from './PainelNsis';
 import {
   listarNsis, getResumo, exportarFechamento, criarNsisManual, formatarUS, formatarReais, formatarData,
-  contarPorEtapa, temFiltro, listarTiposServico, valoresDaColuna, infoEtapa, ehFluxoNovo, descricoesDosItens,
+  excluirNsis, contarPorEtapa, temFiltro, listarTiposServico, valoresDaColuna, infoEtapa, ehFluxoNovo, descricoesDosItens,
   type Etapa, type Nsis, type ResumoFechamento, type FiltrosNsis,
 } from '@/lib/fechamento';
 import { COLUNAS_FLUXO, colunasVisiveis, type ColunaFluxo } from '@/lib/fechamentoFluxo';
@@ -117,6 +118,7 @@ export default function FilaFechamento() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [exportando, setExportando] = useState(false);
+  const [excluindo, setExcluindo] = useState<string | null>(null); // serviço em exclusão
   const [novaAberta, setNovaAberta] = useState(false);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [detalhesAbertos, setDetalhesAbertos] = useState(false);
@@ -259,6 +261,24 @@ export default function FilaFechamento() {
   function ordenarColuna(c: ColunaFluxo, dir: 'asc' | 'desc') {
     const atual = filtros.ordemColuna;
     mudarParam('ordcol', atual && atual.coluna === c && atual.dir === dir ? null : `${c}:${dir}`);
+  }
+
+  /** Exclui a NSIS da linha (só ADMIN; o banco confere de novo). Pede confirmação e guarda cópia no registro de ações. */
+  async function excluirLinha(n: Nsis) {
+    if (excluindo) return;
+    const itens = n.qtd_itens === 0 ? 'sem códigos lançados' : n.qtd_itens === 1 ? '1 código lançado' : `${n.qtd_itens} códigos lançados`;
+    if (!confirm(`Excluir a NSIS ${n.servico} (${itens}) da fila?\n\nOs códigos lançados vão junto. Uma cópia fica guardada no registro de ações.`)) return;
+    setExcluindo(n.servico);
+    setErro(null);
+    try {
+      await excluirNsis(n.servico);
+      if (aberta === n.servico) mudarParam('nsis', null);
+      recarregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao excluir a NSIS.');
+    } finally {
+      setExcluindo(null);
+    }
   }
 
   async function exportar() {
@@ -467,7 +487,7 @@ export default function FilaFechamento() {
                       className={`group ${aberta === n.servico ? 'selecionada' : ''}`}>
                       {colunas.map((id) => <Celula key={id} id={id} n={n} descricoes={descricoes[n.servico]} />)}
                       <td className="grade-fixa text-right cursor-default" onClick={(ev) => ev.stopPropagation()}>
-                        <AcoesLinha n={n} onAbrir={(detalhes) => abrirPainel(n.servico, detalhes)} />
+                        <AcoesLinha n={n} onAbrir={(detalhes) => abrirPainel(n.servico, detalhes)} onExcluir={() => excluirLinha(n)} excluindo={excluindo === n.servico} />
                       </td>
                     </tr>
                   ))}
@@ -501,7 +521,8 @@ function Celula({ id, n, descricoes }: { id: ColunaFluxo; n: Nsis; descricoes?: 
     case 'localidade': return <td title={n.localidade ? `Localidade ${n.localidade}` : undefined}>{n.localidade ? rotuloLocalidade(n.localidade) : vazio}</td>;
     case 'nsmps': return <td className="!text-[#7c3aed]"><Numeros valor={n.nsmps} falta={n.qtd_itens > 0 && n.itens_sem_nsmp > 0} /></td>;
     case 'equipes': return <td><Numeros valor={n.equipes} falta={false} /></td>;
-    case 'nsprs': return <td className="!text-[#15803d]"><Numeros valor={n.nsprs} falta={n.qtd_itens > 0 && !!n.nsmps && n.itens_sem_nspr > 0} /></td>;
+    // NSRI: a NSMC é o NSPR (NSIS antigas guardavam só no NSMP)
+    case 'nsprs': return <td className="!text-[#15803d]"><Numeros valor={n.nsprs ?? (n.tipo_serv === 'NSRI' ? n.nsmps : null)} falta={n.qtd_itens > 0 && !!n.nsmps && n.itens_sem_nspr > 0} /></td>;
     case 'termino': return <td className="!text-[#64748b]">{formatarData(n.termino)}</td>;
     case 'valor_lancamento': return (
       <td className="text-right tabular-nums">
@@ -587,7 +608,8 @@ const BOTAO_AZUL = `${BOTAO} bg-[#1d4ed8] text-white hover:bg-[#1e40af]`;
  * Grupo de ações da linha, como na lista de Instalações do Visão de Dono: botão secundário "Ver detalhes"
  * e o botão da etapa (o que a pessoa faz agora). Ele abre a janela da NSIS, onde a etapa é preenchida.
  */
-function AcoesLinha({ n, onAbrir }: { n: Nsis; onAbrir: (detalhes: boolean) => void }) {
+function AcoesLinha({ n, onAbrir, onExcluir, excluindo }: { n: Nsis; onAbrir: (detalhes: boolean) => void; onExcluir: () => void; excluindo: boolean }) {
+  const { acesso } = useSessao();
   const detalhes = <button type="button" onClick={() => onAbrir(true)} className={BOTAO_SEC}>Ver detalhes</button>;
   const fazer = (rotulo: string, classe: string) => <button type="button" onClick={() => onAbrir(false)} className={classe}>{rotulo}</button>;
   let botoes: ReactNode;
@@ -598,7 +620,17 @@ function AcoesLinha({ n, onAbrir }: { n: Nsis; onAbrir: (detalhes: boolean) => v
     case 'AGUARDANDO_APROPRIACAO': botoes = <>{detalhes}{fazer('Informar apropriação', BOTAO_AZUL)}</>; break;
     default: botoes = detalhes;
   }
-  return <div className="flex items-center justify-end gap-1.5">{botoes}</div>;
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      {botoes}
+      {acesso?.papel === 'ADMIN' && (
+        <button type="button" onClick={onExcluir} disabled={excluindo} title="Excluir NSIS" aria-label={`Excluir a NSIS ${n.servico}`}
+          className="inline-flex size-6 items-center justify-center rounded-md border border-[#e2e8f0] bg-[#f8fafc] text-[#94a3b8] hover:border-erro hover:bg-erro-fundo hover:text-erro disabled:opacity-50">
+          {excluindo ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+        </button>
+      )}
+    </div>
+  );
 }
 
 /** NSMP / NSPR / equipe / AP da NSIS: um número por linha; "falta" quando algum item ainda não tem. */

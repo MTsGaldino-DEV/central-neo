@@ -17,7 +17,7 @@ export const COLUNAS_FLUXO: { id: ColunaFluxo; rotulo: string; numero?: boolean 
   { id: 'termino', rotulo: 'DT execução' },
   { id: 'equipes', rotulo: 'Equipe' },
   { id: 'nsmps', rotulo: 'NSMP' },
-  { id: 'nsprs', rotulo: 'NSPR' },
+  { id: 'nsprs', rotulo: 'NSPR/NSMC' },
   { id: 'valor_lancamento', rotulo: 'Lançamento Salesforce', numero: true },
   { id: 'valor_pago', rotulo: 'Valor pago', numero: true },
   { id: 'data_lancamento_sf', rotulo: 'Data lançamento SF' },

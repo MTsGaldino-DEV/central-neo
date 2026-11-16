@@ -554,7 +554,8 @@ export async function fecharEtapa1(
   if (!nsmp) throw new Error(nsri ? 'Informe a NSMC.' : 'Informe a NSMP.');
   if (nsri && !valorPagoValido(dados.valorPagoUS)) throw new Error('Informe o valor pago (zero é aceito).');
 
-  const itens = dados.itens.map((it) => ({ ...it, equipe, nsmp }));
+  // NSRI: o número informado é a NSMC e vale também como NSPR (a coluna da lista é NSPR/NSMC); o NSMP fica igual a ele
+  const itens = dados.itens.map((it) => ({ ...it, equipe, nsmp, ...(nsri ? { nspr: nsmp } : {}) }));
   if (nsri) {
     const partes = ratearPago(itens.map((it, i) => ({ id: String(i), valor_inicial: it.valor_inicial })), dados.valorPagoUS);
     partes.forEach((p, i) => { itens[i].valor_final = p.valor_final; });
@@ -663,9 +664,10 @@ export async function corrigirEtapa1(
   for (const it of atuais) if (!mantidos.has(it.id)) await excluirItem(it.id);
   const novos: ItemNsisCampos[] = [];
   for (const { id, ...campos } of dados.itens) {
-    const comum = { ...campos, equipe, nsmp };
+    // NSRI: a NSMC vale também como NSPR (mesmo número no NSMP e no NSPR)
+    const comum = { ...campos, equipe, nsmp, ...(nsri ? { nspr: nsmp } : {}) };
     if (id) await atualizarItem(id, comum);
-    else novos.push({ ...comum, nspr, fatura, valor_final: null, us_adicional: null, observacao: null });
+    else novos.push({ ...comum, nspr: nsri ? nsmp : nspr, fatura, valor_final: null, us_adicional: null, observacao: null });
   }
   if (novos.length > 0) await criarItens(nsis.servico, novos);
 

@@ -1031,3 +1031,16 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
 
 - Saiu a coluna **Supervisor** da grade (`src/lib/fechamentoFluxo.ts`, `Fila.tsx`); o supervisor continua gravado na NSIS, na busca da fila, na janela da NSIS e no Excel. O cabeçalho "Tipo do serviço" virou **"Tipo"** (coluna mais estreita; o filtro do painel Filtros mantém o nome longo).
 - Testes: `scripts/fluxo-colunas-testar.cjs` atualizado. `tsc --noEmit` limpo. Não conferido no navegador.
+
+## Fila de NSIS: botão de lixeira na linha (16/11/2026, Claude)
+
+- A coluna Ações da lista ganhou um botão de **lixeira** (só ADMIN) ao lado de "Ver detalhes"/etapa. Pede confirmação (nº do serviço e quantidade de códigos), chama `excluirNsis` (`neo_excluir_nsis`: o banco confere o papel e guarda cópia em `neo_nsis_log`), fecha a janela se era essa NSIS e recarrega a lista. É a mesma exclusão do bloco "Somente administrador" da janela da NSIS (`AcoesAdmin.tsx`), agora também direto na linha. Código: `AcoesLinha` em `Fila.tsx`.
+- `tsc --noEmit` limpo. Não conferido no navegador nem excluindo uma NSIS de verdade.
+
+## NSRI: NSMC vale como NSPR, coluna NSPR/NSMC (16/11/2026, Claude)
+
+- Fluxo confirmado pelo Matheus: **Em revisão** confere/informa NSMP, código do contrato, fator de pagamento e (só NSRI) a NSMC e o valor pago; o valor pago da NSIS comum é informado na etapa **NSPR**. NSRI vai direto para **Salesforce**. Isso já era o comportamento da etapa; a mudança é só a NSMC.
+- **NSMC é tratada como NSPR:** na etapa 1 da NSRI (`fecharEtapa1` e `corrigirEtapa1`, `src/lib/fechamento.ts`) o número informado é gravado no **NSMP e no NSPR** dos itens (mesmo número). Com o NSPR preenchido a coluna da lista se chama **NSPR/NSMC** (`fechamentoFluxo.ts`), filtra e ordena pelos valores reais. Sem migration: a `neo_vw_nsis` já manda NSRI com itens fechados para Salesforce.
+- Lista: NSRI antiga que só tinha o NSMP (1 NSIS de teste, 247380520) mostra o NSMP na coluna NSPR/NSMC por reserva (`Celula`, `Fila.tsx`); não houve atualização de dados antigos.
+- Efeito colateral a lembrar: como a NSRI agora tem NSPR, os contadores de divergência (`itens_divergentes`) e de "valor pago" da view passam a incluir NSRI quando o valor pago difere do pedido (valor pago em vermelho na grade).
+- Teste: `scripts/fluxo-nspr-proxima-etapa-testar.cjs` simula a NSRI (NSMC no NSMP e no NSPR + valor pago → Aguardando Salesforce; transação desfeita). `fluxo-colunas-testar.cjs` com o rótulo novo. `tsc` limpo; tela não conferida no navegador.
