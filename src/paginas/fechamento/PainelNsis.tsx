@@ -4,6 +4,7 @@ import {
   AlertTriangle, MapPin, CalendarCheck, FileText, Equal,
 } from 'lucide-react';
 import EtapaChip from '@/components/fechamento/EtapaChip';
+import { rotuloLocalidade } from '@/lib/localidades';
 import { JanelaModal } from '@/components/faturamento/JanelaModal';
 import {
   getNsis, criarItens, atualizarItem, atualizarItens, confirmarPago, excluirItem, definirSemCobranca,
@@ -143,7 +144,7 @@ export default function PainelNsis({ servico, onFechar, onAlterado, detalhesInic
                 <span className="flex items-center gap-1.5"><CalendarCheck size={15} className="text-aco-claro" />
                   <span className="text-aco">DT execução</span> <strong>{formatarData(nsis.termino, true)}</strong></span>
                 <span className="flex items-center gap-1.5"><MapPin size={15} className="text-aco-claro" />
-                  <span className="text-aco">Localidade</span> <strong className="font-codigo">{nsis.localidade ?? '—'}</strong></span>
+                  <span className="text-aco">Localidade</span> <strong title={nsis.localidade ? `Código ${nsis.localidade}` : undefined}>{rotuloLocalidade(nsis.localidade)}</strong></span>
                 <span><span className="text-aco">Supervisor</span> <strong>{nsis.supervisor ?? '—'}</strong></span>
                 <span><span className="text-aco">Tipo</span> <strong>{nsis.tipo_serv}</strong></span>
               </div>
@@ -184,7 +185,7 @@ export default function PainelNsis({ servico, onFechar, onAlterado, detalhesInic
                 <SemCobranca nsis={nsis} onAlterado={aposMudanca} />
               ) : fluxoNovo ? (
                 <div className="space-y-3">
-                  <JanelaFluxo nsis={{ ...nsis, fluxo_novo: true }} itens={itens} onAlterado={aposMudanca}
+                  <JanelaFluxo nsis={{ ...nsis, fluxo_novo: true, supervisor_equipe: nsis.supervisor_equipe ?? nsis.supervisor }} itens={itens} onAlterado={aposMudanca}
                     onRascunho={(tem) => { setRascunho(tem); if (!tem) setAvisoSair(false); }} />
                   {itens.length === 0 && <MarcarSemCobranca servico={servico} onAlterado={aposMudanca} />}
                 </div>

@@ -9,11 +9,12 @@ import EtapaChip from '@/components/fechamento/EtapaChip';
 import FiltroColuna from '@/components/fechamento/FiltroColuna';
 import PainelNsis from './PainelNsis';
 import {
-  listarNsis, getResumo, getResumoFaturas, exportarFechamento, criarNsisManual, formatarUS, formatarReais, formatarData,
+  listarNsis, getResumo, exportarFechamento, criarNsisManual, formatarUS, formatarReais, formatarData,
   contarPorEtapa, temFiltro, listarTiposServico, valoresDaColuna, infoEtapa, ehFluxoNovo, descricoesDosItens,
-  type Etapa, type Nsis, type ResumoFechamento, type ResumoFatura, type FiltrosNsis,
+  type Etapa, type Nsis, type ResumoFechamento, type FiltrosNsis,
 } from '@/lib/fechamento';
 import { COLUNAS_FLUXO, colunasVisiveis, type ColunaFluxo } from '@/lib/fechamentoFluxo';
+import { rotuloLocalidade } from '@/lib/localidades';
 
 const POR_PAGINA = 50;
 
@@ -76,6 +77,7 @@ function lerOrdemColuna(params: URLSearchParams): FiltrosNsis['ordemColuna'] {
 /** Texto de um valor de coluna na lista do filtro e nos chips. */
 function textoValor(coluna: ColunaFluxo, v: string): string {
   if (coluna === 'etapa' && v !== '—') return infoEtapa(v as Etapa).nome;
+  if (coluna === 'localidade' && v !== '—') return rotuloLocalidade(v);
   if ((coluna === 'termino' || coluna === 'data_lancamento_sf') && /^\d{4}-\d{2}-\d{2}$/.test(v)) return dataBR(v);
   return v;
 }
@@ -83,7 +85,6 @@ function textoValor(coluna: ColunaFluxo, v: string): string {
 export default function FilaFechamento() {
   const [params, setParams] = useSearchParams();
   const etapa = (params.get('etapa') as Etapa | 'TODAS' | null) ?? 'A_FECHAR';
-  const visao = params.get('visao') === 'faturas' ? 'faturas' : 'nsis';
   const aberta = params.get('nsis');
 
   // Os filtros ficam na URL: dá para voltar, recarregar e chegar pelo Painel já filtrado
@@ -96,8 +97,8 @@ export default function FilaFechamento() {
     codigo: params.get('codigo') ?? '',
     de: params.get('de') ?? '',
     ate: params.get('ate') ?? '',
-    alerta: (params.get('alerta') as FiltrosNsis['alerta']) || null,
-    ordem: (params.get('ordem') as FiltrosNsis['ordem']) || 'termino_asc',
+    // a ordem vem do cabeçalho da coluna (ordemColuna); sem ela, execução mais recente primeiro
+    ordem: 'termino_desc',
     colunas: lerColunas(params),
     ordemColuna: lerOrdemColuna(params),
   };
@@ -185,11 +186,11 @@ export default function FilaFechamento() {
     carregar();
   }
 
-  useEffect(() => { if (visao === 'nsis') carregar(); }, [carregar, visao]);
+  useEffect(() => { carregar(); }, [carregar]);
 
   // Pré-carrega a 1ª página das outras etapas (mesmos filtros) depois que a atual chegou
   useEffect(() => {
-    if (visao !== 'nsis' || carregando) return;
+    if (carregando) return;
     let cancelado = false;
     const alvos: (Etapa | 'TODAS')[] = [
       ...ETAPAS_FLUXO, 'TODAS', ...ETAPAS_HISTORICO.filter((e) => (resumo?.etapas[e] ?? 0) > 0),
@@ -206,9 +207,7 @@ export default function FilaFechamento() {
     })();
     return () => { cancelado = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chaveFiltros, visao, carregando, versaoCache]);
-  // Na visão por fatura a lista não carrega, mas os cartões e as contagens sim
-  useEffect(() => { if (visao === 'faturas') getResumo().then(setResumo).catch(() => {}); }, [visao]);
+  }, [chaveFiltros, carregando, versaoCache]);
 
   /** Muda vários parâmetros de uma vez; null apaga. Filtro novo volta para a página 1. */
   function mudarParams(mudancas: Record<string, string | null>) {
@@ -228,7 +227,7 @@ export default function FilaFechamento() {
   }
 
   function trocarEtapa(e: Etapa | 'TODAS') {
-    mudarParams({ etapa: e, visao: null });
+    mudarParam('etapa', e);
   }
 
   function aplicarTextos(e?: FormEvent) {
@@ -238,7 +237,7 @@ export default function FilaFechamento() {
 
   function limparFiltros() {
     const colunasNulas = Object.fromEntries(COLUNAS_FLUXO.map((c) => [`col.${c.id}`, null]));
-    mudarParams({ q: null, loc: null, equipe: null, tipo: null, codigo: null, de: null, ate: null, alerta: null, ...colunasNulas });
+    mudarParams({ q: null, loc: null, equipe: null, tipo: null, codigo: null, de: null, ate: null, ...colunasNulas });
   }
 
   function abrirColuna(c: ColunaFluxo) {
@@ -275,9 +274,6 @@ export default function FilaFechamento() {
 
   const contagem = (e: Etapa) => (contagens ?? resumo)?.etapas[e] ?? 0;
   const totalGeral = contagens?.total ?? resumo?.total ?? 0;
-  const diferenca = resumo ? resumo.valorPagoConfirmado - resumo.valorPedidoConfirmado : 0;
-  const diferencaReais = resumo ? resumo.valorPagoConfirmadoReais - resumo.valorPedidoConfirmadoReais : 0;
-  const verAlerta = (a: FiltrosNsis['alerta']) => mudarParams({ alerta: a ?? null, etapa: 'TODAS', visao: null });
 
   // chips dos filtros ativos
   const chips: { rotulo: ReactNode; limpar: Record<string, null> }[] = [];
@@ -291,7 +287,7 @@ export default function FilaFechamento() {
   if (filtros.codigo) chips.push({ rotulo: <>Código <b className="font-codigo">{filtros.codigo}</b></>, limpar: { codigo: null } });
   if (filtros.tipo) chips.push({ rotulo: <>Tipo <b>{filtros.tipo}</b></>, limpar: { tipo: null } });
   if (filtros.busca) chips.push({ rotulo: <>Busca: <b>{filtros.busca}</b></>, limpar: { q: null } });
-  if (filtros.localidade) chips.push({ rotulo: <>Localidade <b>{filtros.localidade}</b></>, limpar: { loc: null } });
+  if (filtros.localidade) chips.push({ rotulo: <>Localidade <b>{rotuloLocalidade(filtros.localidade)}</b></>, limpar: { loc: null } });
   if (filtros.equipe) chips.push({ rotulo: <>Equipe <b>{filtros.equipe}</b></>, limpar: { equipe: null } });
   for (const c of COLUNAS_FLUXO) {
     const v = filtros.colunas?.[c.id];
@@ -302,7 +298,6 @@ export default function FilaFechamento() {
       limpar: { [`col.${c.id}`]: null },
     });
   }
-  if (filtros.alerta) chips.push({ rotulo: <b>{filtros.alerta === 'DIVERGENTE' ? 'Pago ≠ pedido' : 'NSPR sem valor pago'}</b>, limpar: { alerta: null } });
 
   // filtros do painel recolhido (a busca tem o próprio campo)
   const filtrosExtras = chips.length - (filtros.busca ? 1 : 0);
@@ -316,20 +311,16 @@ export default function FilaFechamento() {
         <button onClick={() => setNovaAberta(true)} className="h-10 px-4 rounded-lg bg-[#16a34a] text-white text-sm font-bold flex items-center gap-1.5 hover:bg-[#15803d]">
           <Plus size={15} /> NSIS avulsa
         </button>
-        {visao === 'nsis' && (
-          <form onSubmit={aplicarTextos} className="relative flex-1 min-w-[240px] max-w-[560px]">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-aco-claro" />
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} onBlur={() => aplicarTextos()}
-              placeholder="Buscar serviço, NSMP, NSPR, AP, equipe ou texto…" className={`${campo} !h-10 w-full pl-9`} />
-          </form>
-        )}
-        {visao === 'nsis' && (
-          <button type="button" onClick={() => setFiltrosAbertos((a) => !a)} aria-expanded={filtrosAbertos}
-            className={`h-10 px-3 rounded-lg border text-sm font-semibold flex items-center gap-1.5 ${filtrosAbertos || filtrosExtras > 0 ? 'border-sinal text-sinal bg-sinal-fundo' : 'border-linha bg-white text-aco hover:border-sinal hover:text-sinal'}`}>
-            <SlidersHorizontal size={15} /> Filtros
-            {filtrosExtras > 0 && <span className="rounded-full bg-sinal text-white text-[11px] font-bold px-1.5">{filtrosExtras}</span>}
-          </button>
-        )}
+        <form onSubmit={aplicarTextos} className="relative flex-1 min-w-[240px] max-w-[560px]">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-aco-claro" />
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} onBlur={() => aplicarTextos()}
+            placeholder="Buscar serviço, NSMP, NSPR, AP, equipe ou texto…" className={`${campo} !h-10 w-full pl-9`} />
+        </form>
+        <button type="button" onClick={() => setFiltrosAbertos((a) => !a)} aria-expanded={filtrosAbertos}
+          className={`h-10 px-3 rounded-lg border text-sm font-semibold flex items-center gap-1.5 ${filtrosAbertos || filtrosExtras > 0 ? 'border-sinal text-sinal bg-sinal-fundo' : 'border-linha bg-white text-aco hover:border-sinal hover:text-sinal'}`}>
+          <SlidersHorizontal size={15} /> Filtros
+          {filtrosExtras > 0 && <span className="rounded-full bg-sinal text-white text-[11px] font-bold px-1.5">{filtrosExtras}</span>}
+        </button>
         <span className="flex-1" />
         <Link to="/fechamento/importar" className="h-10 px-3 rounded-lg border border-linha bg-white text-aco text-sm font-semibold flex items-center gap-1.5 hover:border-sinal hover:text-sinal">
           <FileSpreadsheet size={15} /> Importar relatório
@@ -340,7 +331,7 @@ export default function FilaFechamento() {
         </button>
       </div>
 
-      {visao === 'nsis' && filtrosAbertos && (
+      {filtrosAbertos && (
         <form onSubmit={aplicarTextos} className="bg-white border border-[#e2e8f0] rounded-xl p-3 flex flex-wrap items-end gap-2">
           <div>
             <label className="block text-[11px] font-semibold text-aco mb-1 flex items-center gap-1"><CalendarRange size={12} /> Data de execução</label>
@@ -373,18 +364,6 @@ export default function FilaFechamento() {
             <input value={equipe} onChange={(e) => setEquipe(e.target.value)} onBlur={() => aplicarTextos()}
               placeholder="Nº da equipe" className={`${campo} w-32 font-codigo`} />
           </div>
-          <div>
-            <label className="block text-[11px] font-semibold text-aco mb-1">Pagamento</label>
-            <ListaSuspensa rotulo="Pagamento" valor={filtros.alerta ?? ''} ativo={!!filtros.alerta} tom="cobre" className="min-w-[8.5rem]"
-              opcoes={[{ valor: '', rotulo: 'Todos' }, { valor: 'DIVERGENTE', rotulo: 'Pago diferente do pedido' }, { valor: 'SEM_VALOR', rotulo: 'NSPR sem valor pago' }]}
-              onChange={(v) => mudarParam('alerta', v || null)} />
-          </div>
-          <div>
-            <label className="block text-[11px] font-semibold text-aco mb-1">Ordem</label>
-            <ListaSuspensa rotulo="Ordem" valor={filtros.ordem ?? 'termino_asc'}
-              opcoes={[{ valor: 'termino_asc', rotulo: 'Execução mais antiga primeiro' }, { valor: 'termino_desc', rotulo: 'Execução mais recente primeiro' }, { valor: 'servico', rotulo: 'Nº do serviço' }]}
-              onChange={(v) => mudarParams({ ordem: v === 'termino_asc' ? null : v, ordcol: null })} />
-          </div>
           <span className="flex-1" />
           <button type="button" onClick={recarregar} className="h-9 w-9 flex items-center justify-center border border-linha rounded-lg bg-white text-aco hover:text-sinal" title="Atualizar">
             <RefreshCw size={15} className={carregando ? 'animate-spin' : ''} />
@@ -392,7 +371,7 @@ export default function FilaFechamento() {
         </form>
       )}
 
-      {visao === 'nsis' && chips.length > 0 && (
+      {chips.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           {chips.map((c, i) => (
             <span key={i} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-sinal-fundo text-sinal-forte text-xs">
@@ -412,7 +391,7 @@ export default function FilaFechamento() {
       <div className="flex flex-wrap items-center gap-2">
         {[...ETAPAS_FLUXO, ...ETAPAS_HISTORICO].map((id) => {
           const e = infoEtapa(id);
-          const ativa = visao === 'nsis' && etapa === e.id;
+          const ativa = etapa === e.id;
           const historica = ETAPAS_HISTORICO.includes(e.id);
           const n = contagem(e.id);
           // chips só do histórico somem quando vazios (a menos que sejam a etapa aberta)
@@ -422,53 +401,10 @@ export default function FilaFechamento() {
               onClick={() => trocarEtapa(e.id)} />
           );
         })}
-        <PilulaEtapa ativa={visao === 'nsis' && etapa === 'TODAS'} rotulo="Todas" n={totalGeral} titulo="Todas as etapas" onClick={() => trocarEtapa('TODAS')} />
-        <span className="flex-1" />
-      <div className="flex gap-1 bg-white border border-linha rounded-xl p-1">
-        <button onClick={() => mudarParam('visao', null)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${visao === 'nsis' ? 'bg-sinal text-white' : 'text-aco hover:bg-nevoa'}`}>
-          Por NSIS
-        </button>
-        <button onClick={() => mudarParam('visao', 'faturas')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${visao === 'faturas' ? 'bg-sinal text-white' : 'text-aco hover:bg-nevoa'}`}>
-          Por fatura (pedido × pago)
-        </button>
-      </div>
+        <PilulaEtapa ativa={etapa === 'TODAS'} rotulo="Todas" n={totalGeral} titulo="Todas as etapas" onClick={() => trocarEtapa('TODAS')} />
       </div>
 
-
-      {/* Pedido × pago: uma faixa só, sem cartões */}
-      <div className="flex flex-wrap bg-white border border-[#e2e8f0] rounded-xl lg:divide-x divide-[#e2e8f0]">
-        <Indicador rotulo="Pedido à CEMIG" valor={formatarReais(resumo?.valorPedidoReais ?? 0)}
-          detalhe={`${formatarUS(resumo?.valorPedido ?? 0)} US · NSMP geradas`} />
-        <Indicador rotulo="Pago pela CEMIG" valor={formatarReais(resumo?.valorPagoReais ?? 0)}
-          detalhe={`${formatarUS(resumo?.valorPago ?? 0)} US · NSPR recebidas`} />
-        <Indicador
-          rotulo="Pago − pedido"
-          valor={`${diferencaReais > 0 ? '+' : ''}${formatarReais(diferencaReais)}`}
-          detalhe={`${diferenca > 0 ? '+' : ''}${formatarUS(diferenca)} US · itens com pedido e pago`}
-          destaque={Math.abs(diferencaReais) > 0.005 ? (diferencaReais < 0 ? 'erro' : 'ok') : undefined}
-        />
-        <div className="flex-1 min-w-[190px] px-4 py-2.5">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-aco">Alertas de pagamento</p>
-          <button onClick={() => verAlerta('DIVERGENTE')} className="mt-1 w-full flex items-baseline justify-between gap-2 text-left hover:underline">
-            <span className="text-xs text-aco">Pago ≠ pedido</span>
-            <span className={`text-sm font-extrabold ${(resumo?.divergentes ?? 0) > 0 ? 'text-cobre' : 'text-aco-claro'}`}>{resumo?.divergentes ?? 0}</span>
-          </button>
-          <button onClick={() => verAlerta('SEM_VALOR')} className="w-full flex items-baseline justify-between gap-2 text-left hover:underline">
-            <span className="text-xs text-aco">NSPR sem valor pago</span>
-            <span className={`text-sm font-extrabold ${(resumo?.semValorPago ?? 0) > 0 ? 'text-pendente' : 'text-aco-claro'}`}>{resumo?.semValorPago ?? 0}</span>
-          </button>
-        </div>
-      </div>
-
-      {visao === 'faturas' ? (
-        <PorFatura onAbrirFatura={(ap) => {
-          const p = new URLSearchParams();
-          p.set('etapa', 'TODAS');
-          p.set('q', ap);
-          setParams(p, { replace: true });
-        }} />
-      ) : (
-        <>
+      <>
           {erro && <div className="text-sm text-erro bg-erro-fundo border border-red-200 rounded-xl p-3 flex gap-2"><AlertTriangle size={16} />{erro}</div>}
 
           {/* Tabela: grade estilo Excel, igual à lista de Instalações do Visão de Dono */}
@@ -529,7 +465,7 @@ export default function FilaFechamento() {
                       abrirPainel(n.servico, false);
                     }}
                       className={`group ${aberta === n.servico ? 'selecionada' : ''}`}>
-                      {colunas.map((id) => <Celula key={id} id={id} n={n} descricoes={descricoes[n.servico]} localidadeVisivel={colunas.includes('localidade')} />)}
+                      {colunas.map((id) => <Celula key={id} id={id} n={n} descricoes={descricoes[n.servico]} />)}
                       <td className="grade-fixa text-right cursor-default" onClick={(ev) => ev.stopPropagation()}>
                         <AcoesLinha n={n} onAbrir={(detalhes) => abrirPainel(n.servico, detalhes)} />
                       </td>
@@ -541,8 +477,7 @@ export default function FilaFechamento() {
           </div>
           <Pagination page={pagina} totalPages={Math.ceil(total / POR_PAGINA)} totalItems={total}
             pageSize={POR_PAGINA} onPageChange={setPagina} label="NSIS" />
-        </>
-      )}
+      </>
 
       {aberta && (
         <PainelNsis key={`${aberta}-${detalhesAbertos}`} servico={aberta} detalhesInicial={detalhesAbertos}
@@ -554,7 +489,7 @@ export default function FilaFechamento() {
 }
 
 /** Célula de uma coluna da lista; sem dado mostra —. */
-function Celula({ id, n, localidadeVisivel, descricoes }: { id: ColunaFluxo; n: Nsis; localidadeVisivel: boolean; descricoes?: string[] }) {
+function Celula({ id, n, descricoes }: { id: ColunaFluxo; n: Nsis; descricoes?: string[] }) {
   const vazio = <span className="text-[#94a3b8]">—</span>;
   switch (id) {
     case 'servico': return (
@@ -563,15 +498,9 @@ function Celula({ id, n, localidadeVisivel, descricoes }: { id: ColunaFluxo; n: 
       </td>
     );
     case 'tipo_serv': return <td className="font-bold">{n.tipo_serv}</td>;
-    case 'localidade': return <td className="font-codigo">{n.localidade ?? vazio}</td>;
+    case 'localidade': return <td title={n.localidade ? `Localidade ${n.localidade}` : undefined}>{n.localidade ? rotuloLocalidade(n.localidade) : vazio}</td>;
     case 'nsmps': return <td className="!text-[#7c3aed]"><Numeros valor={n.nsmps} falta={n.qtd_itens > 0 && n.itens_sem_nsmp > 0} /></td>;
     case 'equipes': return <td><Numeros valor={n.equipes} falta={false} /></td>;
-    case 'supervisor': return (
-      <td>
-        {n.supervisor ?? vazio}
-        {!localidadeVisivel && <span className="block text-[11px] text-[#64748b]">Loc. <span className="font-codigo">{n.localidade ?? '—'}</span></span>}
-      </td>
-    );
     case 'nsprs': return <td className="!text-[#15803d]"><Numeros valor={n.nsprs} falta={n.qtd_itens > 0 && !!n.nsmps && n.itens_sem_nspr > 0} /></td>;
     case 'termino': return <td className="!text-[#64748b]">{formatarData(n.termino)}</td>;
     case 'valor_lancamento': return (
@@ -680,76 +609,6 @@ function Numeros({ valor, falta }: { valor: string | null; falta: boolean }) {
       {lista.map((v) => <span key={v} className="block">{v}</span>)}
       {falta && <span className="block font-sans text-[10px] font-bold text-pendente">{lista.length ? '+ falta' : 'falta'}</span>}
       {!lista.length && !falta && <span className="text-aco-claro font-normal">—</span>}
-    </div>
-  );
-}
-
-function Indicador({ rotulo, valor, detalhe, destaque }: { rotulo: string; valor: string; detalhe: string; destaque?: 'erro' | 'ok' | 'cobre' }) {
-  const cor = destaque === 'erro' ? 'text-erro' : destaque === 'ok' ? 'text-concluido' : destaque === 'cobre' ? 'text-cobre' : 'text-tinta';
-  return (
-    <div className="flex-1 min-w-[190px] px-4 py-2.5">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-aco">{rotulo}</p>
-      <p className={`text-lg font-extrabold tracking-tight leading-tight mt-0.5 ${cor}`}>{valor}</p>
-      <p className="text-[11px] text-aco-claro truncate">{detalhe}</p>
-    </div>
-  );
-}
-
-function PorFatura({ onAbrirFatura }: { onAbrirFatura: (ap: string) => void }) {
-  const [faturas, setFaturas] = useState<ResumoFatura[] | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-
-  useEffect(() => {
-    getResumoFaturas().then(setFaturas).catch((e) => setErro(e instanceof Error ? e.message : 'Falha ao carregar.'));
-  }, []);
-
-  if (erro) return <div className="text-sm text-erro bg-erro-fundo border border-red-200 rounded-xl p-3">{erro}</div>;
-  if (!faturas) return <div className="py-12 flex items-center justify-center gap-2 text-aco"><Loader2 size={16} className="animate-spin" /> Carregando…</div>;
-
-  return (
-    <div className="bg-white border border-linha rounded-2xl overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wider text-aco border-b border-linha bg-nevoa/60">
-              <th className="px-4 py-3 font-bold">Fatura</th>
-              <th className="px-3 py-3 font-bold text-right">NSIS</th>
-              <th className="px-3 py-3 font-bold text-right">Itens</th>
-              <th className="px-3 py-3 font-bold text-right">Pedido (US)</th>
-              <th className="px-3 py-3 font-bold text-right">Pago (US)</th>
-              <th className="px-3 py-3 font-bold text-right">Diferença</th>
-              <th className="px-3 py-3 font-bold text-right">Pago (R$)</th>
-              <th className="px-3 py-3 font-bold text-right">Pago ≠ pedido</th>
-              <th className="px-4 py-3 font-bold text-right">Sem valor pago</th>
-            </tr>
-          </thead>
-          <tbody>
-            {faturas.length === 0 && (
-              <tr><td colSpan={9} className="py-12 text-center text-aco">Nenhuma fatura registrada ainda.</td></tr>
-            )}
-            {faturas.map((f) => {
-              const dif = f.valor_pago - f.valor_pedido;
-              return (
-                <tr key={f.fatura} onClick={() => onAbrirFatura(f.fatura)} className="border-b border-linha last:border-0 cursor-pointer hover:bg-sinal-fundo/50">
-                  <td className="px-4 py-3 font-codigo font-semibold">{f.fatura}</td>
-                  <td className="px-3 py-3 text-right">{f.qtd_nsis}</td>
-                  <td className="px-3 py-3 text-right">{f.qtd_itens}</td>
-                  <td className="px-3 py-3 text-right font-semibold">{formatarUS(f.valor_pedido)}</td>
-                  <td className="px-3 py-3 text-right font-semibold">{formatarUS(f.valor_pago)}</td>
-                  <td className={`px-3 py-3 text-right font-bold ${dif < -0.0001 ? 'text-erro' : dif > 0.0001 ? 'text-concluido' : 'text-aco-claro'}`}>
-                    {Math.abs(dif) < 0.0001 ? '—' : `${dif > 0 ? '+' : ''}${formatarUS(dif)}`}
-                  </td>
-                  <td className="px-3 py-3 text-right whitespace-nowrap">
-                    {f.valor_pago_reais ? formatarReais(f.valor_pago_reais) : <span className="text-aco-claro">—</span>}
-                  </td>
-                  <td className={`px-3 py-3 text-right ${f.divergentes ? 'text-cobre font-bold' : 'text-aco-claro'}`}>{f.divergentes || '—'}</td>
-                  <td className={`px-4 py-3 text-right ${f.sem_valor_pago ? 'text-pendente font-bold' : 'text-aco-claro'}`}>{f.sem_valor_pago || '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }

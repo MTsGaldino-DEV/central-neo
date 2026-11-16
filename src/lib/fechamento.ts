@@ -101,10 +101,15 @@ export interface Nsis {
  * `qtdItens` permite usar a lista de itens já carregada na janela em vez do total da view.
  */
 export function ehFluxoNovo(
-  n: Pick<Nsis, 'fluxo_novo' | 'etapa' | 'qtd_itens' | 'sem_cobranca'>,
+  n: Pick<Nsis, 'fluxo_novo' | 'etapa' | 'qtd_itens' | 'sem_cobranca' | 'tipo_serv'>,
   qtdItens: number = n.qtd_itens,
 ): boolean {
-  return n.fluxo_novo || (!n.sem_cobranca && n.etapa === 'A_FECHAR' && qtdItens === 0);
+  if (n.fluxo_novo) return true;
+  if (n.sem_cobranca) return false;
+  if (n.etapa === 'A_FECHAR' && qtdItens === 0) return true;
+  // Histórico parado em "Aguardando NSPR" (NSMP já gerada, sem NSPR): ao informar a NSPR ele entra no fluxo novo
+  // e segue para o Salesforce, em vez de cair em "Aguardando fatura" do cálculo antigo. A NSRI não tem NSPR.
+  return n.etapa === 'AGUARDANDO_NSPR' && n.tipo_serv !== 'NSRI';
 }
 
 /**
@@ -238,7 +243,7 @@ export interface FiltrosNsis {
 /** Coluna da lista → coluna da view neo_vw_nsis. */
 const COLUNA_VIEW: Record<ColunaFluxo, string> = {
   servico: 'servico', tipo_serv: 'tipo_serv', localidade: 'localidade', termino: 'termino', equipes: 'equipes',
-  supervisor: 'supervisor', nsmps: 'nsmps', nsprs: 'nsprs', valor_lancamento: 'valor_inicial_total',
+  nsmps: 'nsmps', nsprs: 'nsprs', valor_lancamento: 'valor_inicial_total',
   valor_pago: 'valor_final_total', data_lancamento_sf: 'data_lancamento_sf', faturas: 'faturas',
   observacao: 'observacao', etapa: 'etapa',
 };
@@ -570,12 +575,21 @@ export async function fecharEtapa1(
   }
 }
 
-/** Etapa 2 (NSIS que não é NSRI): NSPR e valor pago, em US, para a NSIS inteira. */
-export async function informarNspr(itens: ItemNsis[], nspr: string, valorPagoUS: number): Promise<void> {
+/**
+ * Etapa 2 (NSIS que não é NSRI): NSPR e valor pago, em US, para a NSIS inteira.
+ * Marca a NSIS como fluxo novo: a histórica que estava em "Aguardando NSPR" segue daqui para o Salesforce
+ * (sem a marca, o cálculo antigo a mandaria para "Aguardando fatura"). `supervisor` guarda o supervisor que
+ * a NSIS histórica mostrava (vinha da localidade); o fluxo novo lê da própria NSIS. Vazio não apaga o que já existe.
+ */
+export async function informarNspr(itens: ItemNsis[], nspr: string, valorPagoUS: number, supervisor?: string | null): Promise<void> {
   const numero = nspr.trim();
   if (!numero) throw new Error('Informe a NSPR.');
   if (!valorPagoValido(valorPagoUS)) throw new Error('Informe o valor pago (zero é aceito).');
   if (itens.length < 1) throw new Error('A NSIS não tem códigos lançados.');
+  const marca: { fluxo_novo: true; supervisor_equipe?: string } = { fluxo_novo: true };
+  if (supervisor?.trim()) marca.supervisor_equipe = supervisor.trim();
+  const { error } = await supabase.from('neo_nsis').update(marca).eq('servico', itens[0].servico);
+  if (error) throw new Error('Falha ao atualizar a NSIS: ' + error.message);
   await confirmarPago(itens, numero, valorPagoUS);
 }
 

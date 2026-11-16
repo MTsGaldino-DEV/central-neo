@@ -7,16 +7,15 @@
 import type { Etapa } from './fechamento';
 
 export type ColunaFluxo =
-  | 'servico' | 'tipo_serv' | 'localidade' | 'termino' | 'equipes' | 'supervisor'
+  | 'servico' | 'tipo_serv' | 'localidade' | 'termino' | 'equipes'
   | 'nsmps' | 'nsprs' | 'valor_lancamento' | 'valor_pago' | 'data_lancamento_sf' | 'faturas' | 'observacao' | 'etapa';
 
 export const COLUNAS_FLUXO: { id: ColunaFluxo; rotulo: string; numero?: boolean }[] = [
   { id: 'servico', rotulo: 'N° Serviço' },
-  { id: 'tipo_serv', rotulo: 'Tipo do serviço' },
+  { id: 'tipo_serv', rotulo: 'Tipo' },
   { id: 'localidade', rotulo: 'Localidade' },
   { id: 'termino', rotulo: 'DT execução' },
   { id: 'equipes', rotulo: 'Equipe' },
-  { id: 'supervisor', rotulo: 'Supervisor' },
   { id: 'nsmps', rotulo: 'NSMP' },
   { id: 'nsprs', rotulo: 'NSPR' },
   { id: 'valor_lancamento', rotulo: 'Lançamento Salesforce', numero: true },
@@ -28,12 +27,12 @@ export const COLUNAS_FLUXO: { id: ColunaFluxo; rotulo: string; numero?: boolean 
 ];
 
 const BASE: ColunaFluxo[] = ['servico', 'tipo_serv', 'localidade', 'termino'];
-const APOS_NSMP: ColunaFluxo[] = ['equipes', 'supervisor', 'nsmps'];
+const APOS_NSMP: ColunaFluxo[] = ['equipes', 'nsmps'];
 const APOS_NSPR: ColunaFluxo[] = ['nsprs', 'valor_pago'];
 
 /** Colunas de hoje, usadas pelo histórico (nunca localidade nem data de lançamento). */
 const COLUNAS_HISTORICO: ColunaFluxo[] = [
-  'servico', 'tipo_serv', 'nsmps', 'equipes', 'supervisor', 'nsprs', 'termino', 'valor_lancamento', 'valor_pago', 'faturas', 'observacao', 'etapa',
+  'servico', 'tipo_serv', 'nsmps', 'equipes', 'nsprs', 'termino', 'valor_lancamento', 'valor_pago', 'faturas', 'observacao', 'etapa',
 ];
 
 /**
@@ -41,10 +40,12 @@ const COLUNAS_HISTORICO: ColunaFluxo[] = [
  * no histórico (Gerar NSMP, Aguardando fatura, Sem cobrança) usam o conjunto histórico sempre.
  */
 export function colunasVisiveis(etapa: Etapa | 'TODAS', historico: boolean): ColunaFluxo[] {
+  // Aguardando NSPR: o NSPR, o lançamento, o valor pago e a apropriação ainda não existem (entram nas etapas seguintes),
+  // mesmo quando a NSIS veio do histórico
+  if (etapa === 'AGUARDANDO_NSPR') return [...BASE, ...APOS_NSMP, 'etapa'];
   if (historico) return [...COLUNAS_HISTORICO];
   switch (etapa) {
     case 'A_FECHAR': return [...BASE, 'observacao', 'etapa'];
-    case 'AGUARDANDO_NSPR': return [...BASE, ...APOS_NSMP, 'etapa'];
     case 'AGUARDANDO_SALESFORCE': return [...BASE, ...APOS_NSMP, ...APOS_NSPR, 'etapa'];
     case 'AGUARDANDO_APROPRIACAO': return [...BASE, ...APOS_NSMP, ...APOS_NSPR, 'data_lancamento_sf', 'etapa'];
     case 'FATURADA': return [...BASE, ...APOS_NSMP, ...APOS_NSPR, 'data_lancamento_sf', 'faturas', 'etapa'];

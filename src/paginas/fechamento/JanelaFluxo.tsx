@@ -457,7 +457,7 @@ function FormNspr({ nsis, itens, titulo, corrigindo, onAlterado, onCancelar, onC
       dica={corrigindo ? 'Corrigindo o que foi informado nesta etapa.' : `Pedido de ${formatarUS(pedido, 4)} US. Informe a NSPR que a CEMIG devolveu e o valor pago.`}
       onEnviar={() => envio.executar(async () => {
         if (!nspr.trim()) throw new Error('Informe a NSPR.');
-        await informarNspr(itens, nspr, lerValorPago(valor));
+        await informarNspr(itens, nspr, lerValorPago(valor), nsis.supervisor_equipe ?? nsis.supervisor);
       })}>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>

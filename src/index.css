@@ -152,6 +152,14 @@
 
 @layer base {
   html, body, #root { height: 100%; }
+  /* Densidade padrão = o que o navegador mostra com zoom de 90%: tudo (fontes, linhas, espaços)
+   * encolhe junto, então a grade cabe mais linhas/colunas em 100%. Para voltar ao tamanho cheio,
+   * troque --escala-ui por 1. A altura é compensada para o corpo continuar preenchendo a janela. */
+  :root { --escala-ui: 0.9; }
+  body {
+    zoom: var(--escala-ui);
+    height: calc(100vh / var(--escala-ui));
+  }
   body {
     font-family: var(--font-sans);
     background: var(--color-nevoa);

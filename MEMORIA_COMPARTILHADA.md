@@ -264,6 +264,7 @@ Só leitura de `Importação/Disponibilidade Contrato 7360_Macro.xlsm`; nada foi
   - **Cache e pré-carga** em `Fila.tsx`: páginas lidas ficam em memória (chave = filtros + página) e aparecem na hora ao trocar de etapa, revalidando em seguida; depois de carregar, a 1ª página das outras etapas é lida em segundo plano com os mesmos filtros. Só a resposta do último pedido atualiza a tela. Gravar, "Atualizar" ou criar NSIS avulsa limpa o cache (`recarregar`).
   - Testes: `manutencao-ui-testar` usa os nomes novos; `fluxo-colunas-testar` espera Todas sem `valor_lancamento`. Typecheck e teste de UI passaram; velocidade e Observação com dados reais não foram conferidas no navegador.
   - **Filtro de datas em árvore (16/11/2026, sem commit):** nas colunas "DT execução" e "Lanç. SF" o menu ▾ lista Ano › Mês › Dia com + / − para expandir e caixas com estado parcial, como no Excel (`ArvoreDatas` em `components/fechamento/FiltroColuna.tsx`, prop `arvoreDatas`). Pesquisar (ex.: "outubro", "05/10") abre o que combina; "(Vazias)" fica no fim. O valor filtrado continua sendo a lista de dias `YYYY-MM-DD` (`col.termino` na URL). Corrigido também `textoValor` em `Fila.tsx` (regex sem `\d` mostrava a data crua nos chips). Teste de UI cobre expandir, marcação parcial e aplicar.
+  - **Fila sem cartões de dashboard (16/11/2026, sem commit):** Matheus pediu só a lista; os números ficam para o **Painel** da Manutenção. Removida da `Fila.tsx` a faixa "Pedido à CEMIG / Pago pela CEMIG / Pago − pedido / Alertas de pagamento" (e o componente `Indicador`). O filtro "Pagamento" (pago ≠ pedido, NSPR sem valor pago) continua no painel de Filtros e nos chips.
 - **Verificado:** typecheck, `vite build`, `manutencao-ui-testar` (helper `cabecalhos` agora exige "Ações" como última coluna e a ignora nas comparações; captura `fila-fluxo-a-fechar-desktop` conferida). **Não verificado:** dados reais, celular (captura não reconferida), clique nos botões de cada etapa além do "Fechar →".
 
 ## Fila de NSIS: vários códigos, fator e janela no meio — 06/11/2026 (Claude)
@@ -990,3 +991,43 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
 - Cartões de Pedido × Pago viraram uma faixa única compacta; a alternância "Por NSIS / Por fatura" foi para a linha das pílulas de etapa.
 - Tabela: largura mínima forçada de 1180px removida; botão de copiar o nº do serviço só aparece ao passar o mouse na linha.
 - Cabeçalhos da tabela continuam com os nomes completos (o teste `scripts/manutencao-ui-testar.cjs` confere) e a Observação mantém mínimo de 260px. O teste agora clica em "Filtros" antes de usar as listas suspensas. Teste de UI e `vite build` passaram.
+
+## Densidade da interface = zoom 90% (16/11/2026, Claude)
+
+- Matheus gostou da Fila de NSIS com zoom 90% do navegador e pediu o mesmo visual em 100%.
+- `src/index.css`: `--escala-ui: 0.9` aplicado como `zoom` no `body` (altura compensada com `100vh / escala`). Vale para o app todo. Para voltar ao tamanho cheio, `--escala-ui: 1`.
+- Pendência: não verificado visualmente (sem navegador na sessão). Se o rodapé da grade ficar com folga, os `calc(100vh - Npx)` (Fila.tsx, disponibilidade.css) podem ser divididos pela escala.
+
+## Fila de NSIS: só fechamento; comparação de pagamento fica para outra aba (16/11/2026, Claude)
+
+- Decisão do Matheus: a Fila de NSIS serve para **fechar os serviços**. A comparação de pagamento (pedido × pago) vai para uma **aba própria, ainda não criada**. Não criar agora.
+- Saíram de `src/paginas/fechamento/Fila.tsx`: filtro **Ordem** (a ordem vem do cabeçalho da coluna; sem ela, execução mais recente primeiro, decisão de 16/11/2026), filtro **Pagamento** (`alerta`: pago ≠ pedido / NSPR sem valor pago) e a visão **Por fatura (pedido × pago)** com o componente `PorFatura`.
+- Mantido no `src/lib/fechamento.ts` para a futura aba: `getResumoFaturas`, `ResumoFatura` e o filtro `alerta` (`itens_divergentes`, `itens_sem_valor_pago`).
+- Desenho da visão por fatura removida (para refazer na outra aba): tabela com Fatura, NSIS, Itens, Pedido (US), Pago (US), Diferença (pago − pedido, vermelho se negativa, verde se positiva), Pago (R$), Pago ≠ pedido, Sem valor pago; clicar numa fatura abria a lista filtrada pela AP.
+- Continuam na grade os avisos por linha ("sem valor pago", valor pago em vermelho quando diverge): são sinal de fechamento, não a tela de comparação.
+- Verificação: `tsc --noEmit` limpo. Não conferido no navegador.
+
+## Fila de NSIS: etapa Aguardando NSPR sem colunas futuras (16/11/2026, Claude)
+
+- Na etapa **Aguardando NSPR** a grade mostra só N° Serviço, Tipo, Localidade, DT execução, Equipe, Supervisor, NSMP e Etapa, tanto para NSIS novas quanto históricas. NSPR, Lançamento Salesforce, Valor pago e Apropriação só existem nas etapas seguintes (`colunasVisiveis` em `src/lib/fechamentoFluxo.ts`). Antes, NSIS históricas nessa etapa caíam no conjunto histórico e mostravam essas colunas vazias.
+- Não alterado: demais etapas e "Todas".
+
+## Localidade pelo nome na Fila de NSIS (16/11/2026, Claude)
+
+- Nova tabela `src/lib/localidades.ts` (`MUNICIPIOS`, `nomeLocalidade`, `rotuloLocalidade`): código de 4 dígitos → município, lista enviada pelo Matheus (48 municípios). O código é normalizado para 4 dígitos (`12` = `0012` → CAPITÃO ANDRADE). Código fora da lista continua aparecendo como número.
+- Mostra o nome na coluna Localidade da Fila, na linha "Loc." sob o supervisor, no menu de filtro da coluna, no chip de filtro e no detalhe da NSIS (`PainelNsis`). O código fica no tooltip.
+- Não alterado (continua em código): filtro "Localidade" do painel Filtros (campo numérico), ranking de localidades do Painel do fechamento e coluna Localidade do Excel exportado. Estender se o Matheus pedir.
+- Se aparecer localidade nova, acrescentar em `MUNICIPIOS`.
+
+## Correção: NSPR + valor pago não levava ao Salesforce (16/11/2026, Claude)
+
+- **Causa (provada por teste no banco real, transação desfeita):** das 132 NSIS em Aguardando NSPR, 131 eram **históricas** (`fluxo_novo = false`) e só 1 era do fluxo novo. A `neo_vw_nsis` manda histórico com NSPR informada para `AGUARDANDO_FATURA` (regra antiga), não para Salesforce. Só a NSIS do fluxo novo ia para Salesforce.
+- **Correção:** `ehFluxoNovo()` (`src/lib/fechamento.ts`) passa a tratar NSIS (não NSRI) em `AGUARDANDO_NSPR` como fluxo novo, então abre a `JanelaFluxo` e a coluna da fila acompanha. `informarNspr()` agora grava `fluxo_novo = true` (e `supervisor_equipe` com o supervisor que a NSIS já mostrava, que no histórico vinha da localidade) antes de gravar NSPR e valor. Resultado: NSPR + valor → Aguardando Salesforce.
+- Dados conferidos antes (leitura): as 131 históricas são todas NSIS (nenhuma NSRI), 1 NSMP cada, sem NSPR parcial e sem apropriação.
+- Não mudou: as 132 históricas já em Aguardando fatura continuam no cálculo antigo (Matheus não pediu); se quiser que elas também passem por Salesforce, é decisão a parte.
+- Testes: `scripts/fluxo-nspr-proxima-etapa-testar.cjs` (banco real, transação sempre desfeita; `--com-correcao` simula o app novo) e `scripts/fluxo-colunas-testar.cjs` (atualizado: NSPR histórico tem as mesmas colunas do fluxo novo). `tsc --noEmit` limpo. Não conferido no navegador.
+
+## Fila de NSIS: sem coluna Supervisor, "Tipo" curto (16/11/2026, Claude)
+
+- Saiu a coluna **Supervisor** da grade (`src/lib/fechamentoFluxo.ts`, `Fila.tsx`); o supervisor continua gravado na NSIS, na busca da fila, na janela da NSIS e no Excel. O cabeçalho "Tipo do serviço" virou **"Tipo"** (coluna mais estreita; o filtro do painel Filtros mantém o nome longo).
+- Testes: `scripts/fluxo-colunas-testar.cjs` atualizado. `tsc --noEmit` limpo. Não conferido no navegador.
