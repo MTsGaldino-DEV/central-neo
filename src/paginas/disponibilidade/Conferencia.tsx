@@ -7,7 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AvisoErro } from '@/components/faturamento/AvisoErro';
-import { definirEquipeAtiva, lerConfig, lerEstados, lerFrotas, lerMes, limpar, marcar } from '@/lib/disponibilidade';
+import { definirEquipeAtiva, lerConfig, lerEstados, lerFrotas, lerMes, limpar, marcar, preencherFimDeSemana } from '@/lib/disponibilidade';
 import {
   INICIO_CONTROLE, NOMES_MES, agruparEstados, chaveDia, chaveMes, comEstadoEquipe, dataDe, diasDoMes, ehMultavel, equipeDesativada, somarDias,
   type ConfigDisp, type EstadosEquipe, type Frota, type Lancamento,
@@ -74,7 +74,11 @@ export default function ConferenciaDisp() {
 
   // O mês em tela é sempre relido: outra pessoa pode ter marcado.
   const mesDados = visao === 'dia' ? dia.slice(0, 7) : mesTexto;
-  useEffect(() => { void garantirMes(Number(mesDados.slice(0, 4)), Number(mesDados.slice(5, 7)) - 1); }, [mesDados, garantirMes, tentativa]);
+  // Antes de ler, o banco preenche os sábados e domingos que ainda não tinham marcação (rápido: sem trabalho a fazer, devolve 0).
+  // Se a função ainda não existir no banco, segue sem o preenchimento.
+  useEffect(() => {
+    void preencherFimDeSemana().catch(() => undefined).then(() => garantirMes(Number(mesDados.slice(0, 4)), Number(mesDados.slice(5, 7)) - 1));
+  }, [mesDados, garantirMes, tentativa]);
 
   const ler = useCallback((d: string, frota: number) => porMes[d.slice(0, 7)]?.[chaveLinha(d, frota)], [porMes]);
 
@@ -159,14 +163,14 @@ export default function ConferenciaDisp() {
       const k = chaveDia(d);
       // Equipe desativada no dia não precisa de conferência.
       const exigidas = frotas.filter(f => !equipeDesativada(estados, f.frota, k));
-      const linhas = exigidas.map(f => porMes[k.slice(0, 7)]?.[chaveLinha(k, f.frota)]).filter(Boolean);
+      const linhas = exigidas.map(f => ler(k, f.frota)).filter(Boolean);
       if (!linhas.length) continue;
       if (linhas.length < exigidas.length) r.andamento.push(d);
       else if (linhas.some(l => ehMultavel(l?.causa))) r.multa.push(d);
       else r.conferido.push(d);
     }
     return r;
-  }, [calMes, frotas, estados, porMes]);
+  }, [calMes, frotas, estados, ler]);
 
   const textoDia = dataDe(dia).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
   const distancia = Math.round((dataDe(hoje).getTime() - dataDe(dia).getTime()) / 864e5);

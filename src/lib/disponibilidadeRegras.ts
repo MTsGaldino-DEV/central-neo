@@ -15,11 +15,19 @@ export const NOMES_MES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Ju
 export const INICIO_CONTROLE = '2026-03-23';
 
 export interface Frota { frota: number; placa: string; supervisor: string; regiao: string; escala: string; horario: string; local: string; ordem: number; ativo: boolean }
-export interface Lancamento { dia: string; frota: number; situacao: 'CADASTROU' | 'OCORRENCIA'; causa: string | null; observacao: string | null }
+export interface Lancamento {
+  dia: string; frota: number; situacao: 'CADASTROU' | 'OCORRENCIA'; causa: string | null; observacao: string | null;
+  /**
+   * Folga de fim de escala que o banco preencheu sozinho em sábado/domingo (origem AUTO, migration 060). Vem da leitura do mês;
+   * nunca é enviada na gravação. Ao alterar à mão a origem passa a TELA e a marca some.
+   */
+  automatica?: boolean;
+}
 export interface Ocorrencia { dia: string; frota: number; causa: string }
 export interface ConfigDisp { valor_ocorrencia: number; meta_mensal: number }
 
 export const ehMultavel = (causa: string | null | undefined) => !!causa && (MULTAVEIS as readonly string[]).includes(causa);
+
 
 /** "A partir de `dia` a equipe fica ativa ou desativada, até a mudança seguinte." Sem mudança = ativa. */
 export interface EstadoEquipe { frota: number; dia: string; ativa: boolean }

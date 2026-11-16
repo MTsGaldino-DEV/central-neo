@@ -114,7 +114,7 @@ export async function exportarConferenciaMes({ ano, mes, hoje, frotas, valor, le
   const noSup = frotas.filter(f => sup === 'T' || f.supervisor === sup);
   const passa = (f: Frota) => ver === 'T' || chaves.some(k => {
     const l = ler(k, f.frota);
-    return l?.situacao === 'OCORRENCIA' && (ver === 'O' || ehMultavel(l.causa));
+    return l?.situacao === 'OCORRENCIA' && !l.automatica && (ver === 'O' || ehMultavel(l.causa));
   });
   const ordemSup = (s: string) => { const i = (SUPERVISORES as readonly string[]).indexOf(s); return i < 0 ? 99 : i; };
   const lista = noSup.filter(passa).sort((a, b) => ordemSup(a.supervisor) - ordemSup(b.supervisor) || a.ordem - b.ordem);
@@ -216,7 +216,7 @@ export async function exportarConferenciaMes({ ano, mes, hoje, frotas, valor, le
   for (const f of lista) for (const k of chaves) {
     const l = ler(k, f.frota);
     if (l?.situacao !== 'OCORRENCIA') continue;
-    if (ehMultavel(l.causa)) { multaveis++; comMulta.add(f.frota); } else contestaveis++;
+    if (ehMultavel(l.causa)) { multaveis++; comMulta.add(f.frota); } else if (!l.automatica) contestaveis++;
   }
   const kpis: [string, string | number, string?][] = [
     ['Dias conferidos', `${conferidos} de ${validos.length}`],
@@ -242,7 +242,7 @@ export async function exportarConferenciaMes({ ano, mes, hoje, frotas, valor, le
   for (const s of sups) {
     const fs = lista.filter(f => f.supervisor === s);
     let m = 0, c = 0;
-    for (const f of fs) for (const k of chaves) { const l = ler(k, f.frota); if (l?.situacao === 'OCORRENCIA') { if (ehMultavel(l.causa)) m++; else c++; } }
+    for (const f of fs) for (const k of chaves) { const l = ler(k, f.frota); if (l?.situacao === 'OCORRENCIA') { if (ehMultavel(l.causa)) m++; else if (!l.automatica) c++; } }
     resumo.getRow(r).values = [s, fs[0].regiao, fs.length, m, c, m ? -m * valor : 0];
     r++;
   }
@@ -262,7 +262,7 @@ export async function exportarConferenciaMes({ ano, mes, hoje, frotas, valor, le
   resumo.getRow(r).values = ['Causa', 'Sigla', 'Tipo', 'Qtd', '', 'Valor (multas)']; cabecalho(resumo.getRow(r)); r++;
   for (const causa of [...MULTAVEIS, ...CONTESTAVEIS]) {
     let n = 0;
-    for (const f of lista) for (const k of chaves) if (ler(k, f.frota)?.causa === causa && ler(k, f.frota)?.situacao === 'OCORRENCIA') n++;
+    for (const f of lista) for (const k of chaves) if (ler(k, f.frota)?.causa === causa && ler(k, f.frota)?.situacao === 'OCORRENCIA' && !ler(k, f.frota)?.automatica) n++;
     const m = ehMultavel(causa);
     resumo.getRow(r).values = [causa, SIGLAS[causa], tipoDe(causa), n, '', m && n ? -n * valor : 0];
     resumo.getRow(r).eachCell({ includeEmpty: true }, (c, col) => {
@@ -288,7 +288,8 @@ export async function exportarConferenciaMes({ ano, mes, hoje, frotas, valor, le
   let n = 0;
   for (const k of chaves) for (const f of lista) {
     const l = ler(k, f.frota);
-    if (l?.situacao !== 'OCORRENCIA') continue;
+    // A folga automática de fim de semana aparece na grade, mas não na lista de ocorrências.
+    if (l?.situacao !== 'OCORRENCIA' || l.automatica) continue;
     const m = ehMultavel(l.causa);
     const linha = oc.addRow([dataExcel(k), dataDe(k).toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''), f.frota, f.placa, f.supervisor, f.regiao,
       l.causa, SIGLAS[l.causa ?? ''] ?? '', tipoDe(l.causa), m ? -valor : 0, l.observacao ?? '']);
@@ -323,7 +324,7 @@ export async function exportarConferenciaDia({ dia, frotas, valor, ler, estados,
   const off = (f: Frota) => equipeDesativada(estados, f.frota, dia);
   const lista = noSup.filter(f => {
     const l = ler(dia, f.frota);
-    return ver === 'F' ? !l && !off(f) : ver === 'M' ? l?.situacao === 'OCORRENCIA' : true;
+    return ver === 'F' ? !l && !off(f) : ver === 'M' ? l?.situacao === 'OCORRENCIA' && !l.automatica : true;
   }).sort(ordenar);
 
   const cadastraram = noSup.filter(f => ler(dia, f.frota)?.situacao === 'CADASTROU').length;

@@ -25,7 +25,7 @@ function banco() {
     const dia = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     for (const f of dados.frotas) if (!linhas.has(k(dia, f.frota))) linhas.set(k(dia, f.frota), { dia, frota: f.frota, situacao: 'CADASTROU', causa: null, observacao: null });
   }
-  return { linhas, k, estados: [], config: { valor_ocorrencia: 864, meta_mensal: 30000 }, escritas: [], falhar: false };
+  return { linhas, k, estados: [], config: { valor_ocorrencia: 864, meta_mensal: 30000 }, escritas: [], falhar: false, fimSemanaAte: '2026-03-22' };
 }
 
 async function novoContexto(browser, db, largura, altura, papel, modulos) {
@@ -43,12 +43,30 @@ async function novoContexto(browser, db, largura, altura, papel, modulos) {
       else if (recurso === 'neo_disp_mes') {
         const { p_ano, p_mes } = req.postDataJSON();
         const pre = `${p_ano}-${String(p_mes).padStart(2, '0')}`;
-        corpo = [...db.linhas.values()].filter((l) => l.dia.startsWith(pre));
+        corpo = [...db.linhas.values()].filter((l) => l.dia.startsWith(pre)).map((l) => ({ origem: 'TELA', ...l }));
       } else if (recurso === 'neo_disp_ano') {
-        corpo = [...db.linhas.values()].filter((l) => l.situacao === 'OCORRENCIA').map(({ dia, frota, causa }) => ({ dia, frota, causa }));
+        corpo = [...db.linhas.values()].filter((l) => l.situacao === 'OCORRENCIA' && l.origem !== 'AUTO').map(({ dia, frota, causa }) => ({ dia, frota, causa }));
       } else if (recurso === 'neo_disp_config') {
         if (metodo === 'PATCH') { assert.equal(papel, 'ADMIN', 'só o admin altera a meta'); Object.assign(db.config, req.postDataJSON()); db.escritas.push({ meta: db.config.meta_mensal }); corpo = [{ id: 1 }]; }
         else corpo = db.config;
+      } else if (recurso === 'neo_disp_preencher_fim_de_semana') {
+        // Imita a RPC 060: preenche sábado/domingo sem linha (equipe ativa) depois de fimSemanaAte, até o "hoje" do teste, e avança a data.
+        const hojeTeste = '2026-11-06';
+        const off = (f, d) => { let r = false; for (const e of db.estados.filter((x) => x.frota === f).sort((a, b) => a.dia.localeCompare(b.dia))) { if (e.dia > d) break; r = !e.ativa; } return r; };
+        let criadas = 0;
+        if (db.fimSemanaAte < hojeTeste) {
+          for (let d = new Date(2026, 2, 23); ; d.setDate(d.getDate() + 1)) {
+            const dia = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            if (dia > hojeTeste) break;
+            if (dia <= db.fimSemanaAte || ![0, 6].includes(d.getDay())) continue;
+            for (const f of dados.frotas) if (!db.linhas.has(db.k(dia, f.frota)) && !off(f.frota, dia)) {
+              db.linhas.set(db.k(dia, f.frota), { dia, frota: f.frota, situacao: 'OCORRENCIA', causa: 'Folga de fim de escala', observacao: null, origem: 'AUTO' }); criadas++;
+            }
+          }
+          db.fimSemanaAte = hojeTeste;
+        }
+        db.preenchimentos = (db.preenchimentos ?? 0) + 1;
+        corpo = criadas;
       } else if (recurso === 'neo_disp_equipe_estado') {
         corpo = [...db.estados].sort((a, b) => a.frota - b.frota || a.dia.localeCompare(b.dia));
       } else if (recurso === 'neo_disp_equipe_alterar') {
@@ -99,6 +117,33 @@ const celula = (page, f, d) => page.locator(`.disp-cel[data-frota="${f}"][data-d
       assert.equal(await page.getByRole('radio', { name: 'Mês inteiro' }).getAttribute('aria-checked'), 'true');
       assert.equal(await celula(page, 4052, '2026-11-07').isDisabled(), true, 'dia futuro não abre');
       assert.equal(await celula(page, 4052, '2026-11-03').getAttribute('class').then((c) => c.includes(' p')), true, 'novembro começa em falta conferir');
+
+      // Sábado e domingo já vêm como folga de fim de escala (13/11/2026); dia útil segue em falta conferir
+      const domingo = celula(page, 4052, '2026-11-01');
+      assert.equal(await domingo.textContent(), 'FF', 'domingo vem como folga de fim de escala');
+      assert.equal(await domingo.getAttribute('class').then((c) => c.includes(' c')), true, 'contestável, não multa');
+      assert.match(await domingo.getAttribute('aria-label'), /automático/);
+      assert.equal(await page.locator('.disp-cel.p[data-dia="2026-11-01"]').count(), 0, 'fim de semana não fica em falta conferir');
+      assert.match(await texto(page.locator('section').first()), /Dias conferidos1 de 6/, 'só o domingo (1/11) está conferido; 2 a 6/11 ainda faltam');
+      assert.match(await texto(page.locator('section').first()), /Contestáveis0/, 'a folga automática não entra em Contestáveis');
+      // Alteração manual vence o automático e perde a marca de automático
+      await domingo.click();
+      await page.getByRole('button', { name: 'Cadastrou', exact: true }).click();
+      await page.waitForFunction(() => document.querySelector('.disp-cel[data-frota="4052"][data-dia="2026-11-01"]').classList.contains('ok'));
+      assert.equal(await domingo.textContent(), '', 'marcado à mão como cadastrou');
+      // Limpar marcação deixa em falta conferir e o dia NÃO é preenchido de novo, nem ao trocar de mês e voltar
+      await domingo.click();
+      await page.getByText('Limpar marcação').click();
+      await page.waitForFunction(() => document.querySelector('.disp-cel[data-frota="4052"][data-dia="2026-11-01"]').classList.contains('p'));
+      assert.match(await domingo.getAttribute('aria-label'), /falta conferir/, 'limpar deixa em falta conferir');
+      await page.getByRole('button', { name: 'Mês anterior' }).click();
+      await page.getByTestId('mes-atual').getByText('Outubro de 2026').waitFor();
+      await page.getByRole('button', { name: 'Próximo mês' }).click();
+      await page.getByTestId('mes-atual').getByText('Novembro de 2026').waitFor();
+      await celula(page, 4052, '2026-11-01').waitFor();
+      assert.match(await celula(page, 4052, '2026-11-01').getAttribute('aria-label'), /falta conferir/, 'não volta sozinho');
+      assert.ok(db.preenchimentos >= 3, 'a tela pede o preenchimento a cada leitura de mês');
+      assert.equal([...db.linhas.values()].filter((l) => l.origem === 'AUTO' && l.frota === 4052 && l.dia === '2026-11-01').length, 0);
 
       // Outubro bate com a planilha e com a foto
       await page.getByRole('button', { name: 'Mês anterior' }).click();
@@ -392,6 +437,8 @@ const celula = (page, f, d) => page.locator(`.disp-cel[data-frota="${f}"][data-d
       page.on('pageerror', (e) => falhas.push(`usuario: ${e.message}`));
       await page.goto(urlBase + '/disponibilidade/painel?mes=9');
       await page.getByTestId('meta-leitura').waitFor();
+      // Espera a meta carregar: ler o texto logo ao aparecer o elemento pegava "0" de vez em quando.
+      await page.getByTestId('meta-leitura').getByText(/30\.000/).waitFor();
       assert.match(await texto(page.getByTestId('meta-leitura')), /30\.000/);
       assert.equal(await page.locator('input#meta-mes').count(), 0, 'sem campo de meta');
       assert.equal(db.escritas.filter((e) => 'meta' in e).length, 0);

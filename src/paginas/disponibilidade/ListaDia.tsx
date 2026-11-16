@@ -31,6 +31,8 @@ export function ListaDia({ dia, frotas, valor, ler, gravar, desmarcar, estados, 
   const cadastraram = linhas.filter(l => l?.situacao === 'CADASTROU').length;
   const multaveis = linhas.filter(l => ehMultavel(l?.causa)).length;
   const contestaveis = linhas.filter(l => l?.situacao === 'OCORRENCIA' && !ehMultavel(l.causa)).length;
+  // A folga automática de fim de semana conta como conferida, mas não aparece em Contestáveis.
+  const automaticas = linhas.filter(l => l?.automatica).length;
   const feitas = cadastraram + multaveis + contestaveis;
   const off = (f: Frota) => equipeDesativada(estados, f.frota, dia);
   const ativas = frotas.filter(f => !off(f)).length;
@@ -39,7 +41,7 @@ export function ListaDia({ dia, frotas, valor, ler, gravar, desmarcar, estados, 
 
   const passa = (f: Frota) => {
     const l = ler(dia, f.frota);
-    return ver === 'F' ? !l && !off(f) : ver === 'M' ? l?.situacao === 'OCORRENCIA' : true;
+    return ver === 'F' ? !l && !off(f) : ver === 'M' ? l?.situacao === 'OCORRENCIA' && !l.automatica : true;
   };
   const cadastrou = (frota: number) => { setAberto(null); gravar([{ dia, frota, situacao: 'CADASTROU', causa: null, observacao: null }]); };
 
@@ -51,7 +53,7 @@ export function ListaDia({ dia, frotas, valor, ler, gravar, desmarcar, estados, 
         <ItemResumo largo rotulo="Conferidas" valor={`${feitas} de ${ativas}`} barra={ativas ? feitas / ativas : 0} nota={ativas < frotas.length ? `${frotas.length - ativas} ${frotas.length - ativas === 1 ? 'equipe desativada' : 'equipes desativadas'}` : undefined} />
         <ItemResumo rotulo="Cadastraram" valor={cadastraram} nota="sem ocorrência" />
         <ItemResumo rotulo="Multáveis" valor={brlNegativo(multaveis * valor)} cor="text-erro" nota={`${multaveis} ${multaveis === 1 ? 'ocorrência' : 'ocorrências'}`} />
-        <ItemResumo rotulo="Contestáveis" valor={contestaveis} cor="text-pendente" nota="R$ 0 na conta" />
+        <ItemResumo rotulo="Contestáveis" valor={contestaveis - automaticas} cor="text-pendente" nota={automaticas ? `R$ 0 na conta · ${automaticas} de fim de semana` : 'R$ 0 na conta'} />
       </FaixaResumo>
 
       <div className="mb-3.5 flex flex-wrap items-center gap-2">
@@ -100,7 +102,7 @@ export function ListaDia({ dia, frotas, valor, ler, gravar, desmarcar, estados, 
                       </>
                     ) : l?.situacao === 'OCORRENCIA' && !estaAberto ? (
                       <>
-                        <span title={l.observacao ?? undefined} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1.5 text-[12.5px] font-bold ${multa ? 'border-[#ffc7ce] bg-[#ffc7ce]/25 text-[#9c0006]' : 'border-[#f5d76e] bg-[#ffeb9c]/40 text-[#7a4600]'}`}>
+                        <span title={l.automatica ? 'Preenchido automaticamente: fim de semana' : l.observacao ?? undefined} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1.5 text-[12.5px] font-bold ${multa ? 'border-[#ffc7ce] bg-[#ffc7ce]/25 text-[#9c0006]' : 'border-[#f5d76e] bg-[#ffeb9c]/40 text-[#7a4600]'}`}>
                           {l.causa} <small className="font-semibold opacity-85">{multa ? brlNegativo(valor) : 'R$ 0'}</small>
                         </span>
                         <Button variant="outline" size="sm" onClick={() => setAberto(f.frota)}>Trocar</Button>

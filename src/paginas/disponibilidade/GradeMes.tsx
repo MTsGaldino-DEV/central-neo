@@ -38,12 +38,13 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
   for (const f of visiveis) for (const k of chaves) {
     const l = ler(k, f.frota);
     if (l?.situacao !== 'OCORRENCIA') continue;
-    if (ehMultavel(l.causa)) { multaveis++; comMulta.add(f.frota); } else contestaveis++;
+    // A folga automática de fim de semana conta como conferida, mas não como ocorrência a analisar.
+    if (ehMultavel(l.causa)) { multaveis++; comMulta.add(f.frota); } else if (!l.automatica) contestaveis++;
   }
 
   const passa = (f: Frota) => ver === 'T' || chaves.some(k => {
     const l = ler(k, f.frota);
-    return l?.situacao === 'OCORRENCIA' && (ver === 'O' || ehMultavel(l.causa));
+    return l?.situacao === 'OCORRENCIA' && !l.automatica && (ver === 'O' || ehMultavel(l.causa));
   });
   const grupos = SUPERVISORES.filter(s => sup === 'T' || s === sup)
     .map(s => ({ s, regiao: frotas.find(f => f.supervisor === s)?.regiao ?? '', itens: frotas.filter(f => f.supervisor === s && passa(f)) }))
@@ -145,7 +146,7 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
                           if (m) v += valor;
                           cl = m ? 'm' : 'c';
                           sigla = SIGLAS[l.causa ?? ''] ?? '?';
-                          dicaTxt = `${inicio}${l.causa} · ${m ? brlNegativo(valor) : 'R$ 0'}${l.observacao ? ` · ${l.observacao}` : ''}`;
+                          dicaTxt = `${inicio}${l.causa} · ${m ? brlNegativo(valor) : 'R$ 0'}${l.automatica ? ' · automático (fim de semana)' : ''}${l.observacao ? ` · ${l.observacao}` : ''}`;
                         }
                       }
                       return (
@@ -220,7 +221,7 @@ export function GradeMes({ ano, mes, hoje, frotas, valor, ler, gravar, desmarcar
 }
 
 function HistoricoFrota({ frota: f, chaves, mes, valor, ler }: { frota: Frota; chaves: string[]; mes: number; valor: number; ler: PropsVisao['ler'] }) {
-  const eventos = chaves.map(k => ({ k, l: ler(k, f.frota) })).filter(e => e.l?.situacao === 'OCORRENCIA');
+  const eventos = chaves.map(k => ({ k, l: ler(k, f.frota) })).filter(e => e.l?.situacao === 'OCORRENCIA' && !e.l.automatica);
   const multas = eventos.filter(e => ehMultavel(e.l?.causa)).length;
   return (
     <>

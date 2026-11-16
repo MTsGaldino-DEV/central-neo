@@ -100,6 +100,31 @@ Falta dar o módulo `disponibilidade` em Logins e acessos a quem vai usar (ADMIN
 - **Verificado:** typecheck; 059 aplicada e desfeita sobre o banco real (lançamentos 14.161 / ocorrências 1.057 iguais, 1 constraint de causa, causa nova
   aceita, inventada recusada). **Não verificado:** tela no navegador e Excel com o motivo novo.
 
+## Fim de semana já preenchido como folga de fim de escala — 13/11/2026 (Claude)
+
+**Estado: código pronto, SEM commit; migration 060 escrita e testada em transação desfeita, NÃO aplicada.** Matheus aplica com
+`node .tmp-faturamento/aplicar-060.cjs` (aplica só a 060 e registra; `--testar` roda os testes e desfaz). O front publicado antes da 060 continua
+funcionando (a chamada do preenchimento é ignorada se a função não existir), mas sem o preenchimento. A 059 já está aplicada (confirmado por leitura).
+
+- **Pedido do Matheus:** todo sábado e domingo já vem como folga de fim de escala; mudar é manual. **Depois:** "Limpar marcação" deve deixar
+  "falta conferir" (por isso o preenchimento é gravado, não derivado na tela; uma primeira versão derivada na tela foi descartada).
+- **Modelo (060):** linhas reais em `neo_disp_lancamentos` com `origem = 'AUTO'`, criadas por `neo_disp_preencher_fim_de_semana()` (security definer,
+  exige módulo `disponibilidade`) para cada sábado/domingo sem linha, de `neo_disp_config.fim_semana_ate + 1` até hoje, e avança essa data. Só dias
+  depois da data são preenchidos: um dia limpo à mão não volta. Equipe desativada no dia é pulada. Alterar pela tela vira `TELA` (o trigger
+  `neo_disp_carimbar` foi ajustado para não trocar a origem do preenchimento). `neo_disp_mes` devolve `origem`; `neo_disp_ano` (Painel) não conta `AUTO`.
+- **Decisões do Claude, a confirmar pelo uso:** vale para **todas** as frotas, inclusive as de escala 4x2 (que trabalham alguns fins de semana: nesses
+  dias a alteração é manual, como o Matheus pediu). Dias já preenchidos (histórico da planilha como CADASTROU, FF marcado à mão) não mudam. Desativar uma
+  equipe apaga as linhas `AUTO` dos dias desativados (regra da 058); reativar um fim de semana já passado deixa o dia em falta conferir. A folga
+  automática conta como dia conferido, mas **não** entra nos contadores "Contestáveis", no filtro "Só com ocorrência/Com motivo", no histórico da frota,
+  na aba "Ocorrências" do Excel nem no Painel (senão todo mês teria centenas de ocorrências de folga). Se o Matheus confirmar a folga à mão, vira `TELA` e passa a contar.
+- **Código:** `src/lib/disponibilidade.ts` (`preencherFimDeSemana`, `lerMes` marca `automatica`), `Conferencia.tsx` (chama o preenchimento antes de ler o mês),
+  `GradeMes.tsx`, `ListaDia.tsx`, `disponibilidadeExcel.ts`, `disponibilidadeRegras.ts` (`Lancamento.automatica`).
+- **Verificado:** `aplicar-060.cjs --testar` sobre o banco real em transação desfeita (cria exatamente o que falta, 2ª chamada devolve 0, limpar não é
+  refeito, alteração vira TELA, `neo_disp_mes` traz a origem, painel sem `AUTO`, equipe desativada pulada, sem módulo é recusado); `disponibilidade-ui-testar`
+  (4 execuções seguidas; inclui domingo automático, sobrepor, limpar → falta conferir, trocar de mês sem voltar) e `disponibilidade-cruz-testar`; typecheck e build.
+  O `meta-leitura` do teste de interface falhava às vezes (lia "0" antes de carregar; já falhava sem estas mudanças): agora espera o valor.
+  **Não verificado:** tela com o banco real e login real; Excel aberto de verdade.
+
 ## Equipe desativada na Disponibilidade — 11/11/2026 (Claude)
 
 **Estado: código pronto, SEM commit; migration 058 escrita e testada em transação desfeita, NÃO aplicada no banco.** Matheus aplica com

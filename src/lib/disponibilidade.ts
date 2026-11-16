@@ -12,7 +12,15 @@ export async function lerFrotas(): Promise<Frota[]> {
 export async function lerMes(ano: number, mes: number): Promise<Lancamento[]> {
   const { data, error } = await supabase.rpc('neo_disp_mes', { p_ano: ano, p_mes: mes + 1 });
   if (error) throw error;
-  return (data ?? []) as Lancamento[];
+  // O banco manda a origem; AUTO = folga de fim de escala preenchida sozinha (migration 060).
+  return ((data ?? []) as (Lancamento & { origem?: string })[]).map(({ origem, ...l }) => (origem === 'AUTO' ? { ...l, automatica: true } : l));
+}
+
+/** Preenche como folga de fim de escala os sábados e domingos ainda sem marcação, até hoje. Devolve quantas linhas criou. */
+export async function preencherFimDeSemana(): Promise<number> {
+  const { data, error } = await supabase.rpc('neo_disp_preencher_fim_de_semana');
+  if (error) throw error;
+  return Number(data ?? 0);
 }
 
 export async function lerAno(ano: number): Promise<Ocorrencia[]> {
