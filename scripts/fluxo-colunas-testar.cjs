@@ -30,7 +30,7 @@ assert.deepEqual(novo('AGUARDANDO_APROPRIACAO'),
   ['servico', 'tipo_serv', 'localidade', 'termino', 'equipes', 'supervisor', 'nsmps', 'nsprs', 'valor_pago', 'data_lancamento_sf', 'etapa']);
 assert.deepEqual(novo('FATURADA'),
   ['servico', 'tipo_serv', 'localidade', 'termino', 'equipes', 'supervisor', 'nsmps', 'nsprs', 'valor_pago', 'data_lancamento_sf', 'faturas', 'etapa']);
-assert.deepEqual(novo('TODAS'), COLUNAS_FLUXO.map((c) => c.id), 'Todas mostra todas as colunas');
+assert.deepEqual(novo('TODAS'), COLUNAS_FLUXO.map((c) => c.id).filter((id) => id !== 'valor_lancamento'), 'Todas mostra todas as colunas, menos o Lançamento Salesforce');
 
 // Observação do GDIS só na primeira etapa (A fechar) e em Todas
 for (const etapa of ['AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO', 'FATURADA']) {

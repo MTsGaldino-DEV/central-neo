@@ -48,7 +48,8 @@ export function colunasVisiveis(etapa: Etapa | 'TODAS', historico: boolean): Col
     case 'AGUARDANDO_SALESFORCE': return [...BASE, ...APOS_NSMP, ...APOS_NSPR, 'etapa'];
     case 'AGUARDANDO_APROPRIACAO': return [...BASE, ...APOS_NSMP, ...APOS_NSPR, 'data_lancamento_sf', 'etapa'];
     case 'FATURADA': return [...BASE, ...APOS_NSMP, ...APOS_NSPR, 'data_lancamento_sf', 'faturas', 'etapa'];
-    case 'TODAS': return COLUNAS_FLUXO.map((c) => c.id);
+    // Todas: tudo, menos o valor de lançamento Salesforce (não é mais usado nesta aba)
+    case 'TODAS': return COLUNAS_FLUXO.map((c) => c.id).filter((id) => id !== 'valor_lancamento');
     default: return [...COLUNAS_HISTORICO];
   }
 }

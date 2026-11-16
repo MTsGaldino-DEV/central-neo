@@ -363,10 +363,10 @@ function responderNsis(url, metodo, corpo) {
     await page.getByRole('cell', { name: 'Fluxo novo A' }).waitFor();
     await page.getByRole('cell', { name: 'sem observação no GDIS' }).waitFor();
     assert.equal(await page.getByRole('button', { name: /Gerar NSMP/ }).count(), 0, 'chip de histórico vazio fica escondido');
-    assert.equal(await page.getByRole('button', { name: /Aguard\. fatura/ }).count(), 0, 'chip de histórico vazio fica escondido');
+    assert.equal(await page.getByRole('button', { name: /^Fatura( \d+)?$/ }).count(), 0, 'chip de histórico vazio fica escondido');
     assert.equal(await page.getByRole('button', { name: /Sem cobrança/ }).count(), 1);
-    assert.equal(await page.getByRole('button', { name: /Aguard\. apropriação/ }).count(), 1, 'etapas novas na fila');
-    assert.equal(await page.getByRole('button', { name: /Aguard\. Salesforce/ }).count(), 1);
+    assert.equal(await page.getByRole('button', { name: /^Apropriação/ }).count(), 1, 'etapas novas na fila');
+    assert.equal(await page.getByRole('button', { name: /^Salesforce/ }).count(), 1);
     assert.equal(await primeiraCelula(), '900010010');
     await foto('fila-fluxo-a-fechar');
     // 1440 e 390: a página não rola de lado e o texto da Observação aparece inteiro na célula (até 2 linhas)
@@ -431,6 +431,8 @@ function responderNsis(url, metodo, corpo) {
 
     // Listas suspensas dos filtros (no lugar do <select> do navegador)
     {
+      // Os filtros ficam recolhidos atrás do botão Filtros
+      await page.getByRole('button', { name: 'Filtros' }).click();
       const lista = (nome) => page.getByRole('combobox', { name: nome });
       const opcoes = page.getByRole('listbox').getByRole('option');
       assert.equal(await page.locator('form select').count(), 0, 'sem <select> nativo nos filtros');
@@ -491,8 +493,8 @@ function responderNsis(url, metodo, corpo) {
     await esperarLinhas(9);
     assert.deepEqual(await cabecalhos(), [
       'N° Serviço', 'Tipo do serviço', 'Localidade', 'DT execução', 'Equipe', 'Supervisor', 'NSMP', 'NSPR',
-      'Lançamento Salesforce', 'Valor pago', 'Data lançamento SF', 'Apropriação', 'Observação', 'Etapa',
-    ], 'na etapa Todas aparecem todas as colunas');
+      'Valor pago', 'Data lançamento SF', 'Apropriação', 'Observação', 'Etapa',
+    ], 'na etapa Todas aparecem todas as colunas, menos o Lançamento Salesforce');
     await page.getByRole('button', { name: 'Filtrar Valor pago' }).click();
     await menu('Valor pago').getByRole('button', { name: 'Do menor para o maior' }).waitFor();
     assert.equal(await menu('Valor pago').getByPlaceholder('Pesquisar').count(), 0);
@@ -521,7 +523,7 @@ function responderNsis(url, metodo, corpo) {
     ]);
     await page.goto(urlBase + '/fechamento?etapa=AGUARDANDO_NSMP');
     await page.getByRole('button', { name: /Gerar NSMP/ }).waitFor();
-    assert.equal(await page.getByRole('button', { name: /Aguard\. fatura/ }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: /^Fatura( \d+)?$/ }).count(), 0);
     ocultos.clear();
 
     // ── Celular: sem rolagem lateral ──

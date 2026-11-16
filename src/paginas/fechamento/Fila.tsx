@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Search, Download, Plus, Loader2, RefreshCw, FileSpreadsheet, AlertTriangle, X, Inbox, CalendarRange, FilterX, ArrowUp, ArrowDown,
+  Search, Download, Plus, Loader2, RefreshCw, FileSpreadsheet, AlertTriangle, X, Copy, Check, Inbox, CalendarRange, FilterX, SlidersHorizontal, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { Pagination } from '@/components/Pagination';
 import { ListaSuspensa } from '@/components/ui/lista-suspensa';
@@ -10,12 +10,23 @@ import FiltroColuna from '@/components/fechamento/FiltroColuna';
 import PainelNsis from './PainelNsis';
 import {
   listarNsis, getResumo, getResumoFaturas, exportarFechamento, criarNsisManual, formatarUS, formatarReais, formatarData,
-  contarPorEtapa, temFiltro, listarTiposServico, valoresDaColuna, infoEtapa, ehFluxoNovo,
+  contarPorEtapa, temFiltro, listarTiposServico, valoresDaColuna, infoEtapa, ehFluxoNovo, descricoesDosItens,
   type Etapa, type Nsis, type ResumoFechamento, type ResumoFatura, type FiltrosNsis,
 } from '@/lib/fechamento';
 import { COLUNAS_FLUXO, colunasVisiveis, type ColunaFluxo } from '@/lib/fechamentoFluxo';
 
 const POR_PAGINA = 50;
+
+/** Uma página da lista já lida: as NSIS e as descrições dos itens (para a coluna Observação). */
+interface PaginaLida { r: { data: Nsis[]; total: number; page: number }; descricoes: Record<string, string[]> }
+
+async function lerPagina(filtros: FiltrosNsis, p: number): Promise<PaginaLida> {
+  const r = await listarNsis(filtros, p, POR_PAGINA);
+  // NSIS sem observação do GDIS mostram, na coluna Observação, a descrição dos itens
+  const semObservacao = r.data.filter((n) => !n.observacao && n.qtd_itens > 0).map((n) => n.servico);
+  const descricoes = await descricoesDosItens(semObservacao).catch(() => ({}));
+  return { r, descricoes };
+}
 
 function iso(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -106,7 +117,9 @@ export default function FilaFechamento() {
   const [erro, setErro] = useState<string | null>(null);
   const [exportando, setExportando] = useState(false);
   const [novaAberta, setNovaAberta] = useState(false);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [detalhesAbertos, setDetalhesAbertos] = useState(false);
+  const [descricoes, setDescricoes] = useState<Record<string, string[]>>({});
   const [tipos, setTipos] = useState<string[]>([]);
   // valores de cada coluna, carregados quando o menu abre (null = carregando)
   const [valoresCol, setValoresCol] = useState<Partial<Record<ColunaFluxo, string[] | null>>>({});
@@ -127,29 +140,73 @@ export default function FilaFechamento() {
     setEquipe(params.get('equipe') ?? '');
   }, [params]);
 
+  // Páginas já lidas, por filtros + página: trocar de etapa mostra na hora o que já veio (e atualiza por baixo)
+  const cache = useRef(new Map<string, PaginaLida>());
+  const pedido = useRef(0); // só o pedido mais recente mexe na tela
+  const [versaoCache, setVersaoCache] = useState(0);
+
   const carregar = useCallback(async (p = pagina) => {
-    setCarregando(true);
+    const id = ++pedido.current;
+    const chave = JSON.stringify([filtros, p]);
+    const guardada = cache.current.get(chave);
     setErro(null);
+    if (guardada) { mostrar(guardada); setCarregando(false); } else setCarregando(true);
     try {
-      const [r, res, cont] = await Promise.all([
-        listarNsis(filtros, p, POR_PAGINA),
+      const [pag, res, cont] = await Promise.all([
+        lerPagina(filtros, p),
         getResumo(),
         filtrado ? contarPorEtapa(filtros) : Promise.resolve(null),
       ]);
-      setLinhas(r.data);
-      setTotal(r.total);
-      setPagina(r.page);
+      if (cache.current.size > 80) cache.current.clear();
+      cache.current.set(chave, pag);
+      if (id !== pedido.current) return;
+      mostrar(pag);
       setResumo(res);
       setContagens(cont);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao carregar.');
+      if (id === pedido.current) setErro(e instanceof Error ? e.message : 'Falha ao carregar.');
     } finally {
-      setCarregando(false);
+      if (id === pedido.current) setCarregando(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaveFiltros, pagina]);
 
+  function mostrar(pag: PaginaLida) {
+    setLinhas(pag.r.data);
+    setDescricoes(pag.descricoes);
+    setTotal(pag.r.total);
+    setPagina(pag.r.page);
+  }
+
+  /** Depois de gravar ou atualizar à mão: esquece o que estava guardado e lê de novo. */
+  function recarregar() {
+    cache.current.clear();
+    setVersaoCache((v) => v + 1);
+    carregar();
+  }
+
   useEffect(() => { if (visao === 'nsis') carregar(); }, [carregar, visao]);
+
+  // Pré-carrega a 1ª página das outras etapas (mesmos filtros) depois que a atual chegou
+  useEffect(() => {
+    if (visao !== 'nsis' || carregando) return;
+    let cancelado = false;
+    const alvos: (Etapa | 'TODAS')[] = [
+      ...ETAPAS_FLUXO, 'TODAS', ...ETAPAS_HISTORICO.filter((e) => (resumo?.etapas[e] ?? 0) > 0),
+    ];
+    (async () => {
+      for (const e of alvos) {
+        if (cancelado) return;
+        if (e === etapa) continue;
+        const f = { ...filtros, etapa: e };
+        const chave = JSON.stringify([f, 1]);
+        if (cache.current.has(chave)) continue;
+        try { cache.current.set(chave, await lerPagina(f, 1)); } catch { /* o clique carrega normalmente */ }
+      }
+    })();
+    return () => { cancelado = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveFiltros, visao, carregando, versaoCache]);
   // Na visão por fatura a lista não carrega, mas os cartões e as contagens sim
   useEffect(() => { if (visao === 'faturas') getResumo().then(setResumo).catch(() => {}); }, [visao]);
 
@@ -247,136 +304,112 @@ export default function FilaFechamento() {
   }
   if (filtros.alerta) chips.push({ rotulo: <b>{filtros.alerta === 'DIVERGENTE' ? 'Pago ≠ pedido' : 'NSPR sem valor pago'}</b>, limpar: { alerta: null } });
 
+  // filtros do painel recolhido (a busca tem o próprio campo)
+  const filtrosExtras = chips.length - (filtros.busca ? 1 : 0);
+
   const campo = 'h-9 px-3 text-sm border border-linha rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sinal/30 focus:border-sinal';
 
   return (
-    <div className="p-4 lg:p-6 space-y-5">
-      {/* Cabeçalho */}
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[220px]">
-          <h2 className="text-xl font-extrabold tracking-tight">Manutenção · fila de NSIS</h2>
-          <p className="text-sm text-aco">Leia o que foi feito, peça o pagamento (NSMP) e acompanhe até a fatura.</p>
-        </div>
-        <button onClick={() => setNovaAberta(true)} className="h-9 px-3 rounded-lg border border-linha bg-white text-sm font-semibold flex items-center gap-1.5 hover:border-sinal hover:text-sinal">
+    <div className="p-4 lg:p-6 space-y-3">
+      {/* Barra de ferramentas: ação principal, busca e filtros recolhidos, como na lista de Instalações do Visão de Dono */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={() => setNovaAberta(true)} className="h-10 px-4 rounded-lg bg-[#16a34a] text-white text-sm font-bold flex items-center gap-1.5 hover:bg-[#15803d]">
           <Plus size={15} /> NSIS avulsa
         </button>
-        <button onClick={exportar} disabled={exportando} className="h-9 px-3 rounded-lg border border-linha bg-white text-sm font-semibold flex items-center gap-1.5 hover:border-sinal hover:text-sinal disabled:opacity-50"
-          title={filtrado ? 'Exporta só o que está filtrado' : 'Exporta a etapa selecionada'}>
-          {exportando ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Exportar Excel
-        </button>
-        <Link to="/fechamento/importar" className="h-9 px-3 rounded-lg bg-sinal text-white text-sm font-bold flex items-center gap-1.5 hover:bg-sinal-forte">
+        {visao === 'nsis' && (
+          <form onSubmit={aplicarTextos} className="relative flex-1 min-w-[240px] max-w-[560px]">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-aco-claro" />
+            <input value={busca} onChange={(e) => setBusca(e.target.value)} onBlur={() => aplicarTextos()}
+              placeholder="Buscar serviço, NSMP, NSPR, AP, equipe ou texto…" className={`${campo} !h-10 w-full pl-9`} />
+          </form>
+        )}
+        {visao === 'nsis' && (
+          <button type="button" onClick={() => setFiltrosAbertos((a) => !a)} aria-expanded={filtrosAbertos}
+            className={`h-10 px-3 rounded-lg border text-sm font-semibold flex items-center gap-1.5 ${filtrosAbertos || filtrosExtras > 0 ? 'border-sinal text-sinal bg-sinal-fundo' : 'border-linha bg-white text-aco hover:border-sinal hover:text-sinal'}`}>
+            <SlidersHorizontal size={15} /> Filtros
+            {filtrosExtras > 0 && <span className="rounded-full bg-sinal text-white text-[11px] font-bold px-1.5">{filtrosExtras}</span>}
+          </button>
+        )}
+        <span className="flex-1" />
+        <Link to="/fechamento/importar" className="h-10 px-3 rounded-lg border border-linha bg-white text-aco text-sm font-semibold flex items-center gap-1.5 hover:border-sinal hover:text-sinal">
           <FileSpreadsheet size={15} /> Importar relatório
         </Link>
+        <button onClick={exportar} disabled={exportando} className="h-10 px-3 rounded-lg border border-[#bbf7d0] bg-[#f0fdf4] text-[#15803d] text-sm font-bold flex items-center gap-1.5 hover:bg-[#dcfce7] disabled:opacity-50"
+          title={filtrado ? 'Exporta só o que está filtrado' : 'Exporta a etapa selecionada'}>
+          {exportando ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Baixar Excel
+        </button>
       </div>
 
-      {/* Pedido × pago (visão geral, sem filtros) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Indicador rotulo="Pedido à CEMIG" valor={formatarReais(resumo?.valorPedidoReais ?? 0)}
-          detalhe={`${formatarUS(resumo?.valorPedido ?? 0)} US · NSMP geradas`} />
-        <Indicador rotulo="Pago pela CEMIG" valor={formatarReais(resumo?.valorPagoReais ?? 0)}
-          detalhe={`${formatarUS(resumo?.valorPago ?? 0)} US · NSPR recebidas`} />
-        <Indicador
-          rotulo="Pago − pedido"
-          valor={`${diferencaReais > 0 ? '+' : ''}${formatarReais(diferencaReais)}`}
-          detalhe={`${diferenca > 0 ? '+' : ''}${formatarUS(diferenca)} US · itens com pedido e pago`}
-          destaque={Math.abs(diferencaReais) > 0.005 ? (diferencaReais < 0 ? 'erro' : 'ok') : undefined}
-        />
-        <div className="bg-white border border-linha rounded-2xl px-4 py-3 h-full">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-aco">Alertas de pagamento</p>
-          <button onClick={() => verAlerta('DIVERGENTE')} className="mt-1.5 w-full flex items-baseline justify-between gap-2 text-left hover:underline">
-            <span className="text-xs text-aco">Pago ≠ pedido</span>
-            <span className={`text-lg font-extrabold ${(resumo?.divergentes ?? 0) > 0 ? 'text-cobre' : 'text-aco-claro'}`}>{resumo?.divergentes ?? 0}</span>
-          </button>
-          <button onClick={() => verAlerta('SEM_VALOR')} className="w-full flex items-baseline justify-between gap-2 text-left hover:underline">
-            <span className="text-xs text-aco">NSPR sem valor pago</span>
-            <span className={`text-lg font-extrabold ${(resumo?.semValorPago ?? 0) > 0 ? 'text-pendente' : 'text-aco-claro'}`}>{resumo?.semValorPago ?? 0}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Busca e filtros: ficam acima das etapas, como na lista de Instalações do Visão de Dono */}
-      {visao === 'nsis' && (
-        <form onSubmit={aplicarTextos} className="bg-white border border-linha rounded-2xl p-3 space-y-3">
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="flex-1 min-w-[240px]">
-              <label className="block text-[11px] font-semibold text-aco mb-1">Busca</label>
-              <div className="relative">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-aco-claro" />
-                <input value={busca} onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Serviço, NSMP, NSPR, AP, equipe, supervisor ou texto…" className={`${campo} w-full pl-9`} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-aco mb-1 flex items-center gap-1"><CalendarRange size={12} /> Data de execução</label>
-              <div className="flex items-center gap-1.5">
-                <input type="date" value={filtros.de} max={filtros.ate || undefined} onChange={(e) => mudarParam('de', e.target.value)}
-                  className={`${campo} w-[150px] ${filtros.de ? 'border-sinal' : ''}`} aria-label="Execução de" />
-                <span className="text-xs text-aco">até</span>
-                <input type="date" value={filtros.ate} min={filtros.de || undefined} onChange={(e) => mudarParam('ate', e.target.value)}
-                  className={`${campo} w-[150px] ${filtros.ate ? 'border-sinal' : ''}`} aria-label="Execução até" />
-                <ListaSuspensa acao rotulo="Atalhos de período" placeholder="Atalhos…" valor="" opcoes={ATALHOS.map((a) => ({ valor: a.id, rotulo: a.nome }))}
-                  onChange={(id) => {
-                    const a = ATALHOS.find((x) => x.id === id);
-                    if (a) { const [de, ate] = a.faixa(); mudarParams({ de, ate }); }
-                  }} />
-              </div>
+      {visao === 'nsis' && filtrosAbertos && (
+        <form onSubmit={aplicarTextos} className="bg-white border border-[#e2e8f0] rounded-xl p-3 flex flex-wrap items-end gap-2">
+          <div>
+            <label className="block text-[11px] font-semibold text-aco mb-1 flex items-center gap-1"><CalendarRange size={12} /> Data de execução</label>
+            <div className="flex items-center gap-1.5">
+              <input type="date" value={filtros.de} max={filtros.ate || undefined} onChange={(e) => mudarParam('de', e.target.value)}
+                className={`${campo} w-[150px] ${filtros.de ? 'border-sinal' : ''}`} aria-label="Execução de" />
+              <span className="text-xs text-aco">até</span>
+              <input type="date" value={filtros.ate} min={filtros.de || undefined} onChange={(e) => mudarParam('ate', e.target.value)}
+                className={`${campo} w-[150px] ${filtros.ate ? 'border-sinal' : ''}`} aria-label="Execução até" />
+              <ListaSuspensa acao rotulo="Atalhos de período" placeholder="Atalhos…" valor="" opcoes={ATALHOS.map((a) => ({ valor: a.id, rotulo: a.nome }))}
+                onChange={(id) => {
+                  const a = ATALHOS.find((x) => x.id === id);
+                  if (a) { const [de, ate] = a.faixa(); mudarParams({ de, ate }); }
+                }} />
             </div>
           </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <div>
-              <label className="block text-[11px] font-semibold text-aco mb-1">Tipo do serviço</label>
-              <ListaSuspensa rotulo="Tipo do serviço" valor={filtros.tipo ?? ''} ativo={!!filtros.tipo} className="min-w-[8.5rem]"
-                opcoes={[{ valor: '', rotulo: 'Todos' }, ...[...new Set([...tipos, ...(filtros.tipo ? [filtros.tipo] : [])])].map((t) => ({ valor: t, rotulo: t }))]}
-                onChange={(v) => mudarParam('tipo', v || null)} />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-aco mb-1">Localidade</label>
-              <input value={localidade} onChange={(e) => setLocalidade(e.target.value.replace(/\D/g, '').slice(0, 4))} onBlur={() => aplicarTextos()}
-                placeholder="0000" inputMode="numeric" className={`${campo} w-24 font-codigo`} />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-aco mb-1">Equipe</label>
-              <input value={equipe} onChange={(e) => setEquipe(e.target.value)} onBlur={() => aplicarTextos()}
-                placeholder="Nº da equipe" className={`${campo} w-32 font-codigo`} />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-aco mb-1">Pagamento</label>
-              <ListaSuspensa rotulo="Pagamento" valor={filtros.alerta ?? ''} ativo={!!filtros.alerta} tom="cobre" className="min-w-[8.5rem]"
-                opcoes={[{ valor: '', rotulo: 'Todos' }, { valor: 'DIVERGENTE', rotulo: 'Pago diferente do pedido' }, { valor: 'SEM_VALOR', rotulo: 'NSPR sem valor pago' }]}
-                onChange={(v) => mudarParam('alerta', v || null)} />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-aco mb-1">Ordem</label>
-              <ListaSuspensa rotulo="Ordem" valor={filtros.ordem ?? 'termino_asc'}
-                opcoes={[{ valor: 'termino_asc', rotulo: 'Execução mais antiga primeiro' }, { valor: 'termino_desc', rotulo: 'Execução mais recente primeiro' }, { valor: 'servico', rotulo: 'Nº do serviço' }]}
-                onChange={(v) => mudarParams({ ordem: v === 'termino_asc' ? null : v, ordcol: null })} />
-            </div>
-            <span className="flex-1" />
-            <button type="submit" className="h-9 px-4 rounded-lg bg-sinal text-white text-sm font-bold hover:bg-sinal-forte">Filtrar</button>
-            <button type="button" onClick={() => carregar()} className="h-9 w-9 flex items-center justify-center border border-linha rounded-lg bg-white text-aco hover:text-sinal" title="Atualizar">
-              <RefreshCw size={15} className={carregando ? 'animate-spin' : ''} />
-            </button>
+          <div>
+            <label className="block text-[11px] font-semibold text-aco mb-1">Tipo do serviço</label>
+            <ListaSuspensa rotulo="Tipo do serviço" valor={filtros.tipo ?? ''} ativo={!!filtros.tipo} className="min-w-[8.5rem]"
+              opcoes={[{ valor: '', rotulo: 'Todos' }, ...[...new Set([...tipos, ...(filtros.tipo ? [filtros.tipo] : [])])].map((t) => ({ valor: t, rotulo: t }))]}
+              onChange={(v) => mudarParam('tipo', v || null)} />
           </div>
-          {chips.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-linha">
-              {chips.map((c, i) => (
-                <span key={i} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-sinal-fundo text-sinal-forte text-xs">
-                  {c.rotulo}
-                  <button type="button" onClick={() => mudarParams(c.limpar)} className="p-0.5 rounded-full hover:bg-white/70" aria-label="Remover filtro"><X size={12} /></button>
-                </span>
-              ))}
-              <button type="button" onClick={limparFiltros} className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-aco hover:text-erro">
-                <FilterX size={13} /> Limpar filtros
-              </button>
-              <span className="flex-1" />
-              <span className="text-xs text-aco"><b className="text-tinta">{totalGeral.toLocaleString('pt-BR')}</b> NSIS com esses filtros (todas as etapas)</span>
-            </div>
-          )}
+          <div>
+            <label className="block text-[11px] font-semibold text-aco mb-1">Localidade</label>
+            <input value={localidade} onChange={(e) => setLocalidade(e.target.value.replace(/\D/g, '').slice(0, 4))} onBlur={() => aplicarTextos()}
+              placeholder="0000" inputMode="numeric" className={`${campo} w-24 font-codigo`} />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-aco mb-1">Equipe</label>
+            <input value={equipe} onChange={(e) => setEquipe(e.target.value)} onBlur={() => aplicarTextos()}
+              placeholder="Nº da equipe" className={`${campo} w-32 font-codigo`} />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-aco mb-1">Pagamento</label>
+            <ListaSuspensa rotulo="Pagamento" valor={filtros.alerta ?? ''} ativo={!!filtros.alerta} tom="cobre" className="min-w-[8.5rem]"
+              opcoes={[{ valor: '', rotulo: 'Todos' }, { valor: 'DIVERGENTE', rotulo: 'Pago diferente do pedido' }, { valor: 'SEM_VALOR', rotulo: 'NSPR sem valor pago' }]}
+              onChange={(v) => mudarParam('alerta', v || null)} />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-aco mb-1">Ordem</label>
+            <ListaSuspensa rotulo="Ordem" valor={filtros.ordem ?? 'termino_asc'}
+              opcoes={[{ valor: 'termino_asc', rotulo: 'Execução mais antiga primeiro' }, { valor: 'termino_desc', rotulo: 'Execução mais recente primeiro' }, { valor: 'servico', rotulo: 'Nº do serviço' }]}
+              onChange={(v) => mudarParams({ ordem: v === 'termino_asc' ? null : v, ordcol: null })} />
+          </div>
+          <span className="flex-1" />
+          <button type="button" onClick={recarregar} className="h-9 w-9 flex items-center justify-center border border-linha rounded-lg bg-white text-aco hover:text-sinal" title="Atualizar">
+            <RefreshCw size={15} className={carregando ? 'animate-spin' : ''} />
+          </button>
         </form>
       )}
 
+      {visao === 'nsis' && chips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {chips.map((c, i) => (
+            <span key={i} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-sinal-fundo text-sinal-forte text-xs">
+              {c.rotulo}
+              <button type="button" onClick={() => mudarParams(c.limpar)} className="p-0.5 rounded-full hover:bg-white/70" aria-label="Remover filtro"><X size={12} /></button>
+            </span>
+          ))}
+          <button type="button" onClick={limparFiltros} className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-aco hover:text-erro">
+            <FilterX size={13} /> Limpar filtros
+          </button>
+          <span className="flex-1" />
+          <span className="text-xs text-aco"><b className="text-tinta">{totalGeral.toLocaleString('pt-BR')}</b> NSIS com esses filtros (todas as etapas)</span>
+        </div>
+      )}
+
       {/* Etapas do fluxo: pílulas com contador, como os filtros da lista de Instalações do Visão de Dono */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {[...ETAPAS_FLUXO, ...ETAPAS_HISTORICO].map((id) => {
           const e = infoEtapa(id);
           const ativa = visao === 'nsis' && etapa === e.id;
@@ -390,15 +423,41 @@ export default function FilaFechamento() {
           );
         })}
         <PilulaEtapa ativa={visao === 'nsis' && etapa === 'TODAS'} rotulo="Todas" n={totalGeral} titulo="Todas as etapas" onClick={() => trocarEtapa('TODAS')} />
-      </div>
-
-      <div className="flex gap-1 bg-white border border-linha rounded-xl p-1 w-fit">
+        <span className="flex-1" />
+      <div className="flex gap-1 bg-white border border-linha rounded-xl p-1">
         <button onClick={() => mudarParam('visao', null)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${visao === 'nsis' ? 'bg-sinal text-white' : 'text-aco hover:bg-nevoa'}`}>
           Por NSIS
         </button>
         <button onClick={() => mudarParam('visao', 'faturas')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${visao === 'faturas' ? 'bg-sinal text-white' : 'text-aco hover:bg-nevoa'}`}>
           Por fatura (pedido × pago)
         </button>
+      </div>
+      </div>
+
+
+      {/* Pedido × pago: uma faixa só, sem cartões */}
+      <div className="flex flex-wrap bg-white border border-[#e2e8f0] rounded-xl lg:divide-x divide-[#e2e8f0]">
+        <Indicador rotulo="Pedido à CEMIG" valor={formatarReais(resumo?.valorPedidoReais ?? 0)}
+          detalhe={`${formatarUS(resumo?.valorPedido ?? 0)} US · NSMP geradas`} />
+        <Indicador rotulo="Pago pela CEMIG" valor={formatarReais(resumo?.valorPagoReais ?? 0)}
+          detalhe={`${formatarUS(resumo?.valorPago ?? 0)} US · NSPR recebidas`} />
+        <Indicador
+          rotulo="Pago − pedido"
+          valor={`${diferencaReais > 0 ? '+' : ''}${formatarReais(diferencaReais)}`}
+          detalhe={`${diferenca > 0 ? '+' : ''}${formatarUS(diferenca)} US · itens com pedido e pago`}
+          destaque={Math.abs(diferencaReais) > 0.005 ? (diferencaReais < 0 ? 'erro' : 'ok') : undefined}
+        />
+        <div className="flex-1 min-w-[190px] px-4 py-2.5">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-aco">Alertas de pagamento</p>
+          <button onClick={() => verAlerta('DIVERGENTE')} className="mt-1 w-full flex items-baseline justify-between gap-2 text-left hover:underline">
+            <span className="text-xs text-aco">Pago ≠ pedido</span>
+            <span className={`text-sm font-extrabold ${(resumo?.divergentes ?? 0) > 0 ? 'text-cobre' : 'text-aco-claro'}`}>{resumo?.divergentes ?? 0}</span>
+          </button>
+          <button onClick={() => verAlerta('SEM_VALOR')} className="w-full flex items-baseline justify-between gap-2 text-left hover:underline">
+            <span className="text-xs text-aco">NSPR sem valor pago</span>
+            <span className={`text-sm font-extrabold ${(resumo?.semValorPago ?? 0) > 0 ? 'text-pendente' : 'text-aco-claro'}`}>{resumo?.semValorPago ?? 0}</span>
+          </button>
+        </div>
       </div>
 
       {visao === 'faturas' ? (
@@ -418,7 +477,7 @@ export default function FilaFechamento() {
               <b className="text-tinta">{total.toLocaleString('pt-BR')}</b> NSIS
             </div>
             <div className="overflow-auto max-h-[calc(100vh-280px)] min-h-[200px]">
-              <table className={`grade-nsis w-full ${colunas.length > 6 ? 'min-w-[1180px]' : ''} border-separate border-spacing-0 text-xs text-left`}>
+              <table className={`grade-nsis w-full border-separate border-spacing-0 text-xs text-left`}>
                 <thead>
                   <tr>
                     {colunas.map((id) => {
@@ -468,8 +527,8 @@ export default function FilaFechamento() {
                       if (window.getSelection()?.toString()) return;
                       abrirPainel(n.servico, false);
                     }}
-                      className={aberta === n.servico ? 'selecionada' : ''}>
-                      {colunas.map((id) => <Celula key={id} id={id} n={n} localidadeVisivel={colunas.includes('localidade')} />)}
+                      className={`group ${aberta === n.servico ? 'selecionada' : ''}`}>
+                      {colunas.map((id) => <Celula key={id} id={id} n={n} descricoes={descricoes[n.servico]} localidadeVisivel={colunas.includes('localidade')} />)}
                       <td className="grade-fixa text-right cursor-default" onClick={(ev) => ev.stopPropagation()}>
                         <AcoesLinha n={n} onAbrir={(detalhes) => abrirPainel(n.servico, detalhes)} />
                       </td>
@@ -486,18 +545,22 @@ export default function FilaFechamento() {
 
       {aberta && (
         <PainelNsis key={`${aberta}-${detalhesAbertos}`} servico={aberta} detalhesInicial={detalhesAbertos}
-          onFechar={() => mudarParam('nsis', null)} onAlterado={() => carregar()} />
+          onFechar={() => mudarParam('nsis', null)} onAlterado={recarregar} />
       )}
-      {novaAberta && <ModalNovaNsis onFechar={() => setNovaAberta(false)} onCriada={(s) => { setNovaAberta(false); mudarParam('nsis', s); carregar(); }} />}
+      {novaAberta && <ModalNovaNsis onFechar={() => setNovaAberta(false)} onCriada={(s) => { setNovaAberta(false); mudarParam('nsis', s); recarregar(); }} />}
     </div>
   );
 }
 
 /** Célula de uma coluna da lista; sem dado mostra —. */
-function Celula({ id, n, localidadeVisivel }: { id: ColunaFluxo; n: Nsis; localidadeVisivel: boolean }) {
+function Celula({ id, n, localidadeVisivel, descricoes }: { id: ColunaFluxo; n: Nsis; localidadeVisivel: boolean; descricoes?: string[] }) {
   const vazio = <span className="text-[#94a3b8]">—</span>;
   switch (id) {
-    case 'servico': return <td className="font-codigo font-bold text-[#0f2544]">{n.servico}</td>;
+    case 'servico': return (
+      <td className="font-codigo font-bold text-[#0f2544]">
+        <span className="inline-flex items-center gap-1.5">{n.servico}<CopiarNumero valor={n.servico} /></span>
+      </td>
+    );
     case 'tipo_serv': return <td className="font-bold">{n.tipo_serv}</td>;
     case 'localidade': return <td className="font-codigo">{n.localidade ?? vazio}</td>;
     case 'nsmps': return <td className="!text-[#7c3aed]"><Numeros valor={n.nsmps} falta={n.qtd_itens > 0 && n.itens_sem_nsmp > 0} /></td>;
@@ -534,12 +597,44 @@ function Celula({ id, n, localidadeVisivel }: { id: ColunaFluxo; n: Nsis; locali
       <td className="!whitespace-normal min-w-[260px]">
         {n.observacao
           ? <span className="line-clamp-2">{n.observacao}</span>
-          : n.qtd_itens === 0 && <span className="text-pendente text-xs font-semibold">sem observação no GDIS</span>}
-        {n.qtd_itens > 0 && <span className="block text-[11px] text-[#64748b] mt-0.5">{n.qtd_itens} item{n.qtd_itens > 1 ? 's' : ''}</span>}
+          : descricoes?.length
+            ? <span className="line-clamp-2">{descricoes.join(' · ')}</span>
+            : n.qtd_itens === 0 && <span className="text-pendente text-xs font-semibold">sem observação no GDIS</span>}
       </td>
     );
     case 'etapa': return <td><EtapaChip etapa={n.etapa} curto selo /></td>;
   }
+}
+
+/** Botão pequeno ao lado do número do serviço: copia o número sem abrir a janela da NSIS. */
+function CopiarNumero({ valor }: { valor: string }) {
+  const [copiado, setCopiado] = useState(false);
+
+  async function copiar(ev: MouseEvent<HTMLButtonElement>) {
+    ev.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(valor);
+    } catch {
+      // sem permissão da área de transferência (página sem HTTPS, por exemplo): cópia pelo campo de texto
+      const campo = document.createElement('textarea');
+      campo.value = valor;
+      campo.style.position = 'fixed';
+      campo.style.opacity = '0';
+      document.body.appendChild(campo);
+      campo.select();
+      document.execCommand('copy');
+      campo.remove();
+    }
+    setCopiado(true);
+    window.setTimeout(() => setCopiado(false), 1500);
+  }
+
+  return (
+    <button type="button" onClick={copiar} title={copiado ? 'Copiado!' : 'Copiar número do serviço'} aria-label={`Copiar número do serviço ${valor}`}
+      className={`inline-flex size-5 items-center justify-center rounded transition-opacity ${copiado ? 'text-concluido opacity-100' : 'text-[#94a3b8] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-[#f1f5f9] hover:text-[#0f2544]'}`}>
+      {copiado ? <Check size={13} /> : <Copy size={13} />}
+    </button>
+  );
 }
 
 /** Pílula de filtro de etapa: ativa em azul-marinho, com contador (some quando zero, como no Visão de Dono). */
@@ -591,10 +686,10 @@ function Numeros({ valor, falta }: { valor: string | null; falta: boolean }) {
 function Indicador({ rotulo, valor, detalhe, destaque }: { rotulo: string; valor: string; detalhe: string; destaque?: 'erro' | 'ok' | 'cobre' }) {
   const cor = destaque === 'erro' ? 'text-erro' : destaque === 'ok' ? 'text-concluido' : destaque === 'cobre' ? 'text-cobre' : 'text-tinta';
   return (
-    <div className="bg-white border border-linha rounded-2xl px-4 py-3 h-full">
+    <div className="flex-1 min-w-[190px] px-4 py-2.5">
       <p className="text-[11px] font-bold uppercase tracking-wider text-aco">{rotulo}</p>
-      <p className={`text-2xl font-extrabold tracking-tight mt-1 ${cor}`}>{valor}</p>
-      <p className="text-[11px] text-aco-claro">{detalhe}</p>
+      <p className={`text-lg font-extrabold tracking-tight leading-tight mt-0.5 ${cor}`}>{valor}</p>
+      <p className="text-[11px] text-aco-claro truncate">{detalhe}</p>
     </div>
   );
 }

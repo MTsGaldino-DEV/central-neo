@@ -102,7 +102,7 @@ Falta dar o módulo `disponibilidade` em Logins e acessos a quem vai usar (ADMIN
 
 ## Listas suspensas dos filtros — 16/11/2026 (Claude)
 
-**Estado: código pronto, SEM commit.** Pedido do Matheus: os filtros com lista suspensa estavam no design padrão do navegador; fazer algo mais elaborado.
+**Estado: código pronto; commit e push autorizados por Matheus em 16/11/2026.** Pedido do Matheus: os filtros com lista suspensa estavam no design padrão do navegador; fazer algo mais elaborado.
 
 - **Componente novo:** `src/components/ui/lista-suspensa.tsx` (`ListaSuspensa`, sobre o Popover do shadcn, com as cores da NEO): botão com seta que gira, destaque
   (sinal ou cobre) quando há filtro aplicado, painel com sombra e animação, opção escolhida com check, setas/Enter/Esc/Home/End, inicial para pular de opção,
@@ -251,11 +251,18 @@ Só leitura de `Importação/Disponibilidade Contrato 7360_Macro.xlsm`; nada foi
 
 ## Fila de NSIS: etapa, ações e busca no estilo do Visão de Dono — 16/11/2026 (Claude)
 
-**Estado: código pronto, SEM commit.** Pedido do Matheus: deixar a fila parecida com a aba Instalações do Visão de Dono, principalmente etapa e grupo de ações.
+**Estado: código pronto; commit e push autorizados por Matheus em 16/11/2026.** Pedido do Matheus: deixar a fila parecida com a aba Instalações do Visão de Dono, principalmente etapa e grupo de ações.
 - **Etapa:** "A fechar" virou **"Em revisão"** (nome e curto, só texto: o id `A_FECHAR` não mudou), no Início e na importação também. Coluna Etapa é um selo suave (`EtapaChip selo`, cores do Visão de Dono) e deixou de ser a coluna congelada. Filtros de etapa viraram pílulas com contador (ativa azul-marinho `#0f2544`; contador some em zero).
 - **Ações:** nova coluna "Ações" congelada à direita (`AcoesLinha` em `Fila.tsx`): "Ver detalhes" (abre a janela com Detalhes da execução aberto, `PainelNsis detalhesInicial`) e o botão da etapa — "Fechar →" (Em revisão), "Informar NSPR", "Informar Salesforce", "Informar apropriação". Todos abrem a janela da NSIS, onde a etapa é preenchida; clicar na linha continua abrindo.
 - **Busca e filtros** agora ficam acima das pílulas de etapa. Removido o aviso "Valores em R$ pela US vigente…" da Fila (pedido do Matheus: tela com pouca informação).
 - **Fluxo descrito por Matheus (16/11):** Em revisão = código do contrato, equipe, fator e NSMP; NSPR = só o número; Salesforce = valor e data de lançamento; apropriação = pago, fim. **Decidido por Matheus (16/11/2026):** o valor pago **continua na etapa NSPR** (número da NSPR + valor pago em US) e o Salesforce informa **só a data de lançamento**. O fluxo de gravação não mudou; vale a regra da seção "Fila de NSIS: fluxo novo" acima, não a descrição resumida do pedido.
+- **Ajustes seguintes (16/11/2026):**
+  - Botão simples de copiar ao lado do nº do serviço (`CopiarNumero`, ícone vira ✓ por 1,5 s; não abre a janela da NSIS).
+  - Aba **Todas** sem a coluna "Lançamento Salesforce" (`fechamentoFluxo.ts`, `case 'TODAS'`); as etapas históricas ainda mostram `valor_lancamento`.
+  - **Observação** mostra `n.observacao` (GDIS) e, se vazia, as descrições dos itens (`descricoesDosItens` em `fechamento.ts`, lidas de `neo_nsis_itens` por página; sem migration). Não mostra mais "N itens"; sem nada, "sem observação no GDIS".
+  - **Nomes curtos** (pílulas, selos, Início): Em revisão, NSPR, Salesforce, Apropriação, Fatura, sem "Aguard."; os nomes completos "Aguardando …" seguem em dicas e na janela da NSIS. Ids das etapas não mudaram.
+  - **Cache e pré-carga** em `Fila.tsx`: páginas lidas ficam em memória (chave = filtros + página) e aparecem na hora ao trocar de etapa, revalidando em seguida; depois de carregar, a 1ª página das outras etapas é lida em segundo plano com os mesmos filtros. Só a resposta do último pedido atualiza a tela. Gravar, "Atualizar" ou criar NSIS avulsa limpa o cache (`recarregar`).
+  - Testes: `manutencao-ui-testar` usa os nomes novos; `fluxo-colunas-testar` espera Todas sem `valor_lancamento`. Typecheck e teste de UI passaram; velocidade e Observação com dados reais não foram conferidas no navegador.
 - **Verificado:** typecheck, `vite build`, `manutencao-ui-testar` (helper `cabecalhos` agora exige "Ações" como última coluna e a ignora nas comparações; captura `fila-fluxo-a-fechar-desktop` conferida). **Não verificado:** dados reais, celular (captura não reconferida), clique nos botões de cada etapa além do "Fechar →".
 
 ## Fila de NSIS: vários códigos, fator e janela no meio — 06/11/2026 (Claude)
@@ -975,3 +982,10 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
 - Verificado: `npm run typecheck` passou. Funções testadas no banco real em transação desfeita (12 checagens: usuário comum
   recusado ao mover e ao excluir, DELETE direto barrado pela RLS, FATURADA → AP → Salesforce → NSPR → A fechar apagando só o
   devido, recusa de "mover" para frente, exclusão com itens, 5 linhas de log com cópia). Falta Matheus ver a tela como ADMIN.
+
+## Fila de NSIS: layout enxuto, como a lista do Visão de Dono (16/11/2026, Claude)
+- Pedido do Matheus: a fila estava "poluída"; no Visão de Dono (Instalações) a tela é limpa e as colunas aparecem bonitas.
+- `Fila.tsx`: sem título/subtítulo; uma barra só com "NSIS avulsa" (verde), busca, botão **Filtros** (recolhe data, tipo, localidade, equipe, pagamento e ordem; mostra contador de filtros ativos), "Importar relatório" e "Baixar Excel". Chips dos filtros ativos continuam visíveis fora do painel.
+- Cartões de Pedido × Pago viraram uma faixa única compacta; a alternância "Por NSIS / Por fatura" foi para a linha das pílulas de etapa.
+- Tabela: largura mínima forçada de 1180px removida; botão de copiar o nº do serviço só aparece ao passar o mouse na linha.
+- Cabeçalhos da tabela continuam com os nomes completos (o teste `scripts/manutencao-ui-testar.cjs` confere) e a Observação mantém mínimo de 260px. O teste agora clica em "Filtros" antes de usar as listas suspensas. Teste de UI e `vite build` passaram.

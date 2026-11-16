@@ -33,10 +33,10 @@ export type Etapa =
 export const ETAPAS: { id: Etapa; nome: string; curto: string; classe: string; marca: string }[] = [
   { id: 'A_FECHAR', nome: 'Em revisão', curto: 'Em revisão', classe: 'text-etapa-fechar bg-etapa-fechar-fundo', marca: 'bg-etapa-fechar' },
   { id: 'AGUARDANDO_NSMP', nome: 'Aguardando NSMP', curto: 'Gerar NSMP', classe: 'text-etapa-nsmp bg-etapa-nsmp-fundo', marca: 'bg-etapa-nsmp' },
-  { id: 'AGUARDANDO_NSPR', nome: 'Aguardando NSPR', curto: 'Aguard. NSPR', classe: 'text-etapa-nspr bg-etapa-nspr-fundo', marca: 'bg-etapa-nspr' },
-  { id: 'AGUARDANDO_SALESFORCE', nome: 'Aguardando Salesforce', curto: 'Aguard. Salesforce', classe: 'text-etapa-salesforce bg-etapa-salesforce-fundo', marca: 'bg-etapa-salesforce' },
-  { id: 'AGUARDANDO_APROPRIACAO', nome: 'Aguardando apropriação', curto: 'Aguard. apropriação', classe: 'text-etapa-apropriacao bg-etapa-apropriacao-fundo', marca: 'bg-etapa-apropriacao' },
-  { id: 'AGUARDANDO_FATURA', nome: 'Aguardando fatura', curto: 'Aguard. fatura', classe: 'text-etapa-fatura bg-etapa-fatura-fundo', marca: 'bg-etapa-fatura' },
+  { id: 'AGUARDANDO_NSPR', nome: 'Aguardando NSPR', curto: 'NSPR', classe: 'text-etapa-nspr bg-etapa-nspr-fundo', marca: 'bg-etapa-nspr' },
+  { id: 'AGUARDANDO_SALESFORCE', nome: 'Aguardando Salesforce', curto: 'Salesforce', classe: 'text-etapa-salesforce bg-etapa-salesforce-fundo', marca: 'bg-etapa-salesforce' },
+  { id: 'AGUARDANDO_APROPRIACAO', nome: 'Aguardando apropriação', curto: 'Apropriação', classe: 'text-etapa-apropriacao bg-etapa-apropriacao-fundo', marca: 'bg-etapa-apropriacao' },
+  { id: 'AGUARDANDO_FATURA', nome: 'Aguardando fatura', curto: 'Fatura', classe: 'text-etapa-fatura bg-etapa-fatura-fundo', marca: 'bg-etapa-fatura' },
   { id: 'FATURADA', nome: 'Concluída', curto: 'Concluída', classe: 'text-etapa-faturada bg-etapa-faturada-fundo', marca: 'bg-etapa-faturada' },
   { id: 'SEM_COBRANCA', nome: 'Sem cobrança', curto: 'Sem cobrança', classe: 'text-etapa-sem bg-etapa-sem-fundo', marca: 'bg-etapa-sem' },
 ];
@@ -105,6 +105,25 @@ export function ehFluxoNovo(
   qtdItens: number = n.qtd_itens,
 ): boolean {
   return n.fluxo_novo || (!n.sem_cobranca && n.etapa === 'A_FECHAR' && qtdItens === 0);
+}
+
+/**
+ * Descrições dos itens de cada NSIS (sem repetir), para a coluna Observação da fila quando a NSIS não tem
+ * observação do GDIS: o texto do que foi feito fica nos itens.
+ */
+export async function descricoesDosItens(servicos: string[]): Promise<Record<string, string[]>> {
+  if (servicos.length === 0) return {};
+  const { data, error } = await supabase
+    .from('neo_nsis_itens').select('servico, descricao').in('servico', servicos).order('criado_em', { ascending: true });
+  if (error) throw error;
+  const porServico: Record<string, string[]> = {};
+  for (const { servico, descricao } of (data ?? []) as { servico: string; descricao: string | null }[]) {
+    const texto = (descricao ?? '').trim();
+    if (!texto) continue;
+    const lista = (porServico[servico] ??= []);
+    if (!lista.includes(texto)) lista.push(texto);
+  }
+  return porServico;
 }
 
 export interface ItemNsis {
