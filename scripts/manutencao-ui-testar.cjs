@@ -96,6 +96,12 @@ function filtrarLista(url) {
     const valores = tipo.slice(4, -1).split(',').map((v) => v.replaceAll('"', ''));
     lista = lista.filter((n) => valores.includes(n.tipo_serv));
   }
+  // filtro por dia de execução: or(and(termino.gte.<dia>T00:00:00-03:00,termino.lt.<dia seguinte>T…),…)
+  const ou = url.searchParams.get('or');
+  if (ou?.startsWith('(and(termino.gte.')) {
+    const faixas = [...ou.matchAll(/and\(termino\.gte\.([^,]+),termino\.lt\.([^)]+)\)/g)].map((m) => [Date.parse(m[1]), Date.parse(m[2])]);
+    lista = lista.filter((n) => n.termino && faixas.some(([de, ate]) => Date.parse(n.termino) >= de && Date.parse(n.termino) < ate));
+  }
   const chaves = (url.searchParams.get('order') || '').split(',').filter(Boolean).map((k) => { const [col, dir] = k.split('.'); return { col, desc: dir === 'desc' }; });
   return lista.sort((a, b) => {
     for (const { col, desc } of chaves) {
@@ -418,6 +424,27 @@ function responderNsis(url, metodo, corpo) {
     await esperarLinhas(4);
     assert.equal(parametro('col.tipo_serv'), null);
     assert.equal(await page.getByText('Tipo do serviço: NSRI').count(), 0);
+
+    // Datas em árvore (Ano › Mês › Dia), como no filtro do Excel
+    {
+      await page.getByRole('button', { name: 'Filtrar DT execução' }).click();
+      const arv = menu('DT execução');
+      await arv.getByLabel('Ano 2026', { exact: true }).waitFor();
+      assert.equal(await arv.getByLabel('novembro de 2026', { exact: true }).count(), 0, 'meses ficam recolhidos até expandir o ano');
+      await arv.getByRole('button', { name: 'Expandir 2026' }).click();
+      await arv.getByRole('button', { name: 'Expandir novembro de 2026' }).click();
+      await arv.getByLabel('04/11/2026', { exact: true }).waitFor();
+      await arv.getByLabel('Selecionar todos').uncheck();
+      await arv.getByLabel('04/11/2026', { exact: true }).check();
+      assert.equal(await arv.getByLabel('novembro de 2026', { exact: true }).evaluate((e) => e.indeterminate), true, 'mês com só um dia marcado fica parcial');
+      await foto('fila-fluxo-filtro-datas');
+      await arv.getByRole('button', { name: 'Aplicar' }).click();
+      await esperarLinhas(1);
+      assert.equal(await primeiraCelula(), '900010011');
+      assert.equal(parametro('col.termino'), '2026-11-04');
+      await page.getByRole('button', { name: 'Remover filtro' }).click();
+      await esperarLinhas(4);
+    }
 
     // Ordenar: clicar de novo na mesma ordem volta à padrão
     await page.getByRole('button', { name: 'Filtrar Tipo do serviço' }).click();

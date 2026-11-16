@@ -22,6 +22,8 @@ export interface FiltroColunaProps {
   semLista?: boolean;
   /** texto exibido de um valor (o valor continua o mesmo no filtro) */
   formatar?: (valor: string) => string;
+  /** valores são dias (YYYY-MM-DD): lista em árvore Ano › Mês › Dia, como no Excel */
+  arvoreDatas?: boolean;
 }
 
 const LARGURA = 264;
@@ -46,7 +48,99 @@ interface MenuProps extends Omit<FiltroColunaProps, 'ativo' | 'onAbrir'> {
   onFechar: () => void;
 }
 
-function Menu({ botao, coluna, valores, selecionados, ordem, onOrdenar, onFiltrar, onFechar, semLista, formatar }: MenuProps) {
+/** Mesmo texto de "vazio" que a consulta usa (VALOR_VAZIO em lib/fechamento). */
+const VAZIO = '—';
+const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const ehDia = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+/** Texto pesquisável de um dia: "05/10/2023 outubro 2023". */
+const textoDia = (v: string) => `${v.slice(8, 10)}/${v.slice(5, 7)}/${v.slice(0, 4)} ${MESES[Number(v.slice(5, 7)) - 1] ?? ''} ${v.slice(0, 4)}`;
+
+/** Caixa de marcar com o estado "alguns" (quadradinho cheio) para ano e mês. */
+function Caixa({ dias, marcado, onAlternar, rotulo }: { dias: string[]; marcado: (v: string) => boolean; onAlternar: () => void; rotulo: string }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const n = dias.filter(marcado).length;
+  const todos = dias.length > 0 && n === dias.length;
+  useEffect(() => { if (ref.current) ref.current.indeterminate = n > 0 && !todos; }, [n, todos]);
+  return <input ref={ref} type="checkbox" checked={todos} onChange={onAlternar} aria-label={rotulo} />;
+}
+
+const estiloLinha = (nivel: number): CSSProperties => ({
+  display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 8px', paddingLeft: `${8 + nivel * 16}px`, borderRadius: '8px', fontSize: '12px',
+});
+
+const estiloExpandir: CSSProperties = {
+  display: 'grid', placeItems: 'center', width: '14px', height: '14px', padding: 0, flexShrink: 0, border: '1px solid #94a3b8',
+  background: '#fff', color: '#475569', fontSize: '11px', lineHeight: 1, cursor: 'pointer', borderRadius: '2px', fontFamily: 'inherit',
+};
+
+/** Ano › Mês › Dia com + / − para expandir; pesquisar abre tudo o que combina. */
+function ArvoreDatas({ visiveis, marcado, onAlternarDias, abrirTudo }: {
+  visiveis: string[]; marcado: (v: string) => boolean; onAlternarDias: (dias: string[]) => void; abrirTudo: boolean;
+}) {
+  const [abertos, setAbertos] = useState<Set<string>>(new Set());
+  const aberto = (k: string) => abrirTudo || abertos.has(k);
+  const alternarAberto = (k: string) => setAbertos((a) => { const n = new Set(a); if (n.has(k)) n.delete(k); else n.add(k); return n; });
+
+  const anos = new Map<string, Map<string, string[]>>();
+  for (const v of visiveis) {
+    if (!ehDia(v)) continue;
+    const a = v.slice(0, 4), m = v.slice(5, 7);
+    if (!anos.has(a)) anos.set(a, new Map());
+    const meses = anos.get(a)!;
+    if (!meses.has(m)) meses.set(m, []);
+    meses.get(m)!.push(v);
+  }
+  const alternarGrupo = (dias: string[]) => onAlternarDias(dias);
+  const botao = (k: string, rotulo: string) => (
+    <button type="button" style={estiloExpandir} aria-label={`${aberto(k) ? 'Recolher' : 'Expandir'} ${rotulo}`} aria-expanded={aberto(k)}
+      onClick={() => alternarAberto(k)}>{aberto(k) ? '−' : '+'}</button>
+  );
+
+  return (
+    <div role="tree">
+      {[...anos.keys()].sort((x, y) => Number(y) - Number(x)).map((ano) => {
+        const meses = anos.get(ano)!;
+        const diasAno = [...meses.values()].flat();
+        return (
+          <div key={ano} role="treeitem" aria-expanded={aberto(ano)}>
+            <div className="fcn-item" style={estiloLinha(0)}>
+              {botao(ano, ano)}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, cursor: 'pointer' }}>
+                <Caixa dias={diasAno} marcado={marcado} onAlternar={() => alternarGrupo(diasAno)} rotulo={`Ano ${ano}`} />
+                {ano}
+              </label>
+            </div>
+            {aberto(ano) && [...meses.keys()].sort().map((mes) => {
+              const dias = meses.get(mes)!.sort();
+              const chave = `${ano}-${mes}`;
+              const nome = MESES[Number(mes) - 1] ?? mes;
+              return (
+                <div key={chave} role="treeitem" aria-expanded={aberto(chave)}>
+                  <div className="fcn-item" style={estiloLinha(1)}>
+                    {botao(chave, `${nome} de ${ano}`)}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, cursor: 'pointer' }}>
+                      <Caixa dias={dias} marcado={marcado} onAlternar={() => alternarGrupo(dias)} rotulo={`${nome} de ${ano}`} />
+                      {nome}
+                    </label>
+                  </div>
+                  {aberto(chave) && dias.map((d) => (
+                    <label key={d} className="fcn-item" style={{ ...estiloLinha(2), paddingLeft: `${8 + 2 * 16 + 18}px`, cursor: 'pointer', gap: '6px' }}>
+                      <input type="checkbox" checked={marcado(d)} onChange={() => alternarGrupo([d])} aria-label={`${d.slice(8, 10)}/${mes}/${ano}`} />
+                      {d.slice(8, 10)}
+                    </label>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Menu({ botao, coluna, valores, selecionados, ordem, onOrdenar, onFiltrar, onFechar, semLista, formatar, arvoreDatas }: MenuProps) {
   const caixa = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number; largura: number } | null>(null);
   const [busca, setBusca] = useState('');
@@ -115,7 +209,8 @@ function Menu({ botao, coluna, valores, selecionados, ordem, onOrdenar, onFiltra
 
   const lista = valores ?? [];
   const termo = semAcento(busca.trim());
-  const visiveis = termo ? lista.filter((v) => semAcento(texto(v)).includes(termo)) : lista;
+  const textoBusca = (v: string) => (arvoreDatas && ehDia(v) ? textoDia(v) : texto(v));
+  const visiveis = termo ? lista.filter((v) => semAcento(textoBusca(v)).includes(termo)) : lista;
   const exibidos = visiveis.slice(0, MAX_EXIBIDOS);
   const selecaoAtual = termo ? marcadosBusca : marcados;
   const marcado = (v: string) => (selecaoAtual ? selecaoAtual.has(v) : true);
@@ -128,6 +223,16 @@ function Menu({ botao, coluna, valores, selecionados, ordem, onOrdenar, onFiltra
     definir((m) => {
       const n = new Set(m ?? visiveis);
       if (n.has(v)) n.delete(v); else n.add(v);
+      return n;
+    });
+  };
+
+  /** Marca ou desmarca um grupo de dias (ano, mês ou um dia): se todos já estão marcados, desmarca. */
+  const alternarDias = (dias: string[]) => {
+    const marcar = !dias.every(marcado);
+    (termo ? setMarcadosBusca : setMarcados)((m) => {
+      const n = new Set(m ?? visiveis);
+      for (const d of dias) { if (marcar) n.add(d); else n.delete(d); }
       return n;
     });
   };
@@ -180,13 +285,23 @@ function Menu({ botao, coluna, valores, selecionados, ordem, onOrdenar, onFiltra
                   <input type="checkbox" checked={todosVisiveisMarcados} onChange={alternarTudo} />
                   {termo ? 'Selecionar resultados' : 'Selecionar todos'}
                 </label>
-                {exibidos.map((v) => (
+                {arvoreDatas ? (
+                  <>
+                    <ArvoreDatas visiveis={visiveis} marcado={marcado} onAlternarDias={alternarDias} abrirTudo={!!termo} />
+                    {visiveis.includes(VAZIO) && (
+                      <label className="fcn-item" style={estiloItem}>
+                        <input type="checkbox" checked={marcado(VAZIO)} onChange={() => alternar(VAZIO)} />
+                        (Vazias)
+                      </label>
+                    )}
+                  </>
+                ) : exibidos.map((v) => (
                   <label key={v} className="fcn-item" style={estiloItem}>
                     <input type="checkbox" checked={marcado(v)} onChange={() => alternar(v)} />
                     <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={texto(v)}>{texto(v)}</span>
                   </label>
                 ))}
-                {visiveis.length > MAX_EXIBIDOS && (
+                {!arvoreDatas && visiveis.length > MAX_EXIBIDOS && (
                   <p style={{ margin: 0, padding: '6px 8px', color: '#64748b' }}>
                     Mostrando {MAX_EXIBIDOS} de {visiveis.length.toLocaleString('pt-BR')} valores: refine a pesquisa.
                   </p>
@@ -212,7 +327,7 @@ function Menu({ botao, coluna, valores, selecionados, ordem, onOrdenar, onFiltra
   );
 }
 
-export default function FiltroColuna({ coluna, valores, selecionados, ordem, ativo, onOrdenar, onFiltrar, onAbrir, semLista, formatar }: FiltroColunaProps) {
+export default function FiltroColuna({ coluna, valores, selecionados, ordem, ativo, onOrdenar, onFiltrar, onAbrir, semLista, formatar, arvoreDatas }: FiltroColunaProps) {
   const [aberto, setAberto] = useState(false);
   const [botao, setBotao] = useState<HTMLButtonElement | null>(null);
   const fechar = useCallback(() => setAberto(false), []);
@@ -235,7 +350,7 @@ export default function FiltroColuna({ coluna, valores, selecionados, ordem, ati
       </button>
       {aberto && (
         <Menu botao={botao} coluna={coluna} valores={valores} selecionados={selecionados} ordem={ordem}
-          onOrdenar={onOrdenar} onFiltrar={onFiltrar} onFechar={fechar} semLista={semLista} formatar={formatar} />
+          onOrdenar={onOrdenar} onFiltrar={onFiltrar} onFechar={fechar} semLista={semLista} formatar={formatar} arvoreDatas={arvoreDatas} />
       )}
     </>
   );

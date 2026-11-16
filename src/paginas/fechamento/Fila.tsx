@@ -76,7 +76,7 @@ function lerOrdemColuna(params: URLSearchParams): FiltrosNsis['ordemColuna'] {
 /** Texto de um valor de coluna na lista do filtro e nos chips. */
 function textoValor(coluna: ColunaFluxo, v: string): string {
   if (coluna === 'etapa' && v !== '—') return infoEtapa(v as Etapa).nome;
-  if ((coluna === 'termino' || coluna === 'data_lancamento_sf') && /^d{4}-d{2}-d{2}$/.test(v)) return dataBR(v);
+  if ((coluna === 'termino' || coluna === 'data_lancamento_sf') && /^\d{4}-\d{2}-\d{2}$/.test(v)) return dataBR(v);
   return v;
 }
 
@@ -498,6 +498,7 @@ export default function FilaFechamento() {
                               ativo={!!selecionados?.length}
                               semLista={COLUNAS_SEM_LISTA.includes(id)}
                               formatar={(v) => textoValor(id, v)}
+                              arvoreDatas={id === 'termino' || id === 'data_lancamento_sf'}
                               onAbrir={() => abrirColuna(id)}
                               onOrdenar={(dir) => ordenarColuna(id, dir)}
                               onFiltrar={(v) => filtrarColuna(id, v)}
