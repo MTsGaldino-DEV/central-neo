@@ -341,7 +341,13 @@ function responderNsis(url, metodo, corpo) {
     assert.deepEqual(escritas[0].corpo.map((c) => [c.codigo, c.fator, c.valor_inicial]), [[null, 1, 0.25], ['704004', 1.2, 0.04]]);
 
     // ── Colunas por etapa e filtros por coluna (estilo Excel) ──
-    const cabecalhos = () => page.locator('table.grade-nsis thead th').evaluateAll((ths) => ths.map((t) => t.textContent.trim()));
+    // A última coluna é sempre "Ações" (congelada à direita); as asserções de colunas por etapa a ignoram
+    const todosCabecalhos = () => page.locator('table.grade-nsis thead th').evaluateAll((ths) => ths.map((t) => t.textContent.trim()));
+    const cabecalhos = async () => {
+      const todos = await todosCabecalhos();
+      assert.equal(todos[todos.length - 1], 'Ações', 'a última coluna da fila é Ações');
+      return todos.slice(0, -1);
+    };
     const esperarLinhas = (n) => page.waitForFunction((q) => document.querySelectorAll('table.grade-nsis tbody tr:not(.sem-hover)').length === q, n);
     const primeiraCelula = () => page.locator('table.grade-nsis tbody tr').first().locator('td').first().textContent();
     const menu = (rotulo) => page.getByRole('dialog', { name: `Filtro de ${rotulo}` });
@@ -422,6 +428,62 @@ function responderNsis(url, metodo, corpo) {
     await page.getByRole('button', { name: 'Ordenar de Z a A' }).click();
     await page.waitForFunction(() => !new URL(location.href).searchParams.has('ordcol'));
     await page.waitForFunction(() => document.querySelector('table.grade-nsis tbody tr td')?.textContent === '900010010');
+
+    // Listas suspensas dos filtros (no lugar do <select> do navegador)
+    {
+      const lista = (nome) => page.getByRole('combobox', { name: nome });
+      const opcoes = page.getByRole('listbox').getByRole('option');
+      assert.equal(await page.locator('form select').count(), 0, 'sem <select> nativo nos filtros');
+      // Abre com painel, opção escolhida marcada; Esc fecha e devolve o foco ao botão
+      await lista('Pagamento').click();
+      await page.getByRole('listbox', { name: 'Pagamento' }).waitFor();
+      assert.deepEqual(await opcoes.allTextContents(), ['Todos', 'Pago diferente do pedido', 'NSPR sem valor pago']);
+      assert.equal(await page.getByRole('option', { name: 'Todos' }).getAttribute('aria-selected'), 'true');
+      assert.equal(await lista('Pagamento').getAttribute('aria-expanded'), 'true');
+      await foto('lista-suspensa-aberta');
+      await page.keyboard.press('Escape');
+      await page.getByRole('listbox').waitFor({ state: 'detached' });
+      assert.equal(await lista('Pagamento').evaluate((e) => e === document.activeElement), true, 'foco volta ao botão');
+      // Escolher aplica o filtro e o botão fica destacado (cobre); "Todos" desfaz
+      await lista('Pagamento').click();
+      await page.getByRole('option', { name: 'Pago diferente do pedido' }).click();
+      await page.getByRole('listbox').waitFor({ state: 'detached' });
+      await page.waitForFunction(() => new URL(location.href).searchParams.get('alerta') === 'DIVERGENTE');
+      assert.match(await lista('Pagamento').getAttribute('class'), /border-cobre/, 'filtro aplicado destaca o botão');
+      assert.equal((await lista('Pagamento').textContent()).trim(), 'Pago diferente do pedido');
+      await foto('lista-suspensa-filtro-aplicado');
+      await lista('Pagamento').click();
+      await page.getByRole('option', { name: 'Todos' }).click();
+      await page.waitForFunction(() => !new URL(location.href).searchParams.has('alerta'));
+      // Teclado: setas movem, Enter escolhe
+      await lista('Ordem').focus();
+      await page.keyboard.press('Enter');
+      await page.getByRole('listbox', { name: 'Ordem' }).waitFor();
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => new URL(location.href).searchParams.get('ordem') === 'servico');
+      assert.equal((await lista('Ordem').textContent()).trim(), 'Nº do serviço');
+      await lista('Ordem').click();
+      await page.getByRole('option', { name: 'Execução mais antiga primeiro' }).click();
+      await page.waitForFunction(() => !new URL(location.href).searchParams.has('ordem'));
+      // Menu de ação: escolhe o atalho, aplica as datas e o botão continua dizendo "Atalhos…"
+      await lista('Atalhos de período').click();
+      assert.equal(await opcoes.count(), 6);
+      assert.equal(await page.locator('[role=option][aria-selected=true]').count(), 0, 'menu de ação não marca nada');
+      await page.getByRole('option', { name: 'Este ano' }).click();
+      await page.waitForFunction(() => new URL(location.href).searchParams.has('de'));
+      assert.equal((await lista('Atalhos de período').textContent()).trim(), 'Atalhos…');
+      // Celular: o painel cabe na tela
+      await page.setViewportSize({ width: 390, height: 844 });
+      await lista('Pagamento').scrollIntoViewIfNeeded();
+      await lista('Pagamento').click();
+      const painel = await page.getByRole('listbox', { name: 'Pagamento' }).boundingBox();
+      assert.ok(painel.x >= 0 && painel.x + painel.width <= 390, `painel dentro da tela no celular: ${JSON.stringify(painel)}`);
+      await foto('lista-suspensa-celular');
+      await page.keyboard.press('Escape');
+      await page.setViewportSize({ width: 1440, height: 1000 });
+    }
 
     // Colunas de valor só ordenam: sem pesquisa nem lista
     ocultos.clear();

@@ -23,14 +23,16 @@ interface Props {
   onFechar: () => void;
   /** Avisa a fila que algo mudou (etapa, valores). */
   onAlterado: () => void;
+  /** Abre já com "Detalhes da execução" aberto (botão "Ver detalhes" da fila). */
+  detalhesInicial?: boolean;
 }
 
-export default function PainelNsis({ servico, onFechar, onAlterado }: Props) {
+export default function PainelNsis({ servico, onFechar, onAlterado, detalhesInicial }: Props) {
   const [nsis, setNsis] = useState<Nsis | null>(null);
   const [itens, setItens] = useState<ItemNsis[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [detalhes, setDetalhes] = useState(false);
+  const [detalhes, setDetalhes] = useState(!!detalhesInicial);
   const [copiado, setCopiado] = useState(false);
   const [novoItem, setNovoItem] = useState(false);
   // Códigos escolhidos e ainda não salvos: fechar a janela pede confirmação

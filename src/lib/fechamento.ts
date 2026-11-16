@@ -31,7 +31,7 @@ export type Etapa =
   | 'SEM_COBRANCA';
 
 export const ETAPAS: { id: Etapa; nome: string; curto: string; classe: string; marca: string }[] = [
-  { id: 'A_FECHAR', nome: 'A fechar', curto: 'A fechar', classe: 'text-etapa-fechar bg-etapa-fechar-fundo', marca: 'bg-etapa-fechar' },
+  { id: 'A_FECHAR', nome: 'Em revisão', curto: 'Em revisão', classe: 'text-etapa-fechar bg-etapa-fechar-fundo', marca: 'bg-etapa-fechar' },
   { id: 'AGUARDANDO_NSMP', nome: 'Aguardando NSMP', curto: 'Gerar NSMP', classe: 'text-etapa-nsmp bg-etapa-nsmp-fundo', marca: 'bg-etapa-nsmp' },
   { id: 'AGUARDANDO_NSPR', nome: 'Aguardando NSPR', curto: 'Aguard. NSPR', classe: 'text-etapa-nspr bg-etapa-nspr-fundo', marca: 'bg-etapa-nspr' },
   { id: 'AGUARDANDO_SALESFORCE', nome: 'Aguardando Salesforce', curto: 'Aguard. Salesforce', classe: 'text-etapa-salesforce bg-etapa-salesforce-fundo', marca: 'bg-etapa-salesforce' },

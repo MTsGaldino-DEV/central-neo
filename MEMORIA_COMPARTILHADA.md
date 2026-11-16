@@ -100,6 +100,22 @@ Falta dar o módulo `disponibilidade` em Logins e acessos a quem vai usar (ADMIN
 - **Verificado:** typecheck; 059 aplicada e desfeita sobre o banco real (lançamentos 14.161 / ocorrências 1.057 iguais, 1 constraint de causa, causa nova
   aceita, inventada recusada). **Não verificado:** tela no navegador e Excel com o motivo novo.
 
+## Listas suspensas dos filtros — 16/11/2026 (Claude)
+
+**Estado: código pronto, SEM commit.** Pedido do Matheus: os filtros com lista suspensa estavam no design padrão do navegador; fazer algo mais elaborado.
+
+- **Componente novo:** `src/components/ui/lista-suspensa.tsx` (`ListaSuspensa`, sobre o Popover do shadcn, com as cores da NEO): botão com seta que gira, destaque
+  (sinal ou cobre) quando há filtro aplicado, painel com sombra e animação, opção escolhida com check, setas/Enter/Esc/Home/End, inicial para pular de opção,
+  caixa de busca (sem acento) automática acima de 8 opções, "Nada encontrado", modo `acao` (menu de atalhos: não marca nada e o botão segue com o texto fixo) e painel
+  que cabe no celular. O botão tem `role="combobox"` e o painel `role="listbox"`.
+- **Trocados (9 `<select>` de filtro):** Manutenção Fila (Atalhos de período, Tipo do serviço, Pagamento, Ordem), Manutenção Painel (período), Tabela de valores
+  (operação), Colaboradores (situação e login), Faturamento Contrato (tabela). **Não trocados** (não são filtros): Acessos (papel na linha), Ações de admin (mover
+  etapa), navegação da Documentação no celular, formulários antigos do TraceOne. Dá para trocar com o mesmo componente se o Matheus quiser.
+- **Verificado:** `manutencao-ui-testar` (novo trecho: sem `<select>` nos filtros, abrir/Esc/foco de volta, escolher aplica o filtro e destaca em cobre, teclado, menu de
+  ação, painel dentro da tela em 390 px; capturas `lista-suspensa-*` conferidas, inclusive a busca, testada com a busca ligada de propósito e depois desligada),
+  `faturamento-ui-testar` e `disponibilidade-ui-testar` (passam; o de Faturamento falhou uma vez por tempo e passou nas duas repetições), typecheck e build.
+  **Não verificado visualmente:** Colaboradores, Painel do fechamento, Tabela de valores e Contrato (só compilação e testes que passam por essas telas); falta Matheus ver.
+
 ## Fim de semana já preenchido como folga de fim de escala — 13/11/2026 (Claude)
 
 **Estado: código pronto, SEM commit; migration 060 escrita e testada em transação desfeita, NÃO aplicada.** Matheus aplica com
@@ -232,6 +248,15 @@ Só leitura de `Importação/Disponibilidade Contrato 7360_Macro.xlsm`; nada foi
 - **Feito (só visual):** grade estilo Excel em `Fila.tsx` + bloco `.grade-nsis` em `index.css`: cabeçalho fixo, bordas em todas as células, rolagem interna (`calc(100vh - 280px)`), contador "N NSIS" no topo, realce no mouse, cores por coluna (NSMP roxo, NSPR verde, Apropriação azul) e coluna Etapa congelada à direita em telas ≥ 900 px. Colunas, filtros e paginação de 50 não mudaram.
 - **Não feito:** filtro e ordenação por coluna (menu ▾ do Visão de Dono). Lá tudo carrega no navegador; aqui a lista é paginada no servidor, então exigiria mudar `listarNsis`.
 - **Verificado:** typecheck; `manutencao-ui-testar` passou com o Supabase simulado. Falta Matheus ver com dados reais.
+
+## Fila de NSIS: etapa, ações e busca no estilo do Visão de Dono — 16/11/2026 (Claude)
+
+**Estado: código pronto, SEM commit.** Pedido do Matheus: deixar a fila parecida com a aba Instalações do Visão de Dono, principalmente etapa e grupo de ações.
+- **Etapa:** "A fechar" virou **"Em revisão"** (nome e curto, só texto: o id `A_FECHAR` não mudou), no Início e na importação também. Coluna Etapa é um selo suave (`EtapaChip selo`, cores do Visão de Dono) e deixou de ser a coluna congelada. Filtros de etapa viraram pílulas com contador (ativa azul-marinho `#0f2544`; contador some em zero).
+- **Ações:** nova coluna "Ações" congelada à direita (`AcoesLinha` em `Fila.tsx`): "Ver detalhes" (abre a janela com Detalhes da execução aberto, `PainelNsis detalhesInicial`) e o botão da etapa — "Fechar →" (Em revisão), "Informar NSPR", "Informar Salesforce", "Informar apropriação". Todos abrem a janela da NSIS, onde a etapa é preenchida; clicar na linha continua abrindo.
+- **Busca e filtros** agora ficam acima das pílulas de etapa. Removido o aviso "Valores em R$ pela US vigente…" da Fila (pedido do Matheus: tela com pouca informação).
+- **Fluxo descrito por Matheus (16/11):** Em revisão = código do contrato, equipe, fator e NSMP; NSPR = só o número; Salesforce = valor e data de lançamento; apropriação = pago, fim. **Decidido por Matheus (16/11/2026):** o valor pago **continua na etapa NSPR** (número da NSPR + valor pago em US) e o Salesforce informa **só a data de lançamento**. O fluxo de gravação não mudou; vale a regra da seção "Fila de NSIS: fluxo novo" acima, não a descrição resumida do pedido.
+- **Verificado:** typecheck, `vite build`, `manutencao-ui-testar` (helper `cabecalhos` agora exige "Ações" como última coluna e a ignora nas comparações; captura `fila-fluxo-a-fechar-desktop` conferida). **Não verificado:** dados reais, celular (captura não reconferida), clique nos botões de cada etapa além do "Fechar →".
 
 ## Fila de NSIS: vários códigos, fator e janela no meio — 06/11/2026 (Claude)
 

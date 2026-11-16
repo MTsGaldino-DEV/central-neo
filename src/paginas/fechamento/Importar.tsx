@@ -12,7 +12,7 @@ export default function ImportarFechamento() {
     <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-5">
       <div>
         <h2 className="text-xl font-extrabold tracking-tight">Importar para o fechamento</h2>
-        <p className="text-sm text-aco">As NSIS entram na fila "A fechar". Importar de novo o mesmo arquivo não duplica nada.</p>
+        <p className="text-sm text-aco">As NSIS entram na fila "Em revisão". Importar de novo o mesmo arquivo não duplica nada.</p>
       </div>
       <div className="flex gap-1 bg-white border border-linha rounded-xl p-1 w-fit">
         <BotaoAba ativa={aba === 'relatorio'} onClick={() => setAba('relatorio')} icone={<FileSpreadsheet size={15} />}>Relatório do GDIS</BotaoAba>

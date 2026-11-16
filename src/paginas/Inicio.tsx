@@ -82,7 +82,7 @@ export default function Inicio() {
             <h3 className="text-lg font-extrabold mt-4">Manutenção</h3>
             <p className="text-sm text-aco">NSIS de manutenção: do GDIS até a fatura.</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">
-              <Mini rotulo="A fechar" valor={resumo?.etapas.A_FECHAR ?? '—'} cor="text-etapa-fechar" />
+              <Mini rotulo="Em revisão" valor={resumo?.etapas.A_FECHAR ?? '—'} cor="text-etapa-fechar" />
               <Mini rotulo="Aguard. NSPR" valor={resumo?.etapas.AGUARDANDO_NSPR ?? (resumo ? 0 : '—')} cor="text-etapa-nspr" />
               <Mini rotulo="Aguard. Salesforce" valor={resumo?.etapas.AGUARDANDO_SALESFORCE ?? (resumo ? 0 : '—')} cor="text-etapa-salesforce" />
               <Mini rotulo="Aguard. apropriação" valor={resumo?.etapas.AGUARDANDO_APROPRIACAO ?? (resumo ? 0 : '—')} cor="text-etapa-apropriacao" />

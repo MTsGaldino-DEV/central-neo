@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Search, Download, Plus, Loader2, RefreshCw, FileSpreadsheet, AlertTriangle, ChevronRight, X, Inbox, CalendarRange, FilterX, ArrowUp, ArrowDown,
+  Search, Download, Plus, Loader2, RefreshCw, FileSpreadsheet, AlertTriangle, X, Inbox, CalendarRange, FilterX, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { Pagination } from '@/components/Pagination';
+import { ListaSuspensa } from '@/components/ui/lista-suspensa';
 import EtapaChip from '@/components/fechamento/EtapaChip';
 import FiltroColuna from '@/components/fechamento/FiltroColuna';
 import PainelNsis from './PainelNsis';
@@ -105,6 +106,7 @@ export default function FilaFechamento() {
   const [erro, setErro] = useState<string | null>(null);
   const [exportando, setExportando] = useState(false);
   const [novaAberta, setNovaAberta] = useState(false);
+  const [detalhesAbertos, setDetalhesAbertos] = useState(false);
   const [tipos, setTipos] = useState<string[]>([]);
   // valores de cada coluna, carregados quando o menu abre (null = carregando)
   const [valoresCol, setValoresCol] = useState<Partial<Record<ColunaFluxo, string[] | null>>>({});
@@ -161,6 +163,12 @@ export default function FilaFechamento() {
     setParams(p, { replace: !('nsis' in mudancas) });
   }
   const mudarParam = (chave: string, valor: string | null) => mudarParams({ [chave]: valor });
+
+  /** Abre a janela da NSIS; "Ver detalhes" já deixa os detalhes da execução abertos. */
+  function abrirPainel(servico: string, detalhes: boolean) {
+    setDetalhesAbertos(detalhes);
+    mudarParam('nsis', servico);
+  }
 
   function trocarEtapa(e: Etapa | 'TODAS') {
     mudarParams({ etapa: e, visao: null });
@@ -285,38 +293,103 @@ export default function FilaFechamento() {
           </button>
         </div>
       </div>
-      {(resumo?.itensSemValorUS ?? 0) > 0 && (
-        <p className="-mt-3 text-[11px] text-aco-claro">
-          Valores em R$ pela US vigente na data de execução. {resumo!.itensSemValorUS.toLocaleString('pt-BR')} itens executados antes do primeiro valor de US cadastrado
-          ficam fora do R$: <Link to="/fechamento/tabela" className="underline">cadastrar valores da US</Link>.
-        </p>
+
+      {/* Busca e filtros: ficam acima das etapas, como na lista de Instalações do Visão de Dono */}
+      {visao === 'nsis' && (
+        <form onSubmit={aplicarTextos} className="bg-white border border-linha rounded-2xl p-3 space-y-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="flex-1 min-w-[240px]">
+              <label className="block text-[11px] font-semibold text-aco mb-1">Busca</label>
+              <div className="relative">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-aco-claro" />
+                <input value={busca} onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Serviço, NSMP, NSPR, AP, equipe, supervisor ou texto…" className={`${campo} w-full pl-9`} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-aco mb-1 flex items-center gap-1"><CalendarRange size={12} /> Data de execução</label>
+              <div className="flex items-center gap-1.5">
+                <input type="date" value={filtros.de} max={filtros.ate || undefined} onChange={(e) => mudarParam('de', e.target.value)}
+                  className={`${campo} w-[150px] ${filtros.de ? 'border-sinal' : ''}`} aria-label="Execução de" />
+                <span className="text-xs text-aco">até</span>
+                <input type="date" value={filtros.ate} min={filtros.de || undefined} onChange={(e) => mudarParam('ate', e.target.value)}
+                  className={`${campo} w-[150px] ${filtros.ate ? 'border-sinal' : ''}`} aria-label="Execução até" />
+                <ListaSuspensa acao rotulo="Atalhos de período" placeholder="Atalhos…" valor="" opcoes={ATALHOS.map((a) => ({ valor: a.id, rotulo: a.nome }))}
+                  onChange={(id) => {
+                    const a = ATALHOS.find((x) => x.id === id);
+                    if (a) { const [de, ate] = a.faixa(); mudarParams({ de, ate }); }
+                  }} />
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <label className="block text-[11px] font-semibold text-aco mb-1">Tipo do serviço</label>
+              <ListaSuspensa rotulo="Tipo do serviço" valor={filtros.tipo ?? ''} ativo={!!filtros.tipo} className="min-w-[8.5rem]"
+                opcoes={[{ valor: '', rotulo: 'Todos' }, ...[...new Set([...tipos, ...(filtros.tipo ? [filtros.tipo] : [])])].map((t) => ({ valor: t, rotulo: t }))]}
+                onChange={(v) => mudarParam('tipo', v || null)} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-aco mb-1">Localidade</label>
+              <input value={localidade} onChange={(e) => setLocalidade(e.target.value.replace(/\D/g, '').slice(0, 4))} onBlur={() => aplicarTextos()}
+                placeholder="0000" inputMode="numeric" className={`${campo} w-24 font-codigo`} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-aco mb-1">Equipe</label>
+              <input value={equipe} onChange={(e) => setEquipe(e.target.value)} onBlur={() => aplicarTextos()}
+                placeholder="Nº da equipe" className={`${campo} w-32 font-codigo`} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-aco mb-1">Pagamento</label>
+              <ListaSuspensa rotulo="Pagamento" valor={filtros.alerta ?? ''} ativo={!!filtros.alerta} tom="cobre" className="min-w-[8.5rem]"
+                opcoes={[{ valor: '', rotulo: 'Todos' }, { valor: 'DIVERGENTE', rotulo: 'Pago diferente do pedido' }, { valor: 'SEM_VALOR', rotulo: 'NSPR sem valor pago' }]}
+                onChange={(v) => mudarParam('alerta', v || null)} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-aco mb-1">Ordem</label>
+              <ListaSuspensa rotulo="Ordem" valor={filtros.ordem ?? 'termino_asc'}
+                opcoes={[{ valor: 'termino_asc', rotulo: 'Execução mais antiga primeiro' }, { valor: 'termino_desc', rotulo: 'Execução mais recente primeiro' }, { valor: 'servico', rotulo: 'Nº do serviço' }]}
+                onChange={(v) => mudarParams({ ordem: v === 'termino_asc' ? null : v, ordcol: null })} />
+            </div>
+            <span className="flex-1" />
+            <button type="submit" className="h-9 px-4 rounded-lg bg-sinal text-white text-sm font-bold hover:bg-sinal-forte">Filtrar</button>
+            <button type="button" onClick={() => carregar()} className="h-9 w-9 flex items-center justify-center border border-linha rounded-lg bg-white text-aco hover:text-sinal" title="Atualizar">
+              <RefreshCw size={15} className={carregando ? 'animate-spin' : ''} />
+            </button>
+          </div>
+          {chips.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-linha">
+              {chips.map((c, i) => (
+                <span key={i} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-sinal-fundo text-sinal-forte text-xs">
+                  {c.rotulo}
+                  <button type="button" onClick={() => mudarParams(c.limpar)} className="p-0.5 rounded-full hover:bg-white/70" aria-label="Remover filtro"><X size={12} /></button>
+                </span>
+              ))}
+              <button type="button" onClick={limparFiltros} className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-aco hover:text-erro">
+                <FilterX size={13} /> Limpar filtros
+              </button>
+              <span className="flex-1" />
+              <span className="text-xs text-aco"><b className="text-tinta">{totalGeral.toLocaleString('pt-BR')}</b> NSIS com esses filtros (todas as etapas)</span>
+            </div>
+          )}
+        </form>
       )}
 
-      {/* Etapas do fluxo */}
-      <div className="bg-white border border-linha rounded-2xl p-1.5 flex flex-nowrap items-center gap-1 overflow-x-auto">
-        {[...ETAPAS_FLUXO, 'SEPARADOR' as const, ...ETAPAS_HISTORICO].map((id, i) => {
-          if (id === 'SEPARADOR') return <span key={id} className="w-px h-6 bg-linha mx-2 shrink-0" />;
+      {/* Etapas do fluxo: pílulas com contador, como os filtros da lista de Instalações do Visão de Dono */}
+      <div className="flex flex-wrap gap-2">
+        {[...ETAPAS_FLUXO, ...ETAPAS_HISTORICO].map((id) => {
           const e = infoEtapa(id);
           const ativa = visao === 'nsis' && etapa === e.id;
           const historica = ETAPAS_HISTORICO.includes(e.id);
+          const n = contagem(e.id);
           // chips só do histórico somem quando vazios (a menos que sejam a etapa aberta)
-          if (ETAPAS_HISTORICO_ESCONDIVEIS.includes(e.id) && !ativa && contagem(e.id) === 0) return null;
+          if (ETAPAS_HISTORICO_ESCONDIVEIS.includes(e.id) && !ativa && n === 0) return null;
           return (
-            <div key={e.id} className="flex items-center shrink-0">
-              {i > 0 && !historica && <ChevronRight size={13} className="text-aco-claro/60" />}
-              <button onClick={() => trocarEtapa(e.id)} title={historica ? `${e.nome} (histórico)` : e.nome}
-                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${ativa ? `${e.classe} ring-1 ring-current/20` : 'text-aco hover:bg-nevoa'}`}>
-                <span className={`size-2 rounded-full ${e.marca}`} />
-                {e.curto}
-                <span className={`min-w-6 px-1.5 rounded-full text-xs ${ativa ? 'bg-white/70' : 'bg-nevoa'}`}>{contagem(e.id)}</span>
-              </button>
-            </div>
+            <PilulaEtapa key={e.id} ativa={ativa} rotulo={e.curto} n={n} titulo={historica ? `${e.nome} (histórico)` : e.nome}
+              onClick={() => trocarEtapa(e.id)} />
           );
         })}
-        <span className="flex-1 min-w-2" />
-        <button onClick={() => trocarEtapa('TODAS')} className={`shrink-0 whitespace-nowrap px-3 py-2 rounded-xl text-sm font-semibold ${visao === 'nsis' && etapa === 'TODAS' ? 'bg-sinal-fundo text-sinal' : 'text-aco hover:bg-nevoa'}`}>
-          Todas <span className="text-xs">{totalGeral}</span>
-        </button>
+        <PilulaEtapa ativa={visao === 'nsis' && etapa === 'TODAS'} rotulo="Todas" n={totalGeral} titulo="Todas as etapas" onClick={() => trocarEtapa('TODAS')} />
       </div>
 
       <div className="flex gap-1 bg-white border border-linha rounded-xl p-1 w-fit">
@@ -337,95 +410,6 @@ export default function FilaFechamento() {
         }} />
       ) : (
         <>
-          {/* Filtros */}
-          <form onSubmit={aplicarTextos} className="bg-white border border-linha rounded-2xl p-3 space-y-3">
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="flex-1 min-w-[240px]">
-                <label className="block text-[11px] font-semibold text-aco mb-1">Busca</label>
-                <div className="relative">
-                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-aco-claro" />
-                  <input value={busca} onChange={(e) => setBusca(e.target.value)}
-                    placeholder="Serviço, NSMP, NSPR, AP, equipe, supervisor ou texto…" className={`${campo} w-full pl-9`} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-aco mb-1 flex items-center gap-1"><CalendarRange size={12} /> Data de execução</label>
-                <div className="flex items-center gap-1.5">
-                  <input type="date" value={filtros.de} max={filtros.ate || undefined} onChange={(e) => mudarParam('de', e.target.value)}
-                    className={`${campo} w-[150px] ${filtros.de ? 'border-sinal' : ''}`} aria-label="Execução de" />
-                  <span className="text-xs text-aco">até</span>
-                  <input type="date" value={filtros.ate} min={filtros.de || undefined} onChange={(e) => mudarParam('ate', e.target.value)}
-                    className={`${campo} w-[150px] ${filtros.ate ? 'border-sinal' : ''}`} aria-label="Execução até" />
-                  <select value="" onChange={(e) => {
-                    const a = ATALHOS.find((x) => x.id === e.target.value);
-                    if (a) { const [de, ate] = a.faixa(); mudarParams({ de, ate }); }
-                  }} className={`${campo} px-2 text-aco`} aria-label="Atalhos de período">
-                    <option value="">Atalhos…</option>
-                    {ATALHOS.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-end gap-2">
-              <div>
-                <label className="block text-[11px] font-semibold text-aco mb-1">Tipo do serviço</label>
-                <select value={filtros.tipo ?? ''} onChange={(e) => mudarParam('tipo', e.target.value || null)}
-                  className={`${campo} px-2 ${filtros.tipo ? 'border-sinal text-sinal font-semibold' : ''}`}>
-                  <option value="">Todos</option>
-                  {[...new Set([...tipos, ...(filtros.tipo ? [filtros.tipo] : [])])].map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-aco mb-1">Localidade</label>
-                <input value={localidade} onChange={(e) => setLocalidade(e.target.value.replace(/\D/g, '').slice(0, 4))} onBlur={() => aplicarTextos()}
-                  placeholder="0000" inputMode="numeric" className={`${campo} w-24 font-codigo`} />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-aco mb-1">Equipe</label>
-                <input value={equipe} onChange={(e) => setEquipe(e.target.value)} onBlur={() => aplicarTextos()}
-                  placeholder="Nº da equipe" className={`${campo} w-32 font-codigo`} />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-aco mb-1">Pagamento</label>
-                <select value={filtros.alerta ?? ''} onChange={(e) => mudarParam('alerta', e.target.value || null)}
-                  className={`${campo} px-2 ${filtros.alerta ? 'border-cobre text-cobre font-semibold' : ''}`}>
-                  <option value="">Todos</option>
-                  <option value="DIVERGENTE">Pago diferente do pedido</option>
-                  <option value="SEM_VALOR">NSPR sem valor pago</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-aco mb-1">Ordem</label>
-                <select value={filtros.ordem} onChange={(e) => mudarParams({ ordem: e.target.value === 'termino_asc' ? null : e.target.value, ordcol: null })}
-                  className={`${campo} px-2`}>
-                  <option value="termino_asc">Execução mais antiga primeiro</option>
-                  <option value="termino_desc">Execução mais recente primeiro</option>
-                  <option value="servico">Nº do serviço</option>
-                </select>
-              </div>
-              <span className="flex-1" />
-              <button type="submit" className="h-9 px-4 rounded-lg bg-sinal text-white text-sm font-bold hover:bg-sinal-forte">Filtrar</button>
-              <button type="button" onClick={() => carregar()} className="h-9 w-9 flex items-center justify-center border border-linha rounded-lg bg-white text-aco hover:text-sinal" title="Atualizar">
-                <RefreshCw size={15} className={carregando ? 'animate-spin' : ''} />
-              </button>
-            </div>
-            {chips.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-linha">
-                {chips.map((c, i) => (
-                  <span key={i} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-sinal-fundo text-sinal-forte text-xs">
-                    {c.rotulo}
-                    <button type="button" onClick={() => mudarParams(c.limpar)} className="p-0.5 rounded-full hover:bg-white/70" aria-label="Remover filtro"><X size={12} /></button>
-                  </span>
-                ))}
-                <button type="button" onClick={limparFiltros} className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-aco hover:text-erro">
-                  <FilterX size={13} /> Limpar filtros
-                </button>
-                <span className="flex-1" />
-                <span className="text-xs text-aco"><b className="text-tinta">{totalGeral.toLocaleString('pt-BR')}</b> NSIS com esses filtros (todas as etapas)</span>
-              </div>
-            )}
-          </form>
-
           {erro && <div className="text-sm text-erro bg-erro-fundo border border-red-200 rounded-xl p-3 flex gap-2"><AlertTriangle size={16} />{erro}</div>}
 
           {/* Tabela: grade estilo Excel, igual à lista de Instalações do Visão de Dono */}
@@ -442,7 +426,7 @@ export default function FilaFechamento() {
                       const ordemDaColuna = filtros.ordemColuna?.coluna === id ? filtros.ordemColuna.dir : null;
                       const selecionados = filtros.colunas?.[id];
                       return (
-                        <th key={id} className={`${def.numero ? 'text-right' : ''} ${id === 'observacao' ? 'min-w-[260px]' : ''} ${id === 'etapa' ? 'grade-fixa-cab' : ''}`}>
+                        <th key={id} className={`${def.numero ? 'text-right' : ''} ${id === 'observacao' ? 'min-w-[260px]' : ''}`}>
                           <div className={`flex items-center gap-1.5 ${def.numero ? 'justify-end' : ''}`}>
                             <span>{def.rotulo}</span>
                             {ordemDaColuna === 'asc' && <ArrowUp size={11} className="text-sinal" aria-hidden="true" />}
@@ -463,24 +447,32 @@ export default function FilaFechamento() {
                         </th>
                       );
                     })}
+                    <th className="grade-fixa-cab text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {!carregando && linhas.length === 0 && (
-                    <tr className="sem-hover"><td colSpan={colunas.length} className="!py-9 text-center !text-aco-claro !whitespace-normal">
+                    <tr className="sem-hover"><td colSpan={colunas.length + 1} className="!py-9 text-center !text-aco-claro !whitespace-normal">
                       <Inbox size={28} className="mx-auto text-aco-claro mb-2" />
-                      {etapa === 'A_FECHAR' && !filtrado ? 'Nenhuma NSIS a fechar. Importe o relatório da semana.' : 'Nenhuma NSIS encontrada com esses filtros.'}
+                      {etapa === 'A_FECHAR' && !filtrado ? 'Nenhuma NSIS em revisão. Importe o relatório da semana.' : 'Nenhuma NSIS encontrada com esses filtros.'}
                     </td></tr>
                   )}
                   {carregando && linhas.length === 0 && (
-                    <tr className="sem-hover"><td colSpan={colunas.length} className="!py-9 text-center !text-aco-claro">
+                    <tr className="sem-hover"><td colSpan={colunas.length + 1} className="!py-9 text-center !text-aco-claro">
                       <Loader2 size={16} className="animate-spin inline mr-2 align-text-bottom" /> Carregando…
                     </td></tr>
                   )}
                   {linhas.map((n) => (
-                    <tr key={n.servico} onClick={() => mudarParam('nsis', n.servico)}
+                    <tr key={n.servico} onClick={() => {
+                      // texto selecionado: a pessoa está copiando a célula, não abrindo a NSIS
+                      if (window.getSelection()?.toString()) return;
+                      abrirPainel(n.servico, false);
+                    }}
                       className={aberta === n.servico ? 'selecionada' : ''}>
                       {colunas.map((id) => <Celula key={id} id={id} n={n} localidadeVisivel={colunas.includes('localidade')} />)}
+                      <td className="grade-fixa text-right cursor-default" onClick={(ev) => ev.stopPropagation()}>
+                        <AcoesLinha n={n} onAbrir={(detalhes) => abrirPainel(n.servico, detalhes)} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -493,7 +485,8 @@ export default function FilaFechamento() {
       )}
 
       {aberta && (
-        <PainelNsis servico={aberta} onFechar={() => mudarParam('nsis', null)} onAlterado={() => carregar()} />
+        <PainelNsis key={`${aberta}-${detalhesAbertos}`} servico={aberta} detalhesInicial={detalhesAbertos}
+          onFechar={() => mudarParam('nsis', null)} onAlterado={() => carregar()} />
       )}
       {novaAberta && <ModalNovaNsis onFechar={() => setNovaAberta(false)} onCriada={(s) => { setNovaAberta(false); mudarParam('nsis', s); carregar(); }} />}
     </div>
@@ -545,8 +538,42 @@ function Celula({ id, n, localidadeVisivel }: { id: ColunaFluxo; n: Nsis; locali
         {n.qtd_itens > 0 && <span className="block text-[11px] text-[#64748b] mt-0.5">{n.qtd_itens} item{n.qtd_itens > 1 ? 's' : ''}</span>}
       </td>
     );
-    case 'etapa': return <td className="grade-fixa"><EtapaChip etapa={n.etapa} curto /></td>;
+    case 'etapa': return <td><EtapaChip etapa={n.etapa} curto selo /></td>;
   }
+}
+
+/** Pílula de filtro de etapa: ativa em azul-marinho, com contador (some quando zero, como no Visão de Dono). */
+function PilulaEtapa({ ativa, rotulo, n, titulo, onClick }: { ativa: boolean; rotulo: string; n: number; titulo: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} title={titulo} aria-pressed={ativa}
+      className={`flex items-center gap-1.5 rounded-lg border px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors ${ativa ? 'border-[#0f2544] bg-[#0f2544] text-white' : 'border-[#e2e8f0] bg-white text-[#64748b] hover:border-[#cbd5e1] hover:text-[#0f2544]'}`}>
+      {rotulo}
+      {n > 0 && <span className={`rounded-full px-[7px] py-px text-[11px] font-bold ${ativa ? 'bg-white/25 text-white' : 'bg-[#f1f5f9] text-[#64748b]'}`}>{n}</span>}
+    </button>
+  );
+}
+
+const BOTAO = 'rounded-md px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap cursor-pointer';
+const BOTAO_SEC = `${BOTAO} border border-[#e2e8f0] bg-[#f8fafc] text-[#64748b] hover:border-[#cbd5e1] hover:text-[#0f2544]`;
+const BOTAO_PRIM = `${BOTAO} bg-[#0f2544] text-white hover:bg-[#1b3a66]`;
+const BOTAO_AZUL = `${BOTAO} bg-[#1d4ed8] text-white hover:bg-[#1e40af]`;
+
+/**
+ * Grupo de ações da linha, como na lista de Instalações do Visão de Dono: botão secundário "Ver detalhes"
+ * e o botão da etapa (o que a pessoa faz agora). Ele abre a janela da NSIS, onde a etapa é preenchida.
+ */
+function AcoesLinha({ n, onAbrir }: { n: Nsis; onAbrir: (detalhes: boolean) => void }) {
+  const detalhes = <button type="button" onClick={() => onAbrir(true)} className={BOTAO_SEC}>Ver detalhes</button>;
+  const fazer = (rotulo: string, classe: string) => <button type="button" onClick={() => onAbrir(false)} className={classe}>{rotulo}</button>;
+  let botoes: ReactNode;
+  switch (n.etapa) {
+    case 'A_FECHAR': botoes = fazer(ehFluxoNovo(n) ? 'Fechar →' : 'Abrir', BOTAO_PRIM); break;
+    case 'AGUARDANDO_NSPR': botoes = <>{detalhes}{fazer('Informar NSPR', BOTAO_AZUL)}</>; break;
+    case 'AGUARDANDO_SALESFORCE': botoes = <>{detalhes}{fazer('Informar Salesforce', BOTAO_AZUL)}</>; break;
+    case 'AGUARDANDO_APROPRIACAO': botoes = <>{detalhes}{fazer('Informar apropriação', BOTAO_AZUL)}</>; break;
+    default: botoes = detalhes;
+  }
+  return <div className="flex items-center justify-end gap-1.5">{botoes}</div>;
 }
 
 /** NSMP / NSPR / equipe / AP da NSIS: um número por linha; "falta" quando algum item ainda não tem. */
