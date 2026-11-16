@@ -157,7 +157,7 @@ Só variáveis `VITE_` vão para o navegador. Service_role e senha do banco nunc
 
 Migrations do banco central-neo: `node scripts/migrar.cjs` (usa `NEO_DATABASE_URL`; `--testar` roda e desfaz). 001–009 aplicadas em 2026-10-20 010 em 2026-10-21 011 e 012 em 2026-10-22.
 Edge Function: `supabase functions deploy admin-usuarios --project-ref dxcxoimvweeggrvtbmxb --use-api`.
-Edge Function giro-colaboradores: `supabase functions deploy giro-colaboradores --project-ref dxcxoimvweeggrvtbmxb --use-api` (precisa do segredo `GIRO_INTEGRACAO_SEGREDO` nas secrets da função; o mesmo valor vai em `NEO_INTEGRACAO_SEGREDO` no GIRO). Teste puro: `node --experimental-strip-types scripts/giro-colaboradores-testar.mjs`.
+Edge Function giro-colaboradores: `supabase functions deploy giro-colaboradores --project-ref dxcxoimvweeggrvtbmxb --use-api --no-verify-jwt` (a flag é obrigatória: o GIRO chama só com o cabeçalho `x-giro-segredo`, sem JWT; sem ela o Supabase responde 401 a toda chamada. A proteção é o segredo, conferido em tempo constante) (precisa do segredo `GIRO_INTEGRACAO_SEGREDO` nas secrets da função; o mesmo valor vai em `NEO_INTEGRACAO_SEGREDO` no GIRO). Teste puro: `node --experimental-strip-types scripts/giro-colaboradores-testar.mjs`.
 No painel do Supabase (central-neo), em Authentication → URL Configuration, cadastre a URL publicada da NEO em Site URL e em Redirect URLs. Sem isso, o link de "Esqueci minha senha" não volta para `/reset-senha`.
 
 A NEO não acessa o GDIS diretamente, então não precisa de VPN.
