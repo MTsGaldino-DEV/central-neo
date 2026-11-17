@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { ListaSuspensa } from '@/components/ui/lista-suspensa';
 import { Loader2, AlertTriangle, RefreshCw, Info } from 'lucide-react';
 import { ETAPAS, infoEtapa, formatarUS, formatarReais, formatarData, type Etapa } from '@/lib/fechamento';
 import { getPainel, FAIXAS_IDADE, type Painel as DadosPainel, type Par } from '@/lib/painel';
@@ -122,13 +123,14 @@ export default function Painel() {
           <h2 className="text-xl font-extrabold tracking-tight">Painel do fechamento</h2>
           <p className="text-sm text-aco">Período: <strong>{faixa.rotulo}</strong>, pela data de execução das NSIS.</p>
         </div>
-        <select value={personalizado ? 'personalizado' : periodo} onChange={(e) => mudarPeriodo(e.target.value)}
-          className="h-9 px-2 text-sm border border-linha rounded-lg bg-white" aria-label="Atalhos de período">
-          {personalizado && <option value="personalizado">Datas escolhidas</option>}
-          <option value="12m">Últimos 12 meses</option>
-          {anos.map((a) => <option key={a} value={String(a)}>{a}</option>)}
-          <option value="tudo">Todo o histórico</option>
-        </select>
+        <ListaSuspensa rotulo="Atalhos de período" valor={personalizado ? 'personalizado' : periodo} ativo={personalizado}
+          opcoes={[
+            ...(personalizado ? [{ valor: 'personalizado', rotulo: 'Datas escolhidas' }] : []),
+            { valor: '12m', rotulo: 'Últimos 12 meses' },
+            ...anos.map((a) => ({ valor: String(a), rotulo: String(a) })),
+            { valor: 'tudo', rotulo: 'Todo o histórico' },
+          ]}
+          onChange={mudarPeriodo} />
         <div className="flex items-center gap-1.5">
           <input type="date" value={deMostrado} max={ateMostrado || undefined} onChange={(e) => mudarDatas(e.target.value, ateMostrado)}
             className={`h-9 px-2 text-sm border rounded-lg bg-white w-[150px] ${personalizado ? 'border-sinal' : 'border-linha'}`} aria-label="Execução de" />

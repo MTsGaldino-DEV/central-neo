@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Search, Loader2, Pencil, History, RotateCcw, Plus, X, AlertTriangle, Info, Check, EyeOff, Eye, Trash2, Banknote } from 'lucide-react';
 import { useSessao } from '@/contexto/Sessao';
+import { ListaSuspensa } from '@/components/ui/lista-suspensa';
 import { formatarUS, formatarReais, formatarData, lerNumero } from '@/lib/fechamento';
 import { listarValoresUS, salvarValorUS, excluirValorUS, type ValorUS } from '@/lib/painel';
 import {
@@ -79,10 +80,9 @@ export default function TabelaValores() {
           <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Código ou serviço: poda, cruzeta, 704091…"
             className="w-full h-9 pl-9 pr-3 text-sm border border-linha rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sinal/30 focus:border-sinal" />
         </div>
-        <select value={operacao} onChange={(e) => setOperacao(e.target.value)} className="h-9 px-2 text-sm border border-linha rounded-lg bg-white">
-          <option value="">Todas as operações</option>
-          {operacoes.map((o) => <option key={o} value={o}>{o}</option>)}
-        </select>
+        <ListaSuspensa rotulo="Operação" valor={operacao} ativo={operacao !== ''}
+          opcoes={[{ valor: '', rotulo: 'Todas as operações' }, ...operacoes.map((o) => ({ valor: o, rotulo: o }))]}
+          onChange={setOperacao} />
         <label className="flex items-center gap-2 h-9 px-3 text-sm border border-linha rounded-lg bg-white cursor-pointer select-none">
           <input type="checkbox" checked={somenteAcertados} onChange={(e) => setSomenteAcertados(e.target.checked)} className="accent-sinal" />
           Só acertados

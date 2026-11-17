@@ -114,7 +114,9 @@ Falta dar o módulo `disponibilidade` em Logins e acessos a quem vai usar (ADMIN
 - **Verificado:** `manutencao-ui-testar` (novo trecho: sem `<select>` nos filtros, abrir/Esc/foco de volta, escolher aplica o filtro e destaca em cobre, teclado, menu de
   ação, painel dentro da tela em 390 px; capturas `lista-suspensa-*` conferidas, inclusive a busca, testada com a busca ligada de propósito e depois desligada),
   `faturamento-ui-testar` e `disponibilidade-ui-testar` (passam; o de Faturamento falhou uma vez por tempo e passou nas duas repetições), typecheck e build.
-  **Não verificado visualmente:** Colaboradores, Painel do fechamento, Tabela de valores e Contrato (só compilação e testes que passam por essas telas); falta Matheus ver.
+  **Colaboradores, Painel do fechamento, Tabela de valores e Contrato (17/11/2026, Claude):** conferidos no navegador headless com o Supabase simulado
+  (`.tmp-faturamento/listas-quatro-telas-testar.cjs`, fora do Git): sem `<select>` sobrando, abrir/escolher aplica o filtro, painel dentro da tela em 390 px sem rolagem
+  lateral; capturas `quatro-*` conferidas. Commitados e enviados na mesma data. **Não verificado:** dados reais e login real; falta Matheus ver.
 
 ## Fim de semana já preenchido como folga de fim de escala — 13/11/2026 (Claude)
 

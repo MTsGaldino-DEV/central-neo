@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { ListaSuspensa } from '@/components/ui/lista-suspensa';
 import { Search, Plus, Loader2, AlertTriangle, X, KeyRound, UserCheck, Check, Trash2 } from 'lucide-react';
 import {
   listarColaboradores, salvarColaborador, excluirColaborador, cpfValido, formatarCpf, soNumeros, CAMPOS_VAZIOS,
@@ -68,16 +69,12 @@ export default function Colaboradores() {
             placeholder="Nome, matrícula, CPF, e-mail, equipe…"
             className="w-full h-9 pl-9 pr-3 text-sm border border-linha rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sinal/30 focus:border-sinal" />
         </div>
-        <select value={situacao} onChange={(e) => setSituacao(e.target.value as typeof situacao)} className="h-9 px-2 text-sm border border-linha rounded-lg bg-white">
-          <option value="ativos">Ativos</option>
-          <option value="inativos">Inativos</option>
-          <option value="todos">Todos</option>
-        </select>
-        <select value={login} onChange={(e) => setLogin(e.target.value as typeof login)} className="h-9 px-2 text-sm border border-linha rounded-lg bg-white">
-          <option value="">Com ou sem login</option>
-          <option value="com">Com login</option>
-          <option value="sem">Sem login</option>
-        </select>
+        <ListaSuspensa rotulo="Situação" valor={situacao} ativo={situacao !== 'ativos'}
+          opcoes={[{ valor: 'ativos', rotulo: 'Ativos' }, { valor: 'inativos', rotulo: 'Inativos' }, { valor: 'todos', rotulo: 'Todos' }]}
+          onChange={(v) => setSituacao(v as typeof situacao)} />
+        <ListaSuspensa rotulo="Login" valor={login} ativo={login !== ''}
+          opcoes={[{ valor: '', rotulo: 'Com ou sem login' }, { valor: 'com', rotulo: 'Com login' }, { valor: 'sem', rotulo: 'Sem login' }]}
+          onChange={(v) => setLogin(v as typeof login)} />
         {lista && <span className="text-xs text-aco">{filtrados.length} encontrados</span>}
       </div>
 
