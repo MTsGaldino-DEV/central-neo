@@ -35,7 +35,7 @@ export function useSecoesNav(): SecaoNav[] {
       titulo: 'Manutenção',
       itens: [
         { label: 'Painel', href: '/fechamento/painel', icon: BarChart3 },
-        { label: 'Fila de NSIS', href: '/fechamento', icon: ClipboardList, fim: true },
+        { label: 'Fila de fechamento', href: '/fechamento', icon: ClipboardList, fim: true },
         { label: 'Importar', href: '/fechamento/importar', icon: FileSpreadsheet },
         { label: 'Tabela de valores', href: '/fechamento/tabela', icon: Table2 },
       ],

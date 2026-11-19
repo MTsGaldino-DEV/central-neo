@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Search, Download, Plus, Loader2, RefreshCw, FileSpreadsheet, AlertTriangle, X, Copy, Check, Inbox, CalendarRange, FilterX, SlidersHorizontal, ArrowUp, ArrowDown, Trash2,
+  Search, Download, Plus, Loader2, RefreshCw, FileSpreadsheet, AlertTriangle, X, Copy, Check, Inbox, CalendarRange, FilterX, SlidersHorizontal, ArrowUp, ArrowDown, Trash2, BarChart3,
 } from 'lucide-react';
 import { useSessao } from '@/contexto/Sessao';
 import { Pagination } from '@/components/Pagination';
@@ -10,12 +10,13 @@ import EtapaChip from '@/components/fechamento/EtapaChip';
 import FiltroColuna from '@/components/fechamento/FiltroColuna';
 import PainelNsis from './PainelNsis';
 import {
-  listarNsis, getResumo, exportarFechamento, criarNsisManual, formatarUS, formatarReais, formatarData,
-  excluirNsis, contarPorEtapa, temFiltro, listarTiposServico, valoresDaColuna, infoEtapa, ehFluxoNovo, descricoesDosItens,
-  type Etapa, type Nsis, type ResumoFechamento, type FiltrosNsis,
+  listarNsis, exportarFechamento, criarNsisManual, formatarUS, formatarReais, formatarData,
+  excluirNsis, contarPorEtapa, resumoDaSelecao, type ResumoSelecao, temFiltro, valoresDaColuna, infoEtapa, ehFluxoNovo, descricoesDosItens,
+  type Etapa, type Nsis, type FiltrosNsis,
 } from '@/lib/fechamento';
-import { COLUNAS_FLUXO, colunasVisiveis, type ColunaFluxo } from '@/lib/fechamentoFluxo';
+import { COLUNAS_FLUXO, colunasVisiveis, etapasDaLista, rotuloColuna, type ColunaFluxo, type ListaFechamento } from '@/lib/fechamentoFluxo';
 import { rotuloLocalidade } from '@/lib/localidades';
+import { temModulo } from '@/lib/neo';
 
 const POR_PAGINA = 50;
 
@@ -46,11 +47,26 @@ const ATALHOS: { id: string; nome: string; faixa: () => [string, string] }[] = [
 
 const dataBR = (d: string) => d.split('-').reverse().join('/');
 
-/** Etapas do fluxo novo (as demais só existem no histórico). */
-const ETAPAS_FLUXO: Etapa[] = ['A_FECHAR', 'AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO', 'FATURADA'];
+/** Filtro de pagamento (?alerta=): pago ≠ pedido ou NSPR sem valor pago. Os cards do painel ligam e desligam. */
+function lerAlerta(params: URLSearchParams): FiltrosNsis['alerta'] {
+  const a = params.get('alerta');
+  return a === 'DIVERGENTE' || a === 'SEM_VALOR' ? a : null;
+}
+
+/** Painel da seleção aberto ou fechado: preferência de cada pessoa, guardada no navegador. */
+const CHAVE_PAINEL = 'neo.fila.painel';
+function lerPainelAberto(): boolean {
+  try { return localStorage.getItem(CHAVE_PAINEL) === '1'; } catch { return false; }
+}
+
 /** Etapas só do histórico: o chip só aparece com NSIS nelas (ou quando é a etapa aberta). */
 const ETAPAS_HISTORICO: Etapa[] = ['AGUARDANDO_NSMP', 'AGUARDANDO_FATURA', 'SEM_COBRANCA'];
 const ETAPAS_HISTORICO_ESCONDIVEIS: Etapa[] = ['AGUARDANDO_NSMP', 'AGUARDANDO_FATURA'];
+
+/** Etapas que a lista pode mostrar: as do fluxo dela e as do histórico. Na NSRI, NSPR só aparece se tiver alguma. */
+function etapasValidas(lista: ListaFechamento): Etapa[] {
+  return [...etapasDaLista(lista), ...ETAPAS_HISTORICO, ...(lista === 'NSRI' ? ['AGUARDANDO_NSPR' as Etapa] : [])];
+}
 
 /** Colunas de valor e a observação (texto livre) só ordenam: não têm lista de valores para filtrar. */
 const COLUNAS_SEM_LISTA: ColunaFluxo[] = ['valor_lancamento', 'valor_pago', 'observacao'];
@@ -85,6 +101,9 @@ function textoValor(coluna: ColunaFluxo, v: string): string {
 
 export default function FilaFechamento() {
   const [params, setParams] = useSearchParams();
+  // Lista aberta (botão NSIS / NSRI): cada uma com o próprio fluxo de etapas. Sem ?tipo, NSIS.
+  const lista: ListaFechamento = params.get('tipo') === 'NSRI' ? 'NSRI' : 'NSIS';
+  const etapasLista = etapasDaLista(lista);
   const etapa = (params.get('etapa') as Etapa | 'TODAS' | null) ?? 'A_FECHAR';
   const aberta = params.get('nsis');
 
@@ -94,8 +113,9 @@ export default function FilaFechamento() {
     busca: params.get('q') ?? '',
     localidade: params.get('loc') ?? '',
     equipe: params.get('equipe') ?? '',
-    tipo: params.get('tipo') ?? '',
+    tipo: lista,
     codigo: params.get('codigo') ?? '',
+    alerta: lerAlerta(params),
     de: params.get('de') ?? '',
     ate: params.get('ate') ?? '',
     // a ordem vem do cabeçalho da coluna (ordemColuna); sem ela, execução mais recente primeiro
@@ -103,7 +123,8 @@ export default function FilaFechamento() {
     colunas: lerColunas(params),
     ordemColuna: lerOrdemColuna(params),
   };
-  const filtrado = temFiltro(filtros);
+  // a lista (tipo) não conta como filtro: está sempre ligada
+  const filtrado = temFiltro({ ...filtros, tipo: '' });
   const chaveFiltros = JSON.stringify(filtros);
 
   const [busca, setBusca] = useState(filtros.busca ?? '');
@@ -113,7 +134,6 @@ export default function FilaFechamento() {
 
   const [linhas, setLinhas] = useState<Nsis[]>([]);
   const [total, setTotal] = useState(0);
-  const [resumo, setResumo] = useState<ResumoFechamento | null>(null);
   const [contagens, setContagens] = useState<{ etapas: Partial<Record<Etapa, number>>; total: number } | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -123,18 +143,15 @@ export default function FilaFechamento() {
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [detalhesAbertos, setDetalhesAbertos] = useState(false);
   const [descricoes, setDescricoes] = useState<Record<string, string[]>>({});
-  const [tipos, setTipos] = useState<string[]>([]);
   // valores de cada coluna, carregados quando o menu abre (null = carregando)
   const [valoresCol, setValoresCol] = useState<Partial<Record<ColunaFluxo, string[] | null>>>({});
 
   // Colunas por etapa: fluxo novo mostra o que a etapa já tem; histórico e listas mistas, o conjunto de hoje
   const colunas: ColunaFluxo[] = etapa === 'TODAS'
-    ? colunasVisiveis('TODAS', false)
-    : (linhas.length > 0 ? linhas.every((n) => ehFluxoNovo(n)) : ETAPAS_FLUXO.includes(etapa))
-      ? colunasVisiveis(etapa, false)
-      : colunasVisiveis(etapa, true);
-
-  useEffect(() => { listarTiposServico().then(setTipos).catch(() => {}); }, []);
+    ? colunasVisiveis('TODAS', false, lista)
+    : (linhas.length > 0 ? linhas.every((n) => ehFluxoNovo(n)) : etapasLista.includes(etapa))
+      ? colunasVisiveis(etapa, false, lista)
+      : colunasVisiveis(etapa, true, lista);
 
   // campos de texto acompanham a URL quando ela muda por fora (voltar, link do Painel, "limpar")
   useEffect(() => {
@@ -145,6 +162,7 @@ export default function FilaFechamento() {
 
   // Páginas já lidas, por filtros + página: trocar de etapa mostra na hora o que já veio (e atualiza por baixo)
   const cache = useRef(new Map<string, PaginaLida>());
+  const cacheContagens = useRef(new Map<string, { etapas: Partial<Record<Etapa, number>>; total: number }>());
   const pedido = useRef(0); // só o pedido mais recente mexe na tela
   const [versaoCache, setVersaoCache] = useState(0);
 
@@ -152,19 +170,20 @@ export default function FilaFechamento() {
     const id = ++pedido.current;
     const chave = JSON.stringify([filtros, p]);
     const guardada = cache.current.get(chave);
+    // contagens por etapa da lista aberta (com os filtros); não dependem da etapa nem da página
+    const chaveContagem = JSON.stringify({ ...filtros, etapa: 'TODAS', ordemColuna: null });
+    const contagemGuardada = cacheContagens.current.get(chaveContagem);
     setErro(null);
     if (guardada) { mostrar(guardada); setCarregando(false); } else setCarregando(true);
+    if (contagemGuardada) setContagens(contagemGuardada);
     try {
-      const [pag, res, cont] = await Promise.all([
-        lerPagina(filtros, p),
-        getResumo(),
-        filtrado ? contarPorEtapa(filtros) : Promise.resolve(null),
-      ]);
+      const [pag, cont] = await Promise.all([lerPagina(filtros, p), contarPorEtapa(filtros)]);
       if (cache.current.size > 80) cache.current.clear();
       cache.current.set(chave, pag);
+      if (cacheContagens.current.size > 40) cacheContagens.current.clear();
+      cacheContagens.current.set(chaveContagem, cont);
       if (id !== pedido.current) return;
       mostrar(pag);
-      setResumo(res);
       setContagens(cont);
     } catch (e) {
       if (id === pedido.current) setErro(e instanceof Error ? e.message : 'Falha ao carregar.');
@@ -184,18 +203,51 @@ export default function FilaFechamento() {
   /** Depois de gravar ou atualizar à mão: esquece o que estava guardado e lê de novo. */
   function recarregar() {
     cache.current.clear();
+    cacheContagens.current.clear();
+    cacheResumo.current.clear();
     setVersaoCache((v) => v + 1);
     carregar();
   }
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  // Painel opcional com os números da seleção (mesmos filtros da lista). Aberto/fechado fica guardado no navegador.
+  const [painelAberto, setPainelAberto] = useState(lerPainelAberto);
+  const [resumoSel, setResumoSel] = useState<ResumoSelecao | null>(null);
+  const [resumoErro, setResumoErro] = useState<string | null>(null);
+  const cacheResumo = useRef(new Map<string, ResumoSelecao>());
+  const pedidoResumo = useRef(0);
+
+  function alternarPainel() {
+    setPainelAberto((a) => {
+      try { localStorage.setItem(CHAVE_PAINEL, a ? '0' : '1'); } catch { /* sem armazenamento */ }
+      return !a;
+    });
+  }
+
+  useEffect(() => {
+    if (!painelAberto) return;
+    const id = ++pedidoResumo.current;
+    const chave = JSON.stringify({ ...filtros, ordemColuna: null });
+    const guardado = cacheResumo.current.get(chave);
+    setResumoErro(null);
+    setResumoSel(guardado ?? null);
+    resumoDaSelecao(filtros)
+      .then((r) => {
+        if (cacheResumo.current.size > 40) cacheResumo.current.clear();
+        cacheResumo.current.set(chave, r);
+        if (id === pedidoResumo.current) setResumoSel(r);
+      })
+      .catch((e) => { if (id === pedidoResumo.current) setResumoErro(e instanceof Error ? e.message : 'Falha ao somar a seleção.'); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [painelAberto, chaveFiltros, versaoCache]);
+
   // Pré-carrega a 1ª página das outras etapas (mesmos filtros) depois que a atual chegou
   useEffect(() => {
     if (carregando) return;
     let cancelado = false;
     const alvos: (Etapa | 'TODAS')[] = [
-      ...ETAPAS_FLUXO, 'TODAS', ...ETAPAS_HISTORICO.filter((e) => (resumo?.etapas[e] ?? 0) > 0),
+      ...etapasLista, 'TODAS', ...etapasValidas(lista).filter((e) => !etapasLista.includes(e) && (contagens?.etapas[e] ?? 0) > 0),
     ];
     (async () => {
       for (const e of alvos) {
@@ -232,6 +284,13 @@ export default function FilaFechamento() {
     mudarParam('etapa', e);
   }
 
+  /** Botão NSIS / NSRI. A etapa aberta fica se existir no fluxo da outra lista; senão volta para Em revisão. */
+  function trocarLista(l: ListaFechamento) {
+    if (l === lista) return;
+    const manterEtapa = etapa === 'TODAS' || etapasDaLista(l).includes(etapa) || ETAPAS_HISTORICO.includes(etapa);
+    mudarParams({ tipo: l === 'NSRI' ? 'NSRI' : null, etapa: manterEtapa ? etapa : null, 'col.tipo_serv': null });
+  }
+
   function aplicarTextos(e?: FormEvent) {
     e?.preventDefault();
     mudarParams({ q: busca.trim(), loc: localidade.trim(), equipe: equipe.trim() });
@@ -239,7 +298,8 @@ export default function FilaFechamento() {
 
   function limparFiltros() {
     const colunasNulas = Object.fromEntries(COLUNAS_FLUXO.map((c) => [`col.${c.id}`, null]));
-    mudarParams({ q: null, loc: null, equipe: null, tipo: null, codigo: null, de: null, ate: null, ...colunasNulas });
+    // a lista (?tipo) não é filtro: limpar mantém NSIS ou NSRI
+    mudarParams({ q: null, loc: null, equipe: null, codigo: null, alerta: null, de: null, ate: null, ...colunasNulas });
   }
 
   function abrirColuna(c: ColunaFluxo) {
@@ -263,7 +323,7 @@ export default function FilaFechamento() {
     mudarParam('ordcol', atual && atual.coluna === c && atual.dir === dir ? null : `${c}:${dir}`);
   }
 
-  /** Exclui a NSIS da linha (só ADMIN; o banco confere de novo). Pede confirmação e guarda cópia no registro de ações. */
+  /** Exclui a NSIS da linha (quem tem o módulo Manutenção; o banco confere de novo). Pede confirmação e guarda cópia no registro de ações. */
   async function excluirLinha(n: Nsis) {
     if (excluindo) return;
     const itens = n.qtd_itens === 0 ? 'sem códigos lançados' : n.qtd_itens === 1 ? '1 código lançado' : `${n.qtd_itens} códigos lançados`;
@@ -292,8 +352,8 @@ export default function FilaFechamento() {
     }
   }
 
-  const contagem = (e: Etapa) => (contagens ?? resumo)?.etapas[e] ?? 0;
-  const totalGeral = contagens?.total ?? resumo?.total ?? 0;
+  const contagem = (e: Etapa) => contagens?.etapas[e] ?? 0;
+  const totalGeral = contagens?.total ?? 0;
 
   // chips dos filtros ativos
   const chips: { rotulo: ReactNode; limpar: Record<string, null> }[] = [];
@@ -304,8 +364,10 @@ export default function FilaFechamento() {
       limpar: { de: null, ate: null },
     });
   }
+  if (filtros.alerta) {
+    chips.push({ rotulo: <>Pagamento: <b>{filtros.alerta === 'DIVERGENTE' ? 'pago ≠ pedido' : 'NSPR sem valor pago'}</b></>, limpar: { alerta: null } });
+  }
   if (filtros.codigo) chips.push({ rotulo: <>Código <b className="font-codigo">{filtros.codigo}</b></>, limpar: { codigo: null } });
-  if (filtros.tipo) chips.push({ rotulo: <>Tipo <b>{filtros.tipo}</b></>, limpar: { tipo: null } });
   if (filtros.busca) chips.push({ rotulo: <>Busca: <b>{filtros.busca}</b></>, limpar: { q: null } });
   if (filtros.localidade) chips.push({ rotulo: <>Localidade <b>{rotuloLocalidade(filtros.localidade)}</b></>, limpar: { loc: null } });
   if (filtros.equipe) chips.push({ rotulo: <>Equipe <b>{filtros.equipe}</b></>, limpar: { equipe: null } });
@@ -314,7 +376,7 @@ export default function FilaFechamento() {
     if (!v?.length) continue;
     const mostrados = v.slice(0, 2).map((x) => textoValor(c.id, x)).join(', ');
     chips.push({
-      rotulo: <>{c.rotulo}: <b>{mostrados}{v.length > 2 ? ` +${v.length - 2}` : ''}</b></>,
+      rotulo: <>{rotuloColuna(c.id, lista)}: <b>{mostrados}{v.length > 2 ? ` +${v.length - 2}` : ''}</b></>,
       limpar: { [`col.${c.id}`]: null },
     });
   }
@@ -329,7 +391,7 @@ export default function FilaFechamento() {
       {/* Barra de ferramentas: ação principal, busca e filtros recolhidos, como na lista de Instalações do Visão de Dono */}
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={() => setNovaAberta(true)} className="h-10 px-4 rounded-lg bg-[#16a34a] text-white text-sm font-bold flex items-center gap-1.5 hover:bg-[#15803d]">
-          <Plus size={15} /> NSIS avulsa
+          <Plus size={15} /> {lista} avulsa
         </button>
         <form onSubmit={aplicarTextos} className="relative flex-1 min-w-[240px] max-w-[560px]">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-aco-claro" />
@@ -340,6 +402,10 @@ export default function FilaFechamento() {
           className={`h-10 px-3 rounded-lg border text-sm font-semibold flex items-center gap-1.5 ${filtrosAbertos || filtrosExtras > 0 ? 'border-sinal text-sinal bg-sinal-fundo' : 'border-linha bg-white text-aco hover:border-sinal hover:text-sinal'}`}>
           <SlidersHorizontal size={15} /> Filtros
           {filtrosExtras > 0 && <span className="rounded-full bg-sinal text-white text-[11px] font-bold px-1.5">{filtrosExtras}</span>}
+        </button>
+        <button type="button" onClick={alternarPainel} aria-pressed={painelAberto} title="Mostrar números do que está filtrado"
+          className={`h-10 px-3 rounded-lg border text-sm font-semibold flex items-center gap-1.5 ${painelAberto ? 'border-sinal text-sinal bg-sinal-fundo' : 'border-linha bg-white text-aco hover:border-sinal hover:text-sinal'}`}>
+          <BarChart3 size={15} /> Painel
         </button>
         <span className="flex-1" />
         <Link to="/fechamento/importar" className="h-10 px-3 rounded-lg border border-linha bg-white text-aco text-sm font-semibold flex items-center gap-1.5 hover:border-sinal hover:text-sinal">
@@ -367,12 +433,6 @@ export default function FilaFechamento() {
                   if (a) { const [de, ate] = a.faixa(); mudarParams({ de, ate }); }
                 }} />
             </div>
-          </div>
-          <div>
-            <label className="block text-[11px] font-semibold text-aco mb-1">Tipo do serviço</label>
-            <ListaSuspensa rotulo="Tipo do serviço" valor={filtros.tipo ?? ''} ativo={!!filtros.tipo} className="min-w-[8.5rem]"
-              opcoes={[{ valor: '', rotulo: 'Todos' }, ...[...new Set([...tipos, ...(filtros.tipo ? [filtros.tipo] : [])])].map((t) => ({ valor: t, rotulo: t }))]}
-              onChange={(v) => mudarParam('tipo', v || null)} />
           </div>
           <div>
             <label className="block text-[11px] font-semibold text-aco mb-1">Localidade</label>
@@ -403,26 +463,42 @@ export default function FilaFechamento() {
             <FilterX size={13} /> Limpar filtros
           </button>
           <span className="flex-1" />
-          <span className="text-xs text-aco"><b className="text-tinta">{totalGeral.toLocaleString('pt-BR')}</b> NSIS com esses filtros (todas as etapas)</span>
+          <span className="text-xs text-aco"><b className="text-tinta">{totalGeral.toLocaleString('pt-BR')}</b> {lista} com esses filtros (todas as etapas)</span>
         </div>
       )}
 
-      {/* Etapas do fluxo: pílulas com contador, como os filtros da lista de Instalações do Visão de Dono */}
+      {/* Etapas do fluxo da lista aberta: pílulas com contador, como os filtros da lista de Instalações do Visão de Dono.
+          Na direita, o botão que alterna entre a lista de NSIS e a de NSRI. */}
       <div className="flex flex-wrap items-center gap-2">
-        {[...ETAPAS_FLUXO, ...ETAPAS_HISTORICO].map((id) => {
+        {etapasValidas(lista).map((id) => {
           const e = infoEtapa(id);
           const ativa = etapa === e.id;
-          const historica = ETAPAS_HISTORICO.includes(e.id);
+          const doFluxo = etapasLista.includes(e.id);
           const n = contagem(e.id);
-          // chips só do histórico somem quando vazios (a menos que sejam a etapa aberta)
-          if (ETAPAS_HISTORICO_ESCONDIVEIS.includes(e.id) && !ativa && n === 0) return null;
+          // etapas fora do fluxo da lista (histórico; NSPR na NSRI) somem quando vazias, a menos que sejam a etapa aberta
+          if (!doFluxo && (ETAPAS_HISTORICO_ESCONDIVEIS.includes(e.id) || e.id === 'AGUARDANDO_NSPR') && !ativa && n === 0) return null;
           return (
-            <PilulaEtapa key={e.id} ativa={ativa} rotulo={e.curto} n={n} titulo={historica ? `${e.nome} (histórico)` : e.nome}
+            <PilulaEtapa key={e.id} ativa={ativa} rotulo={e.curto} n={n} titulo={doFluxo ? e.nome : `${e.nome} (histórico)`}
               onClick={() => trocarEtapa(e.id)} />
           );
         })}
         <PilulaEtapa ativa={etapa === 'TODAS'} rotulo="Todas" n={totalGeral} titulo="Todas as etapas" onClick={() => trocarEtapa('TODAS')} />
+        <span className="flex-1" />
+        <div role="group" aria-label="Lista" className="flex rounded-lg border border-[#e2e8f0] bg-white p-0.5">
+          {(['NSIS', 'NSRI'] as const).map((l) => (
+            <button key={l} type="button" onClick={() => trocarLista(l)} aria-pressed={lista === l} title={`Lista de ${l}`}
+              className={`rounded-md px-4 py-1.5 text-[13px] font-bold transition-colors ${lista === l ? 'bg-[#0f2544] text-white' : 'text-[#64748b] hover:text-[#0f2544]'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {painelAberto && (
+        <PainelSelecao resumo={resumoSel} erro={resumoErro} lista={lista}
+          etapa={etapa === 'TODAS' ? 'todas as etapas' : infoEtapa(etapa).curto} filtrado={filtrado}
+          alerta={filtros.alerta ?? null} onAlerta={(a) => mudarParam('alerta', filtros.alerta === a ? null : a)} />
+      )}
 
       <>
           {erro && <div className="text-sm text-erro bg-erro-fundo border border-red-200 rounded-xl p-3 flex gap-2"><AlertTriangle size={16} />{erro}</div>}
@@ -430,7 +506,7 @@ export default function FilaFechamento() {
           {/* Tabela: grade estilo Excel, igual à lista de Instalações do Visão de Dono */}
           <div className="bg-white border border-[#e2e8f0] rounded-xl overflow-hidden flex-1 min-h-[260px] flex flex-col">
             <div className="px-4 py-2.5 border-b border-[#e2e8f0] text-xs text-[#64748b]">
-              <b className="text-tinta">{total.toLocaleString('pt-BR')}</b> NSIS
+              <b className="text-tinta">{total.toLocaleString('pt-BR')}</b> {lista}
             </div>
             <div className="overflow-auto flex-1 min-h-0">
               <table className={`grade-nsis w-full border-separate border-spacing-0 text-xs text-left`}>
@@ -443,7 +519,7 @@ export default function FilaFechamento() {
                       return (
                         <th key={id} className={`${def.numero ? 'text-right' : ''} ${id === 'observacao' ? 'min-w-[260px]' : ''}`}>
                           <div className={`flex items-center gap-1.5 ${def.numero ? 'justify-end' : ''}`}>
-                            <span>{def.rotulo}</span>
+                            <span>{rotuloColuna(id, lista)}</span>
                             {ordemDaColuna === 'asc' && <ArrowUp size={11} className="text-sinal" aria-hidden="true" />}
                             {ordemDaColuna === 'desc' && <ArrowDown size={11} className="text-sinal" aria-hidden="true" />}
                             <FiltroColuna
@@ -470,7 +546,7 @@ export default function FilaFechamento() {
                   {!carregando && linhas.length === 0 && (
                     <tr className="sem-hover"><td colSpan={colunas.length + 1} className="!py-9 text-center !text-aco-claro !whitespace-normal">
                       <Inbox size={28} className="mx-auto text-aco-claro mb-2" />
-                      {etapa === 'A_FECHAR' && !filtrado ? 'Nenhuma NSIS em revisão. Importe o relatório da semana.' : 'Nenhuma NSIS encontrada com esses filtros.'}
+                      {etapa === 'A_FECHAR' && !filtrado ? `Nenhuma ${lista} em revisão. Importe o relatório da semana.` : `Nenhuma ${lista} encontrada com esses filtros.`}
                     </td></tr>
                   )}
                   {carregando && linhas.length === 0 && (
@@ -496,14 +572,14 @@ export default function FilaFechamento() {
             </div>
           </div>
           <Pagination page={pagina} totalPages={Math.ceil(total / POR_PAGINA)} totalItems={total}
-            pageSize={POR_PAGINA} onPageChange={setPagina} label="NSIS" />
+            pageSize={POR_PAGINA} onPageChange={setPagina} label={lista} />
       </>
 
       {aberta && (
         <PainelNsis key={`${aberta}-${detalhesAbertos}`} servico={aberta} detalhesInicial={detalhesAbertos}
           onFechar={() => mudarParam('nsis', null)} onAlterado={recarregar} />
       )}
-      {novaAberta && <ModalNovaNsis onFechar={() => setNovaAberta(false)} onCriada={(s) => { setNovaAberta(false); mudarParam('nsis', s); recarregar(); }} />}
+      {novaAberta && <ModalNovaNsis tipo={lista} onFechar={() => setNovaAberta(false)} onCriada={(s) => { setNovaAberta(false); mudarParam('nsis', s); recarregar(); }} />}
     </div>
   );
 }
@@ -623,7 +699,7 @@ function AcoesLinha({ n, onAbrir, onExcluir, excluindo }: { n: Nsis; onAbrir: (d
   return (
     <div className="flex items-center justify-end gap-1.5">
       {botoes}
-      {acesso?.papel === 'ADMIN' && (
+      {temModulo(acesso, 'fechamento') && (
         <button type="button" onClick={onExcluir} disabled={excluindo} title="Excluir NSIS" aria-label={`Excluir a NSIS ${n.servico}`}
           className="inline-flex size-6 items-center justify-center rounded-md border border-[#e2e8f0] bg-[#f8fafc] text-[#94a3b8] hover:border-erro hover:bg-erro-fundo hover:text-erro disabled:opacity-50">
           {excluindo ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
@@ -645,7 +721,7 @@ function Numeros({ valor, falta }: { valor: string | null; falta: boolean }) {
   );
 }
 
-function ModalNovaNsis({ onFechar, onCriada }: { onFechar: () => void; onCriada: (servico: string) => void }) {
+function ModalNovaNsis({ tipo, onFechar, onCriada }: { tipo: ListaFechamento; onFechar: () => void; onCriada: (servico: string) => void }) {
   const [servico, setServico] = useState('');
   const [observacao, setObservacao] = useState('');
   const [salvando, setSalvando] = useState(false);
@@ -656,7 +732,7 @@ function ModalNovaNsis({ onFechar, onCriada }: { onFechar: () => void; onCriada:
     if (!/^\d+$/.test(servico.trim())) return setErro('Informe o número do serviço (só números).');
     setSalvando(true);
     try {
-      await criarNsisManual(servico.trim(), observacao.trim() || null);
+      await criarNsisManual(servico.trim(), observacao.trim() || null, tipo);
       onCriada(servico.trim());
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Falha ao criar.');
@@ -669,10 +745,10 @@ function ModalNovaNsis({ onFechar, onCriada }: { onFechar: () => void; onCriada:
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
       <form onSubmit={salvar} className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold">NSIS avulsa</h3>
+          <h3 className="font-bold">{tipo} avulsa</h3>
           <button type="button" onClick={onFechar} className="text-aco-claro hover:text-tinta"><X size={16} /></button>
         </div>
-        <p className="text-xs text-aco">Para uma NSIS que não veio no relatório importado. O ideal é importar o relatório do GDIS, que traz todos os dados.</p>
+        <p className="text-xs text-aco">Para uma {tipo} que não veio no relatório importado. O ideal é importar o relatório do GDIS, que traz todos os dados.</p>
         {erro && <p className="text-xs text-erro bg-erro-fundo rounded-lg px-3 py-2">{erro}</p>}
         <div><label className="block text-xs font-semibold text-aco mb-1">Nº do serviço</label>
           <input autoFocus value={servico} onChange={(e) => setServico(e.target.value)} className={`${campo} font-codigo`} /></div>
@@ -685,4 +761,65 @@ function ModalNovaNsis({ onFechar, onCriada }: { onFechar: () => void; onCriada:
       </form>
     </div>
   );
+}
+
+/**
+ * Painel opcional da fila: cards com os números do que está filtrado (lista, etapa, busca e filtros de coluna).
+ * Os cards de alerta ligam e desligam o filtro de pagamento.
+ */
+function PainelSelecao({ resumo, erro, lista, etapa, filtrado, alerta, onAlerta }: {
+  resumo: ResumoSelecao | null;
+  erro: string | null;
+  lista: ListaFechamento;
+  etapa: string;
+  filtrado: boolean;
+  alerta: FiltrosNsis['alerta'];
+  onAlerta: (a: 'DIVERGENTE' | 'SEM_VALOR') => void;
+}) {
+  if (erro) return <div className="text-sm text-erro bg-erro-fundo border border-red-200 rounded-xl p-3 flex gap-2"><AlertTriangle size={16} />{erro}</div>;
+  const r = resumo;
+  const dif = r ? r.pagoConfirmadoReais - r.pedidoConfirmadoReais : 0;
+  const n = (v: number) => v.toLocaleString('pt-BR');
+  return (
+    <section aria-label="Painel da seleção" aria-busy={!r} className="space-y-1.5">
+      <p className="text-[11px] text-aco">
+        {lista} · <b className="text-tinta">{etapa}</b>{filtrado || alerta ? ' · com os filtros aplicados' : ''}
+        {!r && <Loader2 size={11} className="inline ml-1.5 animate-spin" />}
+      </p>
+      <div className="grid gap-2 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+        <CardSelecao rotulo={lista} valor={r ? n(r.nsis) : '…'}
+          detalhe={r ? `${n(r.comCodigos)} com códigos · ${n(r.equipes)} equipes` : ' '} />
+        <CardSelecao rotulo="Pedido à CEMIG" valor={r ? formatarReais(r.pedidoReais) : '…'}
+          detalhe={r ? `${formatarUS(r.pedidoUS)} US` : ' '} />
+        <CardSelecao rotulo="Pago pela CEMIG" valor={r ? formatarReais(r.pagoReais) : '…'}
+          detalhe={r ? `${formatarUS(r.pagoUS)} US` : ' '} />
+        <CardSelecao rotulo="Pago − pedido" valor={r ? `${dif > 0.005 ? '+' : ''}${formatarReais(dif)}` : '…'}
+          detalhe={r ? `${n(r.confirmadas)} ${lista} com valor pago` : ' '}
+          cor={r && Math.abs(dif) > 0.005 ? (dif < 0 ? 'text-erro' : 'text-concluido') : undefined} />
+        <CardSelecao rotulo="Pago ≠ pedido" valor={r ? n(r.divergentes) : '…'} detalhe={alerta === 'DIVERGENTE' ? 'filtrando · clique para tirar' : 'clique para filtrar'}
+          cor={r && r.divergentes > 0 ? 'text-cobre' : 'text-aco-claro'} ativo={alerta === 'DIVERGENTE'} onClick={() => onAlerta('DIVERGENTE')} />
+        <CardSelecao rotulo="NSPR sem valor pago" valor={r ? n(r.semValorPago) : '…'} detalhe={alerta === 'SEM_VALOR' ? 'filtrando · clique para tirar' : 'clique para filtrar'}
+          cor={r && r.semValorPago > 0 ? 'text-pendente' : 'text-aco-claro'} ativo={alerta === 'SEM_VALOR'} onClick={() => onAlerta('SEM_VALOR')} />
+      </div>
+      {r && r.semValorUS > 0 && (
+        <p className="text-[11px] text-pendente">{n(r.semValorUS)} {lista} com valor em US sem valor da US cadastrado na data de execução: ficam fora do R$.</p>
+      )}
+    </section>
+  );
+}
+
+function CardSelecao({ rotulo, valor, detalhe, cor, ativo, onClick }: {
+  rotulo: string; valor: string; detalhe: string; cor?: string; ativo?: boolean; onClick?: () => void;
+}) {
+  const corpo = (
+    <>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-aco truncate">{rotulo}</p>
+      <p className={`text-lg font-extrabold tracking-tight leading-tight mt-0.5 tabular-nums ${cor ?? 'text-tinta'}`}>{valor}</p>
+      <p className="text-[11px] text-aco-claro truncate">{detalhe}</p>
+    </>
+  );
+  const base = `rounded-xl border bg-white px-3.5 py-2.5 text-left min-w-0 ${ativo ? 'border-sinal ring-2 ring-sinal/20' : 'border-[#e2e8f0]'}`;
+  return onClick
+    ? <button type="button" onClick={onClick} aria-pressed={ativo} className={`${base} hover:border-sinal`}>{corpo}</button>
+    : <div className={base}>{corpo}</div>;
 }

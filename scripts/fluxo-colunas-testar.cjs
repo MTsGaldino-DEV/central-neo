@@ -59,4 +59,22 @@ for (const etapa of ['AGUARDANDO_NSMP', 'AGUARDANDO_FATURA', 'SEM_COBRANCA']) {
   assert.deepEqual(colunasVisiveis(etapa, false), HOJE, `${etapa}: conjunto histórico`);
 }
 
-console.log('OK: colunas da fila por etapa (fluxo novo e histórico).');
+// ─── Listas NSIS / NSRI (19/11/2026): etapas próprias, sem coluna Tipo; NSRI sem NSMP (o número é a NSMC) ──
+const { etapasDaLista, rotuloColuna } = require('../src/lib/fechamentoFluxo.ts');
+assert.deepEqual(etapasDaLista('NSIS'), ['A_FECHAR', 'AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO', 'FATURADA']);
+assert.deepEqual(etapasDaLista('NSRI'), ['A_FECHAR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO', 'FATURADA'], 'NSRI não tem NSPR');
+assert.equal(rotuloColuna('nsprs', 'NSIS'), 'NSPR');
+assert.equal(rotuloColuna('nsprs', 'NSRI'), 'NSMC');
+assert.equal(rotuloColuna('nsprs'), 'NSPR/NSMC', 'sem lista, rótulo antigo');
+for (const etapa of ['A_FECHAR', 'AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'FATURADA', 'TODAS']) {
+  for (const hist of [false, true]) {
+    assert.ok(!colunasVisiveis(etapa, hist, 'NSIS').includes('tipo_serv'), `${etapa}: lista sem coluna Tipo`);
+    assert.ok(!colunasVisiveis(etapa, hist, 'NSRI').includes('nsmps'), `${etapa}: NSRI sem NSMP`);
+  }
+}
+assert.deepEqual(colunasVisiveis('AGUARDANDO_SALESFORCE', false, 'NSRI'),
+  ['servico', 'localidade', 'termino', 'equipes', 'nsprs', 'valor_pago', 'etapa']);
+assert.deepEqual(colunasVisiveis('AGUARDANDO_SALESFORCE', false, 'NSIS'),
+  ['servico', 'localidade', 'termino', 'equipes', 'nsmps', 'nsprs', 'valor_pago', 'etapa']);
+
+console.log('OK: colunas da fila por etapa (fluxo novo, histórico e listas NSIS/NSRI).');

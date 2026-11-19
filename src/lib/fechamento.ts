@@ -363,6 +363,66 @@ export async function contarPorEtapa(f: FiltrosNsis): Promise<{ etapas: Partial<
   return { total, etapas: Object.fromEntries(ETAPAS.map((e, i) => [e.id, porEtapa[i]])) };
 }
 
+/** Números da seleção da fila (painel opcional da Fila): seguem todos os filtros, inclusive a etapa e a lista. */
+export interface ResumoSelecao {
+  nsis: number;
+  /** NSIS com pelo menos um código lançado */
+  comCodigos: number;
+  pedidoUS: number;
+  pedidoReais: number;
+  pagoUS: number;
+  pagoReais: number;
+  /** Base do "pago − pedido": NSIS com valor pago e sem NSPR esperando valor. */
+  confirmadas: number;
+  pedidoConfirmadoReais: number;
+  pagoConfirmadoReais: number;
+  divergentes: number;
+  semValorPago: number;
+  /** itens de NSIS sem valor da US cadastrado para a data de execução (o R$ fica de fora) */
+  semValorUS: number;
+  equipes: number;
+}
+
+/** Soma a seleção inteira da fila (lê só as colunas de número, de 1.000 em 1.000). */
+export async function resumoDaSelecao(f: FiltrosNsis): Promise<ResumoSelecao> {
+  const r: ResumoSelecao = {
+    nsis: 0, comCodigos: 0, pedidoUS: 0, pedidoReais: 0, pagoUS: 0, pagoReais: 0, confirmadas: 0,
+    pedidoConfirmadoReais: 0, pagoConfirmadoReais: 0, divergentes: 0, semValorPago: 0, semValorUS: 0, equipes: 0,
+  };
+  const equipes = new Set<string>();
+  const colunas = 'servico, qtd_itens, valor_inicial_total, valor_final_total, valor_inicial_reais_total, valor_final_reais_total, '
+    + 'valor_us_reais, itens_divergentes, itens_sem_valor_pago, equipes';
+  for (let pagina = 0; pagina < 50; pagina++) {
+    const from = pagina * 1000;
+    const { data, error } = await aplicarFiltros(supabase.from('neo_vw_nsis').select(colunas), { ...f, ordemColuna: null }, true)
+      .order('servico', { ascending: true })
+      .range(from, from + 999);
+    if (error) throw new Error('Falha ao somar a seleção: ' + error.message);
+    const linhas = (data ?? []) as unknown as Record<string, unknown>[];
+    for (const l of linhas) {
+      const n = (k: string) => Number(l[k] ?? 0) || 0;
+      r.nsis++;
+      if (n('qtd_itens') > 0) r.comCodigos++;
+      r.pedidoUS += n('valor_inicial_total');
+      r.pedidoReais += n('valor_inicial_reais_total');
+      r.pagoUS += n('valor_final_total');
+      r.pagoReais += n('valor_final_reais_total');
+      if (n('valor_final_total') > 0 && n('itens_sem_valor_pago') === 0) {
+        r.confirmadas++;
+        r.pedidoConfirmadoReais += n('valor_inicial_reais_total');
+        r.pagoConfirmadoReais += n('valor_final_reais_total');
+      }
+      if (n('itens_divergentes') > 0) r.divergentes++;
+      if (n('itens_sem_valor_pago') > 0) r.semValorPago++;
+      if (n('valor_inicial_total') > 0 && l.valor_us_reais == null) r.semValorUS++;
+      for (const e of String(l.equipes ?? '').split(', ')) if (e.trim()) equipes.add(e.trim());
+    }
+    if (linhas.length < 1000) break;
+  }
+  r.equipes = equipes.size;
+  return r;
+}
+
 /** Dia (YYYY-MM-DD, fuso de Brasília) de um instante ISO. */
 function diaDe(iso: string): string {
   const d = new Date(iso);
@@ -718,10 +778,10 @@ export async function definirSemCobranca(servico: string, motivo: string | null)
 }
 
 /** NSIS que não veio em relatório (lançada à mão). */
-export async function criarNsisManual(servico: string, observacao: string | null): Promise<void> {
+export async function criarNsisManual(servico: string, observacao: string | null, tipo: 'NSIS' | 'NSRI' = 'NSIS'): Promise<void> {
   const { error } = await supabase
     .from('neo_nsis')
-    .insert({ servico: servico.trim(), observacao, origem: 'MANUAL' });
+    .insert({ servico: servico.trim(), observacao, origem: 'MANUAL', tipo_serv: tipo });
   if (error) {
     if (error.code === '23505') throw new Error(`A NSIS ${servico} já está cadastrada.`);
     throw new Error('Falha ao criar a NSIS: ' + error.message);

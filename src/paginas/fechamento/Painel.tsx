@@ -502,7 +502,7 @@ function Ranking({ itens, fmt, cor }: { itens: ItemRanking[]; fmt: (x: number, c
         return (
           <li key={i.chave}>
             {i.href ? (
-              <Link to={i.href} title="Ver na fila de NSIS" className="block -mx-2 px-2 py-1.5 rounded-lg hover:bg-nevoa">{conteudo}</Link>
+              <Link to={i.href} title="Ver na fila de fechamento" className="block -mx-2 px-2 py-1.5 rounded-lg hover:bg-nevoa">{conteudo}</Link>
             ) : <div className="py-1.5">{conteudo}</div>}
           </li>
         );

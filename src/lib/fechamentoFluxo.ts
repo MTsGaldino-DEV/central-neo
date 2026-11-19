@@ -1,5 +1,5 @@
 /**
- * lib/fechamentoFluxo.ts — colunas da fila de NSIS por etapa (puro, testável em Node)
+ * lib/fechamentoFluxo.ts — listas (NSIS/NSRI), etapas e colunas da fila de fechamento (puro, testável em Node)
  *
  * No fluxo novo as colunas acumulam conforme a etapa (A fechar → … → Concluída) e a
  * coluna Etapa fica sempre por último. O histórico mantém as colunas de hoje.
@@ -35,11 +35,38 @@ const COLUNAS_HISTORICO: ColunaFluxo[] = [
   'servico', 'tipo_serv', 'nsmps', 'equipes', 'nsprs', 'termino', 'valor_lancamento', 'valor_pago', 'faturas', 'observacao', 'etapa',
 ];
 
+/** A fila de fechamento separa NSIS e NSRI: cada lista tem o próprio fluxo. */
+export type ListaFechamento = 'NSIS' | 'NSRI';
+
+/**
+ * Etapas do fluxo de cada lista. A NSRI não tem NSPR: a NSMC (que vale como NSPR) e o valor pago
+ * entram em "Em revisão" e ela vai direto para o Salesforce.
+ */
+export function etapasDaLista(lista: ListaFechamento): Etapa[] {
+  return lista === 'NSRI'
+    ? ['A_FECHAR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO', 'FATURADA']
+    : ['A_FECHAR', 'AGUARDANDO_NSPR', 'AGUARDANDO_SALESFORCE', 'AGUARDANDO_APROPRIACAO', 'FATURADA'];
+}
+
+/** Rótulo da coluna na lista: a coluna NSPR/NSMC vira "NSPR" na NSIS e "NSMC" na NSRI. */
+export function rotuloColuna(id: ColunaFluxo, lista?: ListaFechamento): string {
+  if (id === 'nsprs' && lista) return lista === 'NSRI' ? 'NSMC' : 'NSPR';
+  return COLUNAS_FLUXO.find((c) => c.id === id)?.rotulo ?? id;
+}
+
 /**
  * Colunas que a fila mostra. `historico` = a lista tem NSIS históricas. As etapas que só existem
  * no histórico (Gerar NSMP, Aguardando fatura, Sem cobrança) usam o conjunto histórico sempre.
+ * Com `lista`, a coluna Tipo sai (a lista já é de um tipo só) e, na NSRI, o NSMP sai também: o número
+ * informado é a NSMC, gravada no NSMP e no NSPR, e aparece na coluna NSMC.
  */
-export function colunasVisiveis(etapa: Etapa | 'TODAS', historico: boolean): ColunaFluxo[] {
+export function colunasVisiveis(etapa: Etapa | 'TODAS', historico: boolean, lista?: ListaFechamento): ColunaFluxo[] {
+  const colunas = colunasDaEtapa(etapa, historico);
+  if (!lista) return colunas;
+  return colunas.filter((c) => c !== 'tipo_serv' && !(lista === 'NSRI' && c === 'nsmps'));
+}
+
+function colunasDaEtapa(etapa: Etapa | 'TODAS', historico: boolean): ColunaFluxo[] {
   // Aguardando NSPR: o NSPR, o lançamento, o valor pago e a apropriação ainda não existem (entram nas etapas seguintes),
   // mesmo quando a NSIS veio do histórico
   if (etapa === 'AGUARDANDO_NSPR') return [...BASE, ...APOS_NSMP, 'etapa'];

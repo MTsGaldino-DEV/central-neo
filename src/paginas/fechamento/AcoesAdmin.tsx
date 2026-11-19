@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Loader2, ShieldAlert, Trash2 } from 'lucide-react';
 import { useSessao } from '@/contexto/Sessao';
+import { temModulo } from '@/lib/neo';
 import { ETAPAS_DE_DESTINO, excluirNsis, infoEtapa, moverEtapa, type Etapa, type Nsis } from '@/lib/fechamento';
 import { ROTULO_SECAO } from './ComponentesLancamento';
 
@@ -28,18 +29,21 @@ interface Props {
   onExcluida: () => void;
 }
 
-/** Excluir NSIS e voltar de etapa. Só aparece para ADMIN; o banco confere o papel de novo. */
+/**
+ * Excluir NSIS (quem tem o módulo Manutenção) e voltar de etapa (só ADMIN). O banco confere de novo.
+ */
 export default function AcoesAdmin({ nsis, qtdItens, fluxoNovo, onAlterado, onExcluida }: Props) {
   const { acesso } = useSessao();
   const [destino, setDestino] = useState<Etapa | ''>('');
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  if (acesso?.papel !== 'ADMIN') return null;
+  const admin = acesso?.papel === 'ADMIN' && acesso.ativo;
+  if (!temModulo(acesso, 'fechamento')) return null;
 
   const nsri = nsis.tipo_serv === 'NSRI';
   const posAtual = POSICAO[nsis.etapa];
-  const podeMover = fluxoNovo && !nsis.sem_cobranca && posAtual !== undefined;
+  const podeMover = admin && fluxoNovo && !nsis.sem_cobranca && posAtual !== undefined;
   const destinos = podeMover
     ? ETAPAS_DE_DESTINO.filter((e) => (POSICAO[e] ?? 99) < posAtual && !(nsri && e === 'AGUARDANDO_NSPR'))
     : [];
@@ -72,8 +76,8 @@ export default function AcoesAdmin({ nsis, qtdItens, fluxoNovo, onAlterado, onEx
   }
 
   return (
-    <section aria-label="Ações de administrador" className="rounded-xl border border-dashed border-erro/40 bg-erro-fundo/30 p-4">
-      <p className={`${ROTULO_SECAO} mb-3 flex items-center gap-1.5`}><ShieldAlert size={14} className="text-erro" /> Somente administrador</p>
+    <section aria-label={admin ? 'Ações de administrador' : 'Excluir NSIS'} className="rounded-xl border border-dashed border-erro/40 bg-erro-fundo/30 p-4">
+      <p className={`${ROTULO_SECAO} mb-3 flex items-center gap-1.5`}><ShieldAlert size={14} className="text-erro" /> {admin ? 'Somente administrador' : 'Excluir NSIS'}</p>
 
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         {destinos.length > 0 && (
@@ -99,7 +103,7 @@ export default function AcoesAdmin({ nsis, qtdItens, fluxoNovo, onAlterado, onEx
         </button>
       </div>
 
-      {!podeMover && (
+      {admin && !podeMover && (
         <p className="mt-3 text-xs text-aco">
           {nsis.sem_cobranca ? 'Sem cobrança: reabra a NSIS para poder mudar de etapa.'
             : !fluxoNovo ? 'NSIS do histórico: a etapa vem dos dados e não pode ser movida por aqui.' : null}

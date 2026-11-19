@@ -63,6 +63,30 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
   `faturamento-conferencia-testar` usa `sql.begin` sem desfazer. Nunca injetar migration em `sql.begin` por preload
   ou atalho. Migration nova só entra no teste dentro de transação com `throw` no fim. Conferir antes de rodar.
 
+## Fila de fechamento: excluir com o módulo Manutenção e painel da seleção — 19/11/2026 (Claude)
+
+**Estado: sem commit. Migration 061 NÃO aplicada** (só testada com `--testar`, que desfaz tudo).
+
+- **Pedido do Matheus:** quem tem permissão na Manutenção (módulo `fechamento`) exclui a linha da fila, não só ADMIN.
+  - `supabase/migrations/061_nsis_excluir_modulo.sql`: `neo_excluir_nsis` e a política `neo_nsis_excluir` passam a usar
+    `neo_tem_modulo('fechamento')`. Mover de etapa (`neo_mover_etapa`) e ler `neo_nsis_log` seguem só ADMIN. A cópia continua indo para o log.
+  - Aplicar com `node .tmp-faturamento/aplicar-061.cjs` (aplica só a 061 e registra; `migrar.cjs` segue proibido). Até aplicar,
+    o botão aparece para o usuário mas o banco recusa ("Só administrador pode excluir NSIS").
+  - Tela: lixeira da linha (`Fila.tsx`, `AcoesLinha`) e bloco da janela (`AcoesAdmin.tsx`) usam `temModulo(acesso, 'fechamento')`.
+    Para não ADMIN o bloco mostra só "Excluir NSIS", sem "Voltar para a etapa".
+- **Pedido do Matheus:** opção de mostrar um painel com os dados do filtro na Fila. Botão **Painel** na barra (abre/fecha; a
+  preferência fica no `localStorage`, chave `neo.fila.painel`). Cards: quantidade (com códigos, equipes), Pedido à CEMIG,
+  Pago pela CEMIG (R$ e US), Pago − pedido (só NSIS com valor pago e sem NSPR esperando valor), Pago ≠ pedido e NSPR sem
+  valor pago. Os dois últimos ligam/desligam o filtro `?alerta=` (que voltou para a URL, com chip "Pagamento" e limpo em "Limpar filtros").
+  Os números seguem tudo: lista NSIS/NSRI, etapa aberta, busca e filtros de coluna (`resumoDaSelecao` em `fechamento.ts`,
+  soma `neo_vw_nsis` de 1.000 em 1.000 no navegador; sem migration). NSIS com US sem valor da US cadastrado ficam fora do R$ e o painel avisa.
+- **Verificado:** typecheck, `vite build`, `aplicar-061.cjs --testar` no banco real (sem módulo recusa, usuário da Manutenção
+  exclui e o log grava o autor, mover etapa segue recusado), script Playwright com Supabase simulado e usuário não ADMIN
+  (lixeira, painel, cards de alerta, preferência após recarregar, exclusão com confirmação, janela sem mover etapa; 1440 e 390 px sem rolagem lateral).
+- **Pendências:** aplicar a 061 (pedir ao Matheus); `manutencao-ui-testar` já falhava no commit `0c9c4ac` (passo "Nº da NSPR",
+  linha 283) e o simulado dele filtra `tipo_serv` por `in.(…)`, mas a fila agora usa `eq` por causa da lista NSIS/NSRI; falta
+  ajustar o teste. Painel não conferido com dados reais.
+
 ## Lista de Medidores: botão "Ocultar valores" — 17/11/2026 (Claude)
 
 - Pedido do Matheus: botão para ocultar os valores em R$; quantidades de pendentes e concluídos ficam
@@ -1058,3 +1082,16 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
 - Lista: NSRI antiga que só tinha o NSMP (1 NSIS de teste, 247380520) mostra o NSMP na coluna NSPR/NSMC por reserva (`Celula`, `Fila.tsx`); não houve atualização de dados antigos.
 - Efeito colateral a lembrar: como a NSRI agora tem NSPR, os contadores de divergência (`itens_divergentes`) e de "valor pago" da view passam a incluir NSRI quando o valor pago difere do pedido (valor pago em vermelho na grade).
 - Teste: `scripts/fluxo-nspr-proxima-etapa-testar.cjs` simula a NSRI (NSMC no NSMP e no NSPR + valor pago → Aguardando Salesforce; transação desfeita). `fluxo-colunas-testar.cjs` com o rótulo novo. `tsc` limpo; tela não conferida no navegador.
+
+## Fila de fechamento: listas NSIS e NSRI separadas (19/11/2026, Claude)
+
+- Pedido do Matheus (depois de conversar com a equipe): a "Fila de NSIS" virou **Fila de fechamento** (menu em `Shell.tsx`, caminho da página) e a lista foi separada em **NSIS** e **NSRI**, com um botão de alternar na direita, na linha das etapas, logo acima da grade.
+- A lista fica na URL em `?tipo=NSRI`; sem `tipo`, abre a de NSIS. Ela vira `filtros.tipo` (filtra `tipo_serv`) e **não conta como filtro**: "Limpar filtros" mantém a lista. O filtro "Tipo do serviço" do painel Filtros e a coluna **Tipo** saíram, porque ficaram redundantes.
+- **Etapas por fluxo** (`etapasDaLista`, `src/lib/fechamentoFluxo.ts`): NSIS = Em revisão → NSPR → Salesforce → Apropriação → Concluída; NSRI = Em revisão → Salesforce → Apropriação → Concluída. As etapas do histórico continuam nas duas listas (Gerar NSMP e Fatura somem quando vazias; na NSRI, NSPR também). Ao trocar de lista, a etapa aberta fica se existir na outra; senão volta para Em revisão.
+- Contadores das pílulas: agora sempre `contarPorEtapa(filtros)` da lista aberta, guardados em memória por filtro. A `Fila.tsx` não usa mais `getResumo`.
+- Colunas (`colunasVisiveis(etapa, historico, lista)`): com lista, sai `tipo_serv`; na NSRI sai também o NSMP, porque é o mesmo número da NSMC. `rotuloColuna`: a coluna `nsprs` se chama **NSPR** na NSIS e **NSMC** na NSRI.
+- "NSIS avulsa" vira "NSRI avulsa" na lista NSRI, e `criarNsisManual(servico, obs, tipo)` grava o `tipo_serv`. O padrão do banco continua 'NSIS'.
+- Base em 19/11/2026 (leitura): só existem NSIS (29 em revisão, 203 NSPR, 131 fatura, 1849 concluídas) e NSRI (4 em revisão).
+- Os links do Painel (`/fechamento?etapa=...`) abrem a lista NSIS. Pendente: decidir se eles devem levar `tipo`.
+- Verificado: `scripts/fluxo-colunas-testar.cjs` (casos novos de listas) OK e `tsc --noEmit` limpo. Não conferido no navegador.
+- Neste dia, outro agente mexia na mesma `Fila.tsx` (painel opcional da seleção, `resumoDaSelecao`) e já usa `lista`.
