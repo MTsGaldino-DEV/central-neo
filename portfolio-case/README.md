@@ -4,6 +4,7 @@ Portfólio profissional de desenvolvimento full stack da Central NEO, por Matheu
 
 ## Abrir a entrega
 
+- [Projeto publicado no Behance](https://www.behance.net/gallery/258752635/Central-NEO-Desenvolvimento-Full-Stack) — publicado em 19/11/2026 na conta de Matheus Galdino, com as 12 pranchas, capa, descrição e categorias Programação, Interface e experiência do usuário e Web design.
 - [Site navegável](site/dist/index.html).
 - [Apresentação em PDF](exports/central-neo-portfolio.pdf).
 - [Pacote para o Behance](exports/central-neo-behance.zip): pranchas de 1400 × 1000 px, capa, PDF e índice.
