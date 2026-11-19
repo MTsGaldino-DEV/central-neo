@@ -66,7 +66,7 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 ## Fila de fechamento: excluir com o módulo Manutenção e painel da seleção — 19/11/2026 (Claude)
 
 **Estado: migration 061 aplicada e registrada no CENTRAL-NEO em 19/11/2026, a pedido do Matheus (2.216 NSIS antes e depois).
-Commit `e31693e` (sem push), que levou junto a separação NSIS/NSRI da fila que estava no diretório sem commit
+Commit `e31693e` (push em 19/11/2026, a pedido do Matheus), que levou junto a separação NSIS/NSRI da fila que estava no diretório sem commit
 (`fechamentoFluxo.ts`, `Shell.tsx`, `Painel.tsx`, `fluxo-colunas-testar.cjs`). A 061 fica só local: `/supabase/` está no `.gitignore`.**
 
 - **Pedido do Matheus:** quem tem permissão na Manutenção (módulo `fechamento`) exclui a linha da fila, não só ADMIN.
