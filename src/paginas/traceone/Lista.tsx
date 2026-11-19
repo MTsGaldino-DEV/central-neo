@@ -10,6 +10,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Eye,
+  EyeOff,
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
@@ -67,6 +68,14 @@ function formatDateBR(d: string | null | undefined): string {
 
 function formatBRL(v: number): string {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+// Ocultar valores em R$: borra o número (quantidades continuam visíveis).
+const CHAVE_OCULTAR_VALORES = "neo.listaMedidores.ocultarValores";
+const BORRAR = "blur-[6px] select-none";
+
+function lerOcultarValores(): boolean {
+  try { return localStorage.getItem(CHAVE_OCULTAR_VALORES) === "1"; } catch { return false; }
 }
 
 // ─── ColabMultiSelect — busca por nome OU matrícula ──────────────────────────
@@ -183,9 +192,10 @@ interface MetricCardProps {
   action?: React.ReactNode; // slot opcional no canto superior direito
   onClick?: () => void;     // torna o card inteiro clicável (exceto a action)
   active?: boolean;         // destaque visual quando o filtro do card está aplicado
+  borrar?: boolean;         // borra o valor (ocultar valores em R$)
 }
 
-function MetricCard({ icon: Icon, label, value, sub, iconColor, iconBg, valueColor, loading, action, onClick, active }: MetricCardProps) {
+function MetricCard({ icon: Icon, label, value, sub, iconColor, iconBg, valueColor, loading, action, onClick, active, borrar }: MetricCardProps) {
   if (loading) {
     return (
       <div className="bg-white rounded-[10px] border border-linha p-4 animate-pulse">
@@ -219,7 +229,7 @@ function MetricCard({ icon: Icon, label, value, sub, iconColor, iconBg, valueCol
           {label}
         </p>
       </div>
-      <p className={`text-[26px] font-semibold tabular-nums leading-none ${valueColor ?? "text-slate-900"}`}>
+      <p className={`text-[26px] font-semibold tabular-nums leading-none ${valueColor ?? "text-slate-900"} ${borrar ? BORRAR : ""}`} aria-hidden={borrar || undefined}>
         {value}
       </p>
       {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
@@ -282,6 +292,11 @@ export default function DashboardPage() {
   const [loadingMetrics, setLoadingMetrics] = useState(true);
   const [exportando45, setExportando45] = useState(false);
   const [filterAcima45, setFilterAcima45] = useState(false);
+  const [ocultarValores, setOcultarValores] = useState(lerOcultarValores);
+  const alternarOcultarValores = () => setOcultarValores((v) => {
+    try { localStorage.setItem(CHAVE_OCULTAR_VALORES, v ? "0" : "1"); } catch { /* sem armazenamento */ }
+    return !v;
+  });
 
   // Filter options
   const [supervisorOptions, setSupervisorOptions] = useState<string[]>([]);
@@ -769,6 +784,15 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={alternarOcultarValores}
+            aria-pressed={ocultarValores}
+            title={ocultarValores ? "Mostrar valores em R$" : "Ocultar valores em R$"}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-aco bg-white border border-linha rounded-lg hover:bg-nevoa transition-colors"
+          >
+            {ocultarValores ? <Eye size={13} /> : <EyeOff size={13} />}
+            {ocultarValores ? "Mostrar valores" : "Ocultar valores"}
+          </button>
+          <button
             onClick={() => setShowSortModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-aco bg-white border border-linha rounded-lg hover:bg-nevoa transition-colors"
           >
@@ -812,6 +836,7 @@ export default function DashboardPage() {
           iconBg="bg-amber-50"
           iconColor="text-amber-500"
           loading={loadingMetrics}
+          borrar={ocultarValores}
         />
         <MetricCard
           icon={TrendingUp}
@@ -821,6 +846,7 @@ export default function DashboardPage() {
           iconBg="bg-emerald-50"
           iconColor="text-emerald-500"
           loading={loadingMetrics}
+          borrar={ocultarValores}
         />
         <MetricCard
           icon={BarChart3}
@@ -830,6 +856,7 @@ export default function DashboardPage() {
           iconBg="bg-slate-100"
           iconColor="text-slate-500"
           loading={loadingMetrics}
+          borrar={ocultarValores}
         />
         <MetricCard
           icon={AlertCircle}
@@ -1002,7 +1029,7 @@ export default function DashboardPage() {
                           {item.nome || item.matricula}
                         </span>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className={`text-[12px] font-semibold tabular-nums ${isSelected ? "text-amber-700" : "text-slate-900"}`}>
+                          <span className={`text-[12px] font-semibold tabular-nums ${isSelected ? "text-amber-700" : "text-slate-900"} ${ocultarValores ? BORRAR : ""}`}>
                             {formatBRL(item.valor_pendente)}
                           </span>
                           <span className="text-[10px] text-slate-400 tabular-nums">
@@ -1468,7 +1495,7 @@ export default function DashboardPage() {
                 ].map(([label, value]) => (
                   <div key={String(label)}>
                     <p className="text-[10px] uppercase tracking-wide text-aco-claro font-medium mb-0.5">{label}</p>
-                    <p className="text-sm text-tinta font-medium">{String(value ?? "—")}</p>
+                    <p className={`text-sm text-tinta font-medium ${label === "Valor" && ocultarValores ? BORRAR : ""}`}>{String(value ?? "—")}</p>
                   </div>
                 ))}
               </div>

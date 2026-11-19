@@ -63,6 +63,17 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
   `faturamento-conferencia-testar` usa `sql.begin` sem desfazer. Nunca injetar migration em `sql.begin` por preload
   ou atalho. Migration nova só entra no teste dentro de transação com `throw` no fim. Conferir antes de rodar.
 
+## Lista de Medidores: botão "Ocultar valores" — 17/11/2026 (Claude)
+
+- Pedido do Matheus: botão para ocultar os valores em R$; quantidades de pendentes e concluídos ficam
+  visíveis. Ele disse que **borrar os números basta** (não precisa trocar por "••••").
+- `src/paginas/traceone/Lista.tsx`: botão no cabeçalho (olho) alterna `ocultarValores`. Borra com
+  `blur-[6px] select-none` os cards Valor Pendente/Concluído/Total, o R$ do Top 10 e o "Valor" da janela do
+  medidor. Barras do Top 10, +45 dias, média de dias e contagens não mudam.
+- A escolha fica no navegador (`localStorage` `neo.listaMedidores.ocultarValores`); é só visual — o CSV
+  exportado continua com a coluna VALOR.
+- Verificado: `tsc --noEmit` sem erros. Pendente: conferir no navegador.
+
 ## Entrega: Disponibilidade da frota — 06/11/2026 (Claude)
 
 **Estado: push feito em 06/11/2026; migrations 054 e 055 aplicadas por Matheus.** Conferido só com leitura no banco: as duas registradas em
@@ -999,6 +1010,7 @@ de negócio nem o estado anterior de Faturamento foi alterado nesta tarefa.
 - Matheus gostou da Fila de NSIS com zoom 90% do navegador e pediu o mesmo visual em 100%.
 - `src/index.css`: `--escala-ui: 0.9` aplicado como `zoom` no `body` (altura compensada com `100vh / escala`). Vale para o app todo. Para voltar ao tamanho cheio, `--escala-ui: 1`.
 - Pendência: não verificado visualmente (sem navegador na sessão). Se o rodapé da grade ficar com folga, os `calc(100vh - Npx)` (Fila.tsx, disponibilidade.css) podem ser divididos pela escala.
+- **19/11/2026:** Matheus confirmou a folga (~140 px vazios abaixo da grade da Fila). `Fila.tsx` deixou o `max-h-[calc(100vh-280px)]`: a página virou `h-full flex flex-col`, o cartão da grade `flex-1 min-h-[260px]` e a área rolável `flex-1 min-h-0`, então a grade vai até o pé da janela, sem depender de zoom nem da altura dos filtros/chips. `disponibilidade.css` continua com o `calc(100vh - …)`.
 
 ## Fila de NSIS: só fechamento; comparação de pagamento fica para outra aba (16/11/2026, Claude)
 

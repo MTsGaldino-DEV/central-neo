@@ -325,7 +325,7 @@ export default function FilaFechamento() {
   const campo = 'h-9 px-3 text-sm border border-linha rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sinal/30 focus:border-sinal';
 
   return (
-    <div className="p-4 lg:p-6 space-y-3">
+    <div className="p-4 lg:p-6 space-y-3 h-full flex flex-col">{/* flex: a grade estica até o pé da janela */}
       {/* Barra de ferramentas: ação principal, busca e filtros recolhidos, como na lista de Instalações do Visão de Dono */}
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={() => setNovaAberta(true)} className="h-10 px-4 rounded-lg bg-[#16a34a] text-white text-sm font-bold flex items-center gap-1.5 hover:bg-[#15803d]">
@@ -428,11 +428,11 @@ export default function FilaFechamento() {
           {erro && <div className="text-sm text-erro bg-erro-fundo border border-red-200 rounded-xl p-3 flex gap-2"><AlertTriangle size={16} />{erro}</div>}
 
           {/* Tabela: grade estilo Excel, igual à lista de Instalações do Visão de Dono */}
-          <div className="bg-white border border-[#e2e8f0] rounded-xl overflow-hidden">
+          <div className="bg-white border border-[#e2e8f0] rounded-xl overflow-hidden flex-1 min-h-[260px] flex flex-col">
             <div className="px-4 py-2.5 border-b border-[#e2e8f0] text-xs text-[#64748b]">
               <b className="text-tinta">{total.toLocaleString('pt-BR')}</b> NSIS
             </div>
-            <div className="overflow-auto max-h-[calc(100vh-280px)] min-h-[200px]">
+            <div className="overflow-auto flex-1 min-h-0">
               <table className={`grade-nsis w-full border-separate border-spacing-0 text-xs text-left`}>
                 <thead>
                   <tr>
