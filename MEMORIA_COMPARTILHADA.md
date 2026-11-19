@@ -63,6 +63,14 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
   `faturamento-conferencia-testar` usa `sql.begin` sem desfazer. Nunca injetar migration em `sql.begin` por preload
   ou atalho. Migration nova só entra no teste dentro de transação com `throw` no fim. Conferir antes de rodar.
 
+## Fila de fechamento: exclusão de linhas NSRI — 19/11/2026 (Codex)
+
+- Pedido: disponibilizar a exclusão na lista NSRI como na NSIS. A investigação mostrou que ambas já usavam `AcoesLinha`, mas a ação era só um ícone discreto e os textos de exclusão diziam NSIS em qualquer lista.
+- `Fila.tsx`: botão com lixeira e texto **Excluir** nas duas listas; tooltip, nome acessível e confirmação identificam o `tipo_serv` e o serviço da linha. `AcoesAdmin.tsx` também identifica NSRI na exclusão pelos detalhes. A mensagem de erro de `excluirNsis` passou a dizer "serviço".
+- Mantida a RPC `neo_excluir_nsis`, com acesso pelo módulo Manutenção e cópia no log, conforme a migration 061 existente. Sem migration ou alteração de dados reais.
+- Verificado: `scripts/fila-exclusao-ui-testar.cjs` (Playwright, Supabase inteiramente simulado, usuário não ADMIN com Manutenção): botão e confirmação em NSIS/NSRI nas quatro etapas comuns, cancelamento sem RPC, falha mantendo a linha, exclusão removendo só o serviço escolhido e recarregando, exclusão pelos detalhes e bloqueio sem módulo. Capturas em 1440 e 390 px conferidas, sem rolagem lateral da página; no celular as ações ficam no fim da rolagem da tabela, como as demais colunas.
+- Também verificados: `scripts/fluxo-colunas-testar.cjs`, typecheck e build (avisos existentes de chunks grandes e importação de xlsx). Pendência: conferir com login e dados reais no ambiente publicado; nenhum registro real foi excluído para testar.
+
 ## Fila de fechamento: excluir com o módulo Manutenção e painel da seleção — 19/11/2026 (Claude)
 
 **Estado: migration 061 aplicada e registrada no CENTRAL-NEO em 19/11/2026, a pedido do Matheus (2.216 NSIS antes e depois).

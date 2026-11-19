@@ -753,10 +753,10 @@ export async function excluirItem(id: string): Promise<void> {
   if (error) throw new Error('Falha ao excluir o item: ' + error.message);
 }
 
-/** Só ADMIN (a função do banco confere): apaga a NSIS e os itens, guardando uma cópia em neo_nsis_log. */
+/** Quem tem o módulo Manutenção (o banco confere): apaga o serviço e os itens, guardando cópia em neo_nsis_log. */
 export async function excluirNsis(servico: string): Promise<void> {
   const { error } = await supabase.rpc('neo_excluir_nsis', { p_servico: servico });
-  if (error) throw new Error('Falha ao excluir a NSIS: ' + error.message);
+  if (error) throw new Error('Falha ao excluir o serviço: ' + error.message);
 }
 
 /** Etapas do fluxo novo para onde um ADMIN pode voltar uma NSIS, na ordem do fluxo. */

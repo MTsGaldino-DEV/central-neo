@@ -71,13 +71,13 @@ export default function AcoesAdmin({ nsis, qtdItens, fluxoNovo, onAlterado, onEx
 
   function excluir() {
     const itens = qtdItens === 0 ? 'sem códigos lançados' : qtdItens === 1 ? '1 código lançado' : `${qtdItens} códigos lançados`;
-    if (!confirm(`Excluir a NSIS ${nsis.servico} (${itens}) da fila?\n\nOs códigos lançados vão junto. Uma cópia fica guardada no registro de ações.`)) return;
+    if (!confirm(`Excluir a ${nsis.tipo_serv} ${nsis.servico} (${itens}) da fila?\n\nOs códigos lançados vão junto. Uma cópia fica guardada no registro de ações.`)) return;
     executar(() => excluirNsis(nsis.servico), onExcluida);
   }
 
   return (
-    <section aria-label={admin ? 'Ações de administrador' : 'Excluir NSIS'} className="rounded-xl border border-dashed border-erro/40 bg-erro-fundo/30 p-4">
-      <p className={`${ROTULO_SECAO} mb-3 flex items-center gap-1.5`}><ShieldAlert size={14} className="text-erro" /> {admin ? 'Somente administrador' : 'Excluir NSIS'}</p>
+    <section aria-label={admin ? 'Ações de administrador' : `Excluir ${nsis.tipo_serv}`} className="rounded-xl border border-dashed border-erro/40 bg-erro-fundo/30 p-4">
+      <p className={`${ROTULO_SECAO} mb-3 flex items-center gap-1.5`}><ShieldAlert size={14} className="text-erro" /> {admin ? 'Somente administrador' : `Excluir ${nsis.tipo_serv}`}</p>
 
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         {destinos.length > 0 && (
@@ -99,7 +99,7 @@ export default function AcoesAdmin({ nsis, qtdItens, fluxoNovo, onAlterado, onEx
 
         <button type="button" onClick={excluir} disabled={ocupado}
           className="ml-auto flex h-9 items-center gap-1.5 rounded-lg bg-erro px-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50">
-          <Trash2 size={14} /> Excluir NSIS
+          <Trash2 size={14} /> Excluir {nsis.tipo_serv}
         </button>
       </div>
 

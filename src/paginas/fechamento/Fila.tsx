@@ -323,11 +323,11 @@ export default function FilaFechamento() {
     mudarParam('ordcol', atual && atual.coluna === c && atual.dir === dir ? null : `${c}:${dir}`);
   }
 
-  /** Exclui a NSIS da linha (quem tem o módulo Manutenção; o banco confere de novo). Pede confirmação e guarda cópia no registro de ações. */
+  /** Exclui o serviço da linha (quem tem o módulo Manutenção; o banco confere de novo). Pede confirmação e guarda cópia no registro de ações. */
   async function excluirLinha(n: Nsis) {
     if (excluindo) return;
     const itens = n.qtd_itens === 0 ? 'sem códigos lançados' : n.qtd_itens === 1 ? '1 código lançado' : `${n.qtd_itens} códigos lançados`;
-    if (!confirm(`Excluir a NSIS ${n.servico} (${itens}) da fila?\n\nOs códigos lançados vão junto. Uma cópia fica guardada no registro de ações.`)) return;
+    if (!confirm(`Excluir a ${n.tipo_serv} ${n.servico} (${itens}) da fila?\n\nOs códigos lançados vão junto. Uma cópia fica guardada no registro de ações.`)) return;
     setExcluindo(n.servico);
     setErro(null);
     try {
@@ -335,7 +335,7 @@ export default function FilaFechamento() {
       if (aberta === n.servico) mudarParam('nsis', null);
       recarregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao excluir a NSIS.');
+      setErro(e instanceof Error ? e.message : `Falha ao excluir a ${n.tipo_serv}.`);
     } finally {
       setExcluindo(null);
     }
@@ -700,9 +700,10 @@ function AcoesLinha({ n, onAbrir, onExcluir, excluindo }: { n: Nsis; onAbrir: (d
     <div className="flex items-center justify-end gap-1.5">
       {botoes}
       {temModulo(acesso, 'fechamento') && (
-        <button type="button" onClick={onExcluir} disabled={excluindo} title="Excluir NSIS" aria-label={`Excluir a NSIS ${n.servico}`}
-          className="inline-flex size-6 items-center justify-center rounded-md border border-[#e2e8f0] bg-[#f8fafc] text-[#94a3b8] hover:border-erro hover:bg-erro-fundo hover:text-erro disabled:opacity-50">
+        <button type="button" onClick={onExcluir} disabled={excluindo} title={`Excluir ${n.tipo_serv}`} aria-label={`Excluir a ${n.tipo_serv} ${n.servico}`}
+          className={`${BOTAO} inline-flex items-center justify-center gap-1 border border-[#e2e8f0] bg-[#f8fafc] text-erro hover:border-erro hover:bg-erro-fundo disabled:opacity-50`}>
           {excluindo ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+          Excluir
         </button>
       )}
     </div>
