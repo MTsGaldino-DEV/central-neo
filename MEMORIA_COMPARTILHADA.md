@@ -65,12 +65,14 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 
 ## Fila de fechamento: excluir com o módulo Manutenção e painel da seleção — 19/11/2026 (Claude)
 
-**Estado: sem commit. Migration 061 NÃO aplicada** (só testada com `--testar`, que desfaz tudo).
+**Estado: migration 061 aplicada e registrada no CENTRAL-NEO em 19/11/2026, a pedido do Matheus (2.216 NSIS antes e depois).
+Commit `e31693e` (sem push), que levou junto a separação NSIS/NSRI da fila que estava no diretório sem commit
+(`fechamentoFluxo.ts`, `Shell.tsx`, `Painel.tsx`, `fluxo-colunas-testar.cjs`). A 061 fica só local: `/supabase/` está no `.gitignore`.**
 
 - **Pedido do Matheus:** quem tem permissão na Manutenção (módulo `fechamento`) exclui a linha da fila, não só ADMIN.
   - `supabase/migrations/061_nsis_excluir_modulo.sql`: `neo_excluir_nsis` e a política `neo_nsis_excluir` passam a usar
     `neo_tem_modulo('fechamento')`. Mover de etapa (`neo_mover_etapa`) e ler `neo_nsis_log` seguem só ADMIN. A cópia continua indo para o log.
-  - Aplicar com `node .tmp-faturamento/aplicar-061.cjs` (aplica só a 061 e registra; `migrar.cjs` segue proibido). Até aplicar,
+  - Aplicada por `node .tmp-faturamento/aplicar-061.cjs` (aplica só a 061 e registra; `migrar.cjs` segue proibido). Antes dela,
     o botão aparece para o usuário mas o banco recusa ("Só administrador pode excluir NSIS").
   - Tela: lixeira da linha (`Fila.tsx`, `AcoesLinha`) e bloco da janela (`AcoesAdmin.tsx`) usam `temModulo(acesso, 'fechamento')`.
     Para não ADMIN o bloco mostra só "Excluir NSIS", sem "Voltar para a etapa".
@@ -83,7 +85,7 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
 - **Verificado:** typecheck, `vite build`, `aplicar-061.cjs --testar` no banco real (sem módulo recusa, usuário da Manutenção
   exclui e o log grava o autor, mover etapa segue recusado), script Playwright com Supabase simulado e usuário não ADMIN
   (lixeira, painel, cards de alerta, preferência após recarregar, exclusão com confirmação, janela sem mover etapa; 1440 e 390 px sem rolagem lateral).
-- **Pendências:** aplicar a 061 (pedir ao Matheus); `manutencao-ui-testar` já falhava no commit `0c9c4ac` (passo "Nº da NSPR",
+- **Pendências:** `manutencao-ui-testar` já falhava no commit `0c9c4ac` (passo "Nº da NSPR",
   linha 283) e o simulado dele filtra `tipo_serv` por `in.(…)`, mas a fila agora usa `eq` por causa da lista NSIS/NSRI; falta
   ajustar o teste. Painel não conferido com dados reais.
 
