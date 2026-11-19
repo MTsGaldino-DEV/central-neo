@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" font-family="Inter, sans-serif">
+  <rect width="960" height="300" fill="#f4f7f8"/>
+  <g font-size="13" font-weight="600">
+    <rect x="30" y="30" width="130" height="150" rx="14" fill="#0b7285"/><text x="42" y="206" fill="#0b1f24">sinal (Petróleo)</text><text x="42" y="224" fill="#586e74" font-family="monospace">#0B7285</text>
+    <rect x="180" y="30" width="130" height="150" rx="14" fill="#3bc9db"/><text x="192" y="206" fill="#0b1f24">sinal-claro</text><text x="192" y="224" fill="#586e74" font-family="monospace">#3BC9DB</text>
+    <rect x="330" y="30" width="130" height="150" rx="14" fill="#061a1f"/><text x="342" y="206" fill="#0b1f24">noite</text><text x="342" y="224" fill="#586e74" font-family="monospace">#061A1F</text>
+    <rect x="480" y="30" width="130" height="150" rx="14" fill="#0b1f24"/><text x="492" y="206" fill="#0b1f24">tinta</text><text x="492" y="224" fill="#586e74" font-family="monospace">#0B1F24</text>
+    <rect x="630" y="30" width="130" height="150" rx="14" fill="#d9822b"/><text x="642" y="206" fill="#0b1f24">cobre</text><text x="642" y="224" fill="#586e74" font-family="monospace">#D9822B</text>
+    <rect x="780" y="30" width="130" height="150" rx="14" fill="#586e74"/><text x="792" y="206" fill="#0b1f24">aço</text><text x="792" y="224" fill="#586e74" font-family="monospace">#586E74</text>
+    <rect x="30" y="246" width="60" height="30" rx="8" fill="#ffffff" stroke="#dde6e8"/><text x="100" y="266" fill="#586e74" font-family="monospace">fundo #FFFFFF</text>
+    <rect x="260" y="246" width="60" height="30" rx="8" fill="#f4f7f8" stroke="#dde6e8"/><text x="330" y="266" fill="#586e74" font-family="monospace">névoa #F4F7F8</text>
+    <rect x="490" y="246" width="60" height="30" rx="8" fill="#dde6e8"/><text x="560" y="266" fill="#586e74" font-family="monospace">linha #DDE6E8</text>
+    <rect x="720" y="246" width="60" height="30" rx="8" fill="#e6f4f6"/><text x="790" y="266" fill="#586e74" font-family="monospace">sinal-fundo #E6F4F6</text>
+  </g>
+</svg>

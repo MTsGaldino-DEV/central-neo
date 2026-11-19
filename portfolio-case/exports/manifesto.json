@@ -1,0 +1,21 @@
+{
+  "generated": "2026-11-19",
+  "width": 1400,
+  "height": 1000,
+  "frames": [
+    "01-abertura.png",
+    "02-produto.png",
+    "03-problema.png",
+    "04-manutencao.png",
+    "05-faturamento.png",
+    "06-painel.png",
+    "07-operacao.png",
+    "08-arquitetura.png",
+    "09-engenharia.png",
+    "10-identidade.png",
+    "11-entrega.png",
+    "12-encerramento.png"
+  ],
+  "pdf": "central-neo-portfolio.pdf",
+  "syntheticData": true
+}

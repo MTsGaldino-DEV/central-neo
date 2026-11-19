@@ -32,3 +32,10 @@ Thumbs.db
 
 # Vídeos finais e dados de produção permanecem locais.
 /entregas/central-neo/
+
+# Portfólio: somente a apresentação gerada e o site estático são versionados.
+/.tmp-portfolio/
+!/portfolio-case/site/dist/
+!/portfolio-case/site/dist/**
+!/portfolio-case/site/dist/downloads/central-neo-portfolio.pdf
+!/portfolio-case/exports/central-neo-portfolio.pdf

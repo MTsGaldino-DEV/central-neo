@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 48" role="img" aria-label="Central NEO">
+  <text x="0" y="38" fill="#0b1f24" font-family="Manrope, sans-serif" font-weight="800" font-size="40" letter-spacing="-1">NE</text>
+  <g transform="translate(50 3.5) scale(0.85)">
+    <circle cx="24" cy="24" r="15" fill="none" stroke="#0b1f24" stroke-width="6.5" stroke-dasharray="76 100" stroke-linecap="round"/>
+    <circle cx="36.3" cy="15.4" r="5" fill="#0b7285"/>
+  </g>
+</svg>
