@@ -7,6 +7,7 @@ import {
   type Nsis, type ItemNsis, type Etapa,
 } from '@/lib/fechamento';
 import { useSessao } from '@/contexto/Sessao';
+import { confirmarSemDuplicidade, tipoDaPrimeiraEtapa, type TipoNumero } from '@/lib/fechamentoDuplicidade';
 import { listarContrato, type CodigoContrato } from '@/lib/contrato';
 import { FATORES_NOVOS, calcularValor, fatorPadrao, totalPedido } from '@/lib/fechamentoCobranca';
 import {
@@ -64,6 +65,14 @@ function lerValorPago(texto: string): number {
   return v;
 }
 
+/** A pessoa desistiu na confirmação (ex.: número repetido): não grava e não mostra erro. */
+class EnvioCancelado extends Error {}
+
+/** Confere NSMP / NSPR / NSMC repetidas em outro serviço; cancelar na confirmação interrompe o envio. */
+async function conferirRepetidos(conferir: { tipo: TipoNumero; numero: string }[], servico: string) {
+  if (!(await confirmarSemDuplicidade(conferir, servico))) throw new EnvioCancelado();
+}
+
 /** Grava uma vez por vez: o botão fica desabilitado e um segundo clique não passa pela trava. */
 function useEnvio(onAlterado: () => void | Promise<void>, onConcluido?: () => void) {
   const [salvando, setSalvando] = useState(false);
@@ -80,7 +89,7 @@ function useEnvio(onAlterado: () => void | Promise<void>, onConcluido?: () => vo
       await onAlterado();
       onConcluido?.();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao salvar.');
+      if (!(e instanceof EnvioCancelado)) setErro(e instanceof Error ? e.message : 'Falha ao salvar.');
     } finally {
       trava.current = false;
       setSalvando(false);
@@ -383,6 +392,10 @@ function FormFechar({ nsis, itens, titulo, corrigindo, onAlterado, onRascunho, o
       if (!nomeEquipe) throw new Error('Informe o número da equipe.');
       if (!nsmp.trim()) throw new Error(nsri ? 'Informe a NSMC.' : 'Informe a NSMP.');
       const pagoUS = nsri ? lerValorPago(valorPago) : null;
+      // na correção, o número que já era deste serviço não pede confirmação de novo
+      if (!corrigindo || nsmp.trim() !== (primeiro?.nsmp ?? '').trim()) {
+        await conferirRepetidos([{ tipo: tipoDaPrimeiraEtapa(nsis.tipo_serv), numero: nsmp }], nsis.servico);
+      }
       // sem ter saído do campo, a consulta ainda não rodou: o supervisor da frota vale mais que o campo à mão
       const daFrota = await consultar(nomeEquipe);
       const supervisor = daFrota ?? (supervisorManual.trim() || null);
@@ -457,7 +470,11 @@ function FormNspr({ nsis, itens, titulo, corrigindo, onAlterado, onCancelar, onC
       dica={corrigindo ? 'Corrigindo o que foi informado nesta etapa.' : `Pedido de ${formatarUS(pedido, 4)} US. Informe a NSPR que a CEMIG devolveu e o valor pago.`}
       onEnviar={() => envio.executar(async () => {
         if (!nspr.trim()) throw new Error('Informe a NSPR.');
-        await informarNspr(itens, nspr, lerValorPago(valor), nsis.supervisor_equipe ?? nsis.supervisor);
+        const pago = lerValorPago(valor);
+        if (!corrigindo || nspr.trim() !== (itens[0]?.nspr ?? '').trim()) {
+          await conferirRepetidos([{ tipo: 'NSPR', numero: nspr }], nsis.servico);
+        }
+        await informarNspr(itens, nspr, pago, nsis.supervisor_equipe ?? nsis.supervisor);
       })}>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>

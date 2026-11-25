@@ -15,6 +15,7 @@ import {
   type Etapa, type Nsis, type FiltrosNsis,
 } from '@/lib/fechamento';
 import { COLUNAS_FLUXO, colunasVisiveis, etapasDaLista, rotuloColuna, type ColunaFluxo, type ListaFechamento } from '@/lib/fechamentoFluxo';
+import { duplicidadesDaPagina, textoServicos, type Repeticao } from '@/lib/fechamentoDuplicidade';
 import { rotuloLocalidade } from '@/lib/localidades';
 import { temModulo } from '@/lib/neo';
 
@@ -210,6 +211,20 @@ export default function FilaFechamento() {
   }
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  // NSMP / NSPR / NSMC da página que também estão em outro serviço: a linha fica amarela.
+  // Falha na conferência não atrapalha a lista: só fica sem o amarelo.
+  const [repetidos, setRepetidos] = useState<Record<string, Repeticao[]>>({});
+  const pedidoRepetidos = useRef(0);
+  // a página guardada e a lida de novo costumam ter os mesmos números: só confere quando mudam (ou após gravar)
+  const chaveNumeros = JSON.stringify([versaoCache, linhas.map((n) => [n.servico, n.tipo_serv, n.nsmps, n.nsprs])]);
+  useEffect(() => {
+    const id = ++pedidoRepetidos.current;
+    duplicidadesDaPagina(linhas)
+      .then((r) => { if (id === pedidoRepetidos.current) setRepetidos(r); })
+      .catch(() => { if (id === pedidoRepetidos.current) setRepetidos({}); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveNumeros]);
 
   // Painel opcional com os números da seleção (mesmos filtros da lista). Aberto/fechado fica guardado no navegador.
   const [painelAberto, setPainelAberto] = useState(lerPainelAberto);
@@ -554,19 +569,23 @@ export default function FilaFechamento() {
                       <Loader2 size={16} className="animate-spin inline mr-2 align-text-bottom" /> Carregando…
                     </td></tr>
                   )}
-                  {linhas.map((n) => (
+                  {linhas.map((n) => {
+                    const rep = repetidos[n.servico];
+                    return (
                     <tr key={n.servico} onClick={() => {
                       // texto selecionado: a pessoa está copiando a célula, não abrindo a NSIS
                       if (window.getSelection()?.toString()) return;
                       abrirPainel(n.servico, false);
                     }}
-                      className={`group ${aberta === n.servico ? 'selecionada' : ''}`}>
-                      {colunas.map((id) => <Celula key={id} id={id} n={n} descricoes={descricoes[n.servico]} />)}
+                      title={rep ? rep.map((r) => `${r.tipo} ${r.numero} também ${textoServicos(r.servicos)}`).join('\n') : undefined}
+                      className={`group ${aberta === n.servico ? 'selecionada' : ''} ${rep ? 'duplicada' : ''}`}>
+                      {colunas.map((id) => <Celula key={id} id={id} n={n} descricoes={descricoes[n.servico]} repetidos={rep} />)}
                       <td className="grade-fixa text-right cursor-default" onClick={(ev) => ev.stopPropagation()}>
                         <AcoesLinha n={n} onAbrir={(detalhes) => abrirPainel(n.servico, detalhes)} onExcluir={() => excluirLinha(n)} excluindo={excluindo === n.servico} />
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -585,8 +604,11 @@ export default function FilaFechamento() {
 }
 
 /** Célula de uma coluna da lista; sem dado mostra —. */
-function Celula({ id, n, descricoes }: { id: ColunaFluxo; n: Nsis; descricoes?: string[] }) {
+function Celula({ id, n, descricoes, repetidos }: { id: ColunaFluxo; n: Nsis; descricoes?: string[]; repetidos?: Repeticao[] }) {
   const vazio = <span className="text-[#94a3b8]">—</span>;
+  // números desta coluna que também estão em outro serviço (NSRI: a NSMC aparece nas duas colunas)
+  const nsri = n.tipo_serv === 'NSRI';
+  const repetidosDe = (tipos: string[]) => new Set((repetidos ?? []).filter((r) => tipos.includes(r.tipo)).map((r) => r.numero));
   switch (id) {
     case 'servico': return (
       <td className="font-codigo font-bold text-[#0f2544]">
@@ -595,10 +617,10 @@ function Celula({ id, n, descricoes }: { id: ColunaFluxo; n: Nsis; descricoes?: 
     );
     case 'tipo_serv': return <td className="font-bold">{n.tipo_serv}</td>;
     case 'localidade': return <td title={n.localidade ? `Localidade ${n.localidade}` : undefined}>{n.localidade ? rotuloLocalidade(n.localidade) : vazio}</td>;
-    case 'nsmps': return <td className="!text-[#7c3aed]"><Numeros valor={n.nsmps} falta={n.qtd_itens > 0 && n.itens_sem_nsmp > 0} /></td>;
+    case 'nsmps': return <td className="!text-[#7c3aed]"><Numeros valor={n.nsmps} falta={n.qtd_itens > 0 && n.itens_sem_nsmp > 0} repetidos={repetidosDe(nsri ? ['NSMC'] : ['NSMP'])} /></td>;
     case 'equipes': return <td><Numeros valor={n.equipes} falta={false} /></td>;
     // NSRI: a NSMC é o NSPR (NSIS antigas guardavam só no NSMP)
-    case 'nsprs': return <td className="!text-[#15803d]"><Numeros valor={n.nsprs ?? (n.tipo_serv === 'NSRI' ? n.nsmps : null)} falta={n.qtd_itens > 0 && !!n.nsmps && n.itens_sem_nspr > 0} /></td>;
+    case 'nsprs': return <td className="!text-[#15803d]"><Numeros valor={n.nsprs ?? (nsri ? n.nsmps : null)} falta={n.qtd_itens > 0 && !!n.nsmps && n.itens_sem_nspr > 0} repetidos={repetidosDe(nsri ? ['NSMC'] : ['NSPR'])} /></td>;
     case 'termino': return <td className="!text-[#64748b]">{formatarData(n.termino)}</td>;
     case 'valor_lancamento': return (
       <td className="text-right tabular-nums">
@@ -711,11 +733,20 @@ function AcoesLinha({ n, onAbrir, onExcluir, excluindo }: { n: Nsis; onAbrir: (d
 }
 
 /** NSMP / NSPR / equipe / AP da NSIS: um número por linha; "falta" quando algum item ainda não tem. */
-function Numeros({ valor, falta }: { valor: string | null; falta: boolean }) {
+function Numeros({ valor, falta, repetidos }: { valor: string | null; falta: boolean; repetidos?: Set<string> }) {
   const lista = valor ? valor.split(', ') : [];
   return (
     <div className="font-codigo text-[13px] font-semibold leading-5 whitespace-nowrap">
-      {lista.map((v) => <span key={v} className="block">{v}</span>)}
+      {lista.map((v) => (
+        <span key={v} className="block">
+          {v}
+          {repetidos?.has(v.trim()) && (
+            <span className="ml-1 inline-flex items-center gap-0.5 rounded bg-[#fde047] px-1 font-sans text-[10px] font-bold text-[#713f12] align-middle">
+              <AlertTriangle size={10} aria-hidden="true" /> repetido
+            </span>
+          )}
+        </span>
+      ))}
       {falta && <span className="block font-sans text-[10px] font-bold text-pendente">{lista.length ? '+ falta' : 'falta'}</span>}
       {!lista.length && !falta && <span className="text-aco-claro font-normal">—</span>}
     </div>

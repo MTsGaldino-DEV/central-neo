@@ -203,6 +203,8 @@
 }
 .grade-nsis tbody tr { background: #fff; cursor: pointer; }
 .grade-nsis tbody tr.sem-hover { cursor: default; }
+/* NSMP / NSPR / NSMC também em outro serviço; a linha aberta continua com a cor de selecionada */
+.grade-nsis tbody tr.duplicada { background: #fef9c3; }
 .grade-nsis tbody tr.selecionada { background: var(--color-sinal-fundo); }
 .grade-nsis tbody tr:not(.sem-hover):hover > td { background-image: linear-gradient(rgba(15, 37, 68, 0.05), rgba(15, 37, 68, 0.05)); }
 .grade-nsis th:last-child, .grade-nsis td:last-child { border-right: none; }

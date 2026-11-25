@@ -12,6 +12,7 @@ import {
   type Nsis, type ItemNsis, type ItemNsisCampos,
 } from '@/lib/fechamento';
 import { listarContrato, type CodigoContrato } from '@/lib/contrato';
+import { confirmarSemDuplicidade, tipoDaPrimeiraEtapa, type TipoNumero } from '@/lib/fechamentoDuplicidade';
 import { agruparLancamentos, calcularValor, fatorPadrao, textoFator, type Lancamento } from '@/lib/fechamentoCobranca';
 import {
   ROTULO_SECAO, CAMPO, ROTULO_CAMPO, impedirEnvioPeloEnter, EditorCodigos, SeletorCodigo, SeletorFator, valorDaLinha, type LinhaLancamento,
@@ -192,7 +193,7 @@ export default function PainelNsis({ servico, onFechar, onAlterado, detalhesInic
               ) : (
                 <div className="space-y-3">
                   {lancamentos.map((l) => (
-                    <CartaoLancamento key={l.chave} lancamento={l} primeiroNumero={1 + itens.indexOf(l.itens[0])} valorUS={nsis.valor_us_reais} onAlterado={aposMudanca} />
+                    <CartaoLancamento key={l.chave} lancamento={l} primeiroNumero={1 + itens.indexOf(l.itens[0])} valorUS={nsis.valor_us_reais} tipoServ={nsis.tipo_serv} onAlterado={aposMudanca} />
                   ))}
 
                   {novoItem || itens.length === 0 ? (
@@ -244,17 +245,20 @@ function Campo({ rotulo, valor, codigo }: { rotulo: string; valor: string | null
 
 // ─── Um lançamento: os códigos da mesma NSMP, com as etapas NSMP → NSPR → fatura ─
 
-function CartaoLancamento({ lancamento, primeiroNumero, valorUS, onAlterado }: {
-  lancamento: Lancamento<ItemNsis>; primeiroNumero: number; valorUS: number | null; onAlterado: () => Promise<void>;
+function CartaoLancamento({ lancamento, primeiroNumero, valorUS, tipoServ, onAlterado }: {
+  lancamento: Lancamento<ItemNsis>; primeiroNumero: number; valorUS: number | null; tipoServ: string; onAlterado: () => Promise<void>;
 }) {
   const { itens, nsmp, nspr, fatura, pedido, pago, semValorPago, divergente } = lancamento;
   const [erro, setErro] = useState<string | null>(null);
   const varios = itens.length > 1;
   const ids = itens.map((it) => it.id);
+  const servico = itens[0].servico;
 
-  async function executar(acao: () => Promise<void>) {
+  /** Número repetido em outro serviço: grava só se a pessoa confirmar. */
+  async function executar(acao: () => Promise<void>, conferir: { tipo: TipoNumero; numero: string }[] = []) {
     setErro(null);
     try {
+      if (!(await confirmarSemDuplicidade(conferir, servico))) return;
       await acao();
       await onAlterado();
     } catch (e) {
@@ -266,7 +270,7 @@ function CartaoLancamento({ lancamento, primeiroNumero, valorUS, onAlterado }: {
     <div className="bg-white border border-linha rounded-xl overflow-hidden">
       <ul className="divide-y divide-linha border-b border-linha">
         {itens.map((it, i) => (
-          <LinhaItem key={it.id} item={it} numero={primeiroNumero + i} valorUS={valorUS} onAlterado={onAlterado} onErro={setErro} />
+          <LinhaItem key={it.id} item={it} numero={primeiroNumero + i} valorUS={valorUS} tipoServ={tipoServ} onAlterado={onAlterado} onErro={setErro} />
         ))}
       </ul>
       {varios && (
@@ -281,7 +285,7 @@ function CartaoLancamento({ lancamento, primeiroNumero, valorUS, onAlterado }: {
 
       <ol className="grid grid-cols-1 divide-y divide-linha text-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <Etapa titulo="NSMP" feito={!!nsmp} valor={nsmp}>
-          <CampoRapido placeholder="Nº da NSMP" onSalvar={(v) => executar(() => atualizarItens(ids, { nsmp: v }))} />
+          <CampoRapido placeholder="Nº da NSMP" onSalvar={(v) => executar(() => atualizarItens(ids, { nsmp: v }), [{ tipo: tipoDaPrimeiraEtapa(tipoServ), numero: v }])} />
         </Etapa>
         <Etapa titulo="NSPR · valor pago" feito={!!nspr} bloqueado={!nsmp}
           valor={nspr && (
@@ -301,7 +305,9 @@ function CartaoLancamento({ lancamento, primeiroNumero, valorUS, onAlterado }: {
               )}
             </>
           )}>
-          <ConfirmacaoNspr valorPedido={pedido} varios={varios} onSalvar={(n, v) => executar(() => confirmarPago(itens, n, v))} />
+          {/* NSRI: a NSPR repete a NSMC e não é comparada */}
+          <ConfirmacaoNspr valorPedido={pedido} varios={varios}
+            onSalvar={(n, v) => executar(() => confirmarPago(itens, n, v), tipoServ === 'NSRI' ? [] : [{ tipo: 'NSPR', numero: n }])} />
         </Etapa>
         <Etapa titulo="Fatura (AP)" feito={!!fatura} bloqueado={!nspr} valor={fatura}>
           <CampoRapido placeholder="Ex.: AP 83809" onSalvar={(v) => executar(() => atualizarItens(ids, { fatura: normalizarAP(v) }))} />
@@ -312,8 +318,8 @@ function CartaoLancamento({ lancamento, primeiroNumero, valorUS, onAlterado }: {
   );
 }
 
-function LinhaItem({ item, numero, valorUS, onAlterado, onErro }: {
-  item: ItemNsis; numero: number; valorUS: number | null; onAlterado: () => Promise<void>; onErro: (m: string | null) => void;
+function LinhaItem({ item, numero, valorUS, tipoServ, onAlterado, onErro }: {
+  item: ItemNsis; numero: number; valorUS: number | null; tipoServ: string; onAlterado: () => Promise<void>; onErro: (m: string | null) => void;
 }) {
   const [editando, setEditando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
@@ -324,6 +330,7 @@ function LinhaItem({ item, numero, valorUS, onAlterado, onErro }: {
         <FormEdicao
           titulo={`Editar item ${numero}`}
           inicial={item}
+          tipoServ={tipoServ}
           onCancelar={() => setEditando(false)}
           onSalvar={async (campos) => {
             await atualizarItem(item.id, campos);
@@ -540,9 +547,10 @@ function FormLancamento({ titulo, zona, equipePadrao, fatorInicial, valorUS, onR
 
 // ─── Edição completa de um item já lançado ───────────────────────────────────
 
-function FormEdicao({ titulo, inicial, onSalvar, onCancelar }: {
+function FormEdicao({ titulo, inicial, tipoServ, onSalvar, onCancelar }: {
   titulo: string;
   inicial: ItemNsis;
+  tipoServ: string;
   onSalvar: (campos: CamposItem) => Promise<void>;
   onCancelar: () => void;
 }) {
@@ -616,8 +624,13 @@ function FormEdicao({ titulo, inicial, onSalvar, onCancelar }: {
         codigo: codigo.codigo, quantidade: qtd, fator: fatorItem, fator_unitario: fatorCodigo, valor_inicial: valorCalculado, ...etapas,
       };
     }
+    // só os números que mudaram: o que já era deste item não pede confirmação de novo (NSRI: a NSPR repete a NSMC)
+    const conferir: { tipo: TipoNumero; numero: string }[] = [];
+    if (etapas.nsmp && etapas.nsmp !== (inicial.nsmp ?? '').trim()) conferir.push({ tipo: tipoDaPrimeiraEtapa(tipoServ), numero: etapas.nsmp });
+    if (tipoServ !== 'NSRI' && etapas.nspr && etapas.nspr !== (inicial.nspr ?? '').trim()) conferir.push({ tipo: 'NSPR', numero: etapas.nspr });
     setSalvando(true);
     try {
+      if (!(await confirmarSemDuplicidade(conferir, inicial.servico))) { setSalvando(false); return; }
       await onSalvar(campos);
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Falha ao salvar.');

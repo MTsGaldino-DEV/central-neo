@@ -63,6 +63,27 @@ histórico completo das conversas. Ambos devem lê-lo e atualizá-lo.
   `faturamento-conferencia-testar` usa `sql.begin` sem desfazer. Nunca injetar migration em `sql.begin` por preload
   ou atalho. Migration nova só entra no teste dentro de transação com `throw` no fim. Conferir antes de rodar.
 
+## Fila de fechamento: NSMP / NSPR / NSMC repetidas — 25/11/2026 (Claude)
+
+- **Decisão do Matheus:** cada serviço é único (já bloqueado pela chave de `neo_nsis`, nada mudou) e cada
+  NSMP, NSPR e NSMC também pertence a um só serviço. Número repetido em outro serviço: linha **amarela** na
+  fila e, ao lançar, `confirm` "A NSPR X já existe no serviço Y… Lançar mesmo assim?". Cancelar não grava;
+  OK grava. Ele escolheu a conferência na tela (opção A), sem migration e sem filtro "só duplicadas".
+- **Regras** (`src/lib/fechamentoDuplicidade.ts`): comparação exata após trim, mesmo tipo com mesmo tipo
+  (NSMP = `nsmp` de não NSRI; NSPR = `nspr` de não NSRI; NSMC = `nsmp` de NSRI; a `nspr` da NSRI repete a
+  NSMC e não é comparada). Itens do próprio serviço não contam. Consulta `neo_nsis_itens` com
+  `neo_nsis!inner(tipo_serv)` (índices de `nsmp`/`nspr` já existiam, migration 002).
+- **Fila:** só a página aberta (50) é conferida; título da linha diz o número e os outros serviços; selo
+  "repetido" no número. Falha da consulta só tira o amarelo. CSS `.grade-nsis tr.duplicada` (`#fef9c3`).
+- **Confirmação em:** `JanelaFluxo` (etapa 1 NSMP/NSMC e NSPR; na correção só se o número mudou) e
+  `PainelNsis` histórico (NSMP rápida, confirmação da NSPR, edição do item com número alterado).
+- Design: `docs/superpowers/specs/2026-11-25-fila-duplicidade-design.md`; plano em `docs/superpowers/plans/`.
+- **Verificado:** `npm run typecheck`, `npm run build`, `scripts/fila-duplicidade-ui-testar.cjs` (novo,
+  Supabase simulado: amarelo NSIS/NSRI, NSMP×NSMC não conta, NSRI sozinha não conta, cancelar não grava,
+  aceitar grava, número novo sem pergunta) e `scripts/fila-exclusao-ui-testar.cjs` passam.
+- **Pendência antiga (não causada aqui):** `scripts/manutencao-ui-testar.cjs` já falha sem esta mudança na
+  linha 283 (espera `getByLabel('Nº da NSPR')` na janela). Teste desatualizado; conferir depois.
+
 ## Fila de fechamento: exclusão de linhas NSRI — 19/11/2026 (Codex)
 
 - Pedido: disponibilizar a exclusão na lista NSRI como na NSIS. A investigação mostrou que ambas já usavam `AcoesLinha`, mas a ação era só um ícone discreto e os textos de exclusão diziam NSIS em qualquer lista.
